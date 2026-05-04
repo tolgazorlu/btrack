@@ -13,6 +13,11 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	AI       AIConfig       `mapstructure:"ai"`
 	Daemon   DaemonConfig   `mapstructure:"daemon"`
+	Work     WorkConfig     `mapstructure:"work"`
+}
+
+type WorkConfig struct {
+	DailyHours int `mapstructure:"daily_hours"`
 }
 
 type DatabaseConfig struct {
@@ -116,6 +121,7 @@ func Load() (*Config, error) {
 
 	viper.SetDefault("database.type", "sqlite")
 	viper.SetDefault("ai.provider", "")
+	viper.SetDefault("work.daily_hours", 8)
 
 	viper.SetEnvPrefix("BTRACK")
 	viper.AutomaticEnv()
@@ -169,6 +175,19 @@ func SaveProviderKey(provider, key string) error {
 	return nil
 }
 
+// SaveDailyHours persists the daily work-hours target.
+func SaveDailyHours(hours int) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("work.daily_hours", hours)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
 func writeDefaultConfig(path string) {
 	content := `# btrack configuration
 # https://github.com/tolgazorlu/btrack
@@ -184,6 +203,9 @@ ai:
   claude_key: ""        # Anthropic API key
   gemini_key: ""        # Google Gemini API key
   # model: ""           # optional override (e.g. gpt-4o, claude-sonnet-4-6)
+
+work:
+  daily_hours: 8        # target working hours per day
 
 daemon:
   # socket_path: ""

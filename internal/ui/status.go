@@ -12,20 +12,24 @@ import (
 )
 
 type StatusModel struct {
-	status    *daemon.StatusData
-	startTime time.Time
-	frame     int
-	err       error
-	quitting  bool
-	client    *daemon.Client
+	status     *daemon.StatusData
+	startTime  time.Time
+	frame      int
+	err        error
+	quitting   bool
+	client     *daemon.Client
+	dailyHours int
 }
 
 type tickMsg time.Time
 type statusMsg *daemon.StatusData
 type errMsg error
 
-func NewStatusModel(client *daemon.Client) *StatusModel {
-	return &StatusModel{client: client}
+func NewStatusModel(client *daemon.Client, dailyHours int) *StatusModel {
+	if dailyHours <= 0 {
+		dailyHours = 8
+	}
+	return &StatusModel{client: client, dailyHours: dailyHours}
 }
 
 func (m StatusModel) Init() tea.Cmd {
@@ -105,7 +109,8 @@ func (m StatusModel) View() string {
 		b.WriteString("\n\n")
 	}
 
-	b.WriteString(renderProgressBar(elapsed) + "\n\n")
+	b.WriteString(renderProgressBar(elapsed, m.dailyHours) + "\n")
+	b.WriteString(fmt.Sprintf("  %s\n\n", StyleDimmed.Render(fmt.Sprintf("%dh daily target", m.dailyHours))))
 
 	if len(m.status.RecentLog) > 0 {
 		b.WriteString(StyleHighlight.Render("  recent notes") + "\n")
@@ -124,9 +129,9 @@ func (m StatusModel) View() string {
 	return b.String()
 }
 
-func renderProgressBar(d time.Duration) string {
+func renderProgressBar(d time.Duration, dailyHours int) string {
 	const width = 40
-	pct := d.Hours() / 8.0
+	pct := d.Hours() / float64(dailyHours)
 	if pct > 1 {
 		pct = 1
 	}

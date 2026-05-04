@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
@@ -43,15 +42,3 @@ func maybeFirstRun() {
 	}
 }
 
-func init() {
-	// Hook into root command PersistentPreRun so it fires before any subcommand.
-	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		// Skip for daemon (internal) and setup itself.
-		if cmd.Name() == "start" || cmd.Name() == "stop" ||
-			cmd.Name() == "log" || cmd.Name() == "resume" ||
-			cmd.Name() == "history" || cmd.Name() == "hist" ||
-			cmd.Name() == "status" || cmd.Name() == "version" {
-			maybeFirstRun()
-		}
-	}
-}
