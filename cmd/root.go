@@ -18,35 +18,48 @@ var rootCmd = &cobra.Command{
 	Long: ui.StyleTitle.Render("btrack") + `  ` + ui.StyleDimmed.Render("— time tracker for developers") + `
 
   ` + ui.StyleHighlight.Render("DAILY WORKFLOW") + `
-    btrack s "fix login bug"               start a session       (start)
+    btrack s "fix login bug"               start                 (start)
     btrack n "found the JWT issue"         add a note            (note)
     btrack x -m "fixed JWT #bugfix"        stop and save         (stop)
+    btrack sw "review PR #43"              stop + start new      (switch)
     btrack r                               continue last session  (resume)
+    btrack break                           pause for a break
 
   ` + ui.StyleHighlight.Render("REVIEW YOUR WORK") + `
     btrack w                               live view             (status)
     btrack d                               today as a tree       (day)
-    btrack d yesterday                     yesterday's sessions
-    btrack d 2026-05-01                    any specific date
-    btrack week                            full week tree view
+    btrack d yesterday / 2026-05-01        specific day
+    btrack week                            full week tree
     btrack h                               last 20 sessions      (history)
-    btrack h -n 50 -v                      50 sessions with notes
+    btrack h -n 50 -v                      with notes
+    btrack stats                           quick snapshot
+    btrack streak                          working day streak
     btrack tag #bugfix                     filter by tag
+    btrack search "JWT"                    search sessions       (find, f)
 
   ` + ui.StyleHighlight.Render("AI FEATURES") + `
-    btrack ai setup                        configure an API key
+    btrack ai setup                        configure API key
     btrack ai sum                          standup from today     (summarize)
     btrack ai sum --days 3                 last 3 days
     btrack ai ins                          productivity dashboard (insights)
     btrack ai ins --no-ai                 stats only, no key needed
 
-  ` + ui.StyleHighlight.Render("EXPORT & SETTINGS") + `
-    btrack export                          export sessions to CSV
-    btrack export --format json            export as JSON
-    btrack export --days 30 --out f.csv    last 30 days to file
-    btrack config                          show all current settings
-    btrack config hours 6                  set daily target to 6 hours
-    btrack version                         print version
+  ` + ui.StyleHighlight.Render("DATA & SETTINGS") + `
+    btrack export                          export to CSV
+    btrack export --format json --out f    export to JSON file
+    btrack edit <id> -t "new name"         edit a past session
+    btrack config hours 6                  set daily target
+    btrack config                          show all settings
+
+  ` + ui.StyleHighlight.Render("LINKS") + `
+    btrack star                            open GitHub repo
+    btrack issue / feedback / bug          open issue tracker
+    btrack releases                        see changelog
+
+  ` + ui.StyleHighlight.Render("SHELL AUTOCOMPLETE") + `
+    btrack completion zsh >> ~/.zshrc      zsh
+    btrack completion bash >> ~/.bashrc    bash
+    btrack completion fish > completions   fish
 
   Use ` + ui.StyleDimmed.Render("btrack <command> --help") + ` for details on any command.`,
 	SilenceUsage: true,

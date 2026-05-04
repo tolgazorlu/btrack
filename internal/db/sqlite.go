@@ -103,6 +103,36 @@ func (s *SQLiteStore) GetRecentSessions(limit int) ([]*Session, error) {
 	return scanSessions(rows)
 }
 
+func (s *SQLiteStore) GetSessionByID(id int64) (*Session, error) {
+	rows, err := s.db.Query(
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		 FROM sessions WHERE id=? LIMIT 1`, id,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	sessions, err := scanSessions(rows)
+	if err != nil || len(sessions) == 0 {
+		return nil, err
+	}
+	return sessions[0], nil
+}
+
+func (s *SQLiteStore) SearchSessions(query string) ([]*Session, error) {
+	q := "%" + strings.ToLower(query) + "%"
+	rows, err := s.db.Query(
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		 FROM sessions WHERE LOWER(task_name) LIKE ? OR LOWER(message) LIKE ?
+		 ORDER BY start_time DESC LIMIT 200`, q, q,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanSessions(rows)
+}
+
 func (s *SQLiteStore) GetSessionsForDate(date time.Time) ([]*Session, error) {
 	y, m, d := date.Local().Date()
 	from := time.Date(y, m, d, 0, 0, 0, 0, time.Local).UTC()

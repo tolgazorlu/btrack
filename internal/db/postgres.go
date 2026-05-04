@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -92,6 +93,36 @@ func (s *PostgresStore) GetRecentSessions(limit int) ([]*Session, error) {
 	rows, err := s.db.Query(
 		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
 		 FROM sessions ORDER BY start_time DESC LIMIT $1`, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanSessionsPG(rows)
+}
+
+func (s *PostgresStore) GetSessionByID(id int64) (*Session, error) {
+	rows, err := s.db.Query(
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		 FROM sessions WHERE id=$1 LIMIT 1`, id,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	sessions, err := scanSessionsPG(rows)
+	if err != nil || len(sessions) == 0 {
+		return nil, err
+	}
+	return sessions[0], nil
+}
+
+func (s *PostgresStore) SearchSessions(query string) ([]*Session, error) {
+	q := "%" + strings.ToLower(query) + "%"
+	rows, err := s.db.Query(
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		 FROM sessions WHERE LOWER(task_name) LIKE $1 OR LOWER(message) LIKE $1
+		 ORDER BY start_time DESC LIMIT 200`, q,
 	)
 	if err != nil {
 		return nil, err
