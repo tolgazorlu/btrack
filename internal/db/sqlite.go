@@ -103,6 +103,22 @@ func (s *SQLiteStore) GetRecentSessions(limit int) ([]*Session, error) {
 	return scanSessions(rows)
 }
 
+func (s *SQLiteStore) GetSessionsForDate(date time.Time) ([]*Session, error) {
+	y, m, d := date.Local().Date()
+	from := time.Date(y, m, d, 0, 0, 0, 0, time.Local).UTC()
+	to := from.Add(24 * time.Hour)
+	rows, err := s.db.Query(
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		 FROM sessions WHERE start_time >= ? AND start_time < ?
+		 ORDER BY start_time ASC`, from, to,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanSessions(rows)
+}
+
 func (s *SQLiteStore) CreateLogEntry(e *LogEntry) error {
 	res, err := s.db.Exec(
 		`INSERT INTO log_entries (session_id, note, timestamp) VALUES (?, ?, ?)`,

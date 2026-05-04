@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -91,6 +92,22 @@ func (s *PostgresStore) GetRecentSessions(limit int) ([]*Session, error) {
 	rows, err := s.db.Query(
 		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
 		 FROM sessions ORDER BY start_time DESC LIMIT $1`, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanSessionsPG(rows)
+}
+
+func (s *PostgresStore) GetSessionsForDate(date time.Time) ([]*Session, error) {
+	y, m, d := date.Local().Date()
+	from := time.Date(y, m, d, 0, 0, 0, 0, time.Local).UTC()
+	to := from.Add(24 * time.Hour)
+	rows, err := s.db.Query(
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		 FROM sessions WHERE start_time >= $1 AND start_time < $2
+		 ORDER BY start_time ASC`, from, to,
 	)
 	if err != nil {
 		return nil, err
