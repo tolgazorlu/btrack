@@ -5,7 +5,6 @@ project_name: btrack
 before:
   hooks:
     - go mod tidy
-    - go generate ./...
 
 builds:
   - env:
@@ -50,6 +49,8 @@ brews:
     homepage: https://github.com/tolgazorlu/btrack
     description: AI-native CLI time tracker with git-style workflow
     license: MIT
-    install: bin.install "btrack"
-    test: system "#{bin}/btrack", "--version"
-
+    install: |
+      bin.install "btrack"
+    test: |
+      system "#{bin}/btrack", "--version"
+    extra_install: ""

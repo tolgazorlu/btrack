@@ -37,10 +37,24 @@ jobs:
           git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/tolgazorlu/homebrew-btrack.git
           cd homebrew-btrack
 
-          python3 << 'EOF'
+          # Find the formula file (could be at root or Formula/)
+          if [ -f "btrack.rb" ]; then
+            FORMULA="btrack.rb"
+          elif [ -f "Formula/btrack.rb" ]; then
+            FORMULA="Formula/btrack.rb"
+          else
+            echo "Formula file not found!"
+            ls -la
+            exit 1
+          fi
+
+          echo "Found formula at: $FORMULA"
+          cat "$FORMULA"
+
+          python3 << EOF
           import re
 
-          with open("Formula/btrack.rb", "r") as f:
+          with open("$FORMULA", "r") as f:
               content = f.read()
 
           # Remove define_method(:install) blocks
@@ -50,24 +64,25 @@ jobs:
               content
           )
 
-          # Add def install before test do
-          content = content.replace(
-              '  test do',
-              '  def install\n    bin.install "btrack"\n  end\n\n  test do'
-          )
+          # Add def install before test do if not already present
+          if 'def install' not in content:
+              content = content.replace(
+                  '  test do',
+                  '  def install\n    bin.install "btrack"\n  end\n\n  test do'
+              )
 
-          with open("Formula/btrack.rb", "w") as f:
+          with open("$FORMULA", "w") as f:
               f.write(content)
 
-          print("Formula fixed.")
-          with open("Formula/btrack.rb") as f:
+          print("Formula fixed:")
+          with open("$FORMULA") as f:
               print(f.read())
           EOF
 
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
-          git add Formula/btrack.rb
-          git commit -m "fix: use def install instead of define_method" || echo "No changes"
+          git add "$FORMULA"
+          git diff --staged --quiet || git commit -m "fix: use def install instead of define_method"
           git push
 
   test:
