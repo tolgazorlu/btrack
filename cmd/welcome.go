@@ -58,21 +58,21 @@ func printWelcome(isUpgrade bool, prevVersion string) {
 		ui.StyleDimmed.Render("  time tracker for developers") + "\n\n" +
 		"  " + sep + "\n\n" +
 		"  " + ui.StyleHighlight.Render("QUICK START") + "\n\n" +
-		c(`btrack start "fix login bug"`, "start tracking a task") + "\n" +
-		c(`btrack note "found the issue"`, "add a checkpoint note") + "\n" +
-		c(`btrack stop -m "fixed it #bugfix"`, "stop and save") + "\n\n" +
+		c(`btrack s "fix login bug"`, `start  (btrack start)`) + "\n" +
+		c(`btrack n "found the issue"`, `note   (btrack note)`) + "\n" +
+		c(`btrack x -m "fixed it #bugfix"`, `stop   (btrack stop)`) + "\n\n" +
 		"  " + sep + "\n\n" +
 		"  " + ui.StyleHighlight.Render("REVIEW") + "\n\n" +
-		c("btrack day", "today's sessions as a tree") + "\n" +
-		c("btrack day yesterday", "yesterday's sessions") + "\n" +
-		c("btrack history", "all past sessions in a table") + "\n" +
-		c("btrack status", "live view of active session") + "\n\n" +
+		c("btrack d", `day    — today as a tree`) + "\n" +
+		c("btrack d yesterday", "yesterday's sessions") + "\n" +
+		c("btrack h", `history — all past sessions`) + "\n" +
+		c("btrack w", `status  — live view`) + "\n\n" +
 		"  " + sep + "\n\n" +
 		"  " + ui.StyleHighlight.Render("AI  ") +
 		ui.StyleDimmed.Render("(optional — needs an API key)") + "\n\n" +
 		c("btrack ai setup", "configure OpenAI / Claude / Gemini") + "\n" +
-		c("btrack ai summarize", "standup summary from today's work") + "\n" +
-		c("btrack ai insights", "weekly stats + AI analysis") + "\n\n" +
+		c("btrack ai sum", "standup summary from today") + "\n" +
+		c("btrack ai ins", "weekly stats + AI analysis") + "\n\n" +
 		"  " + sep + "\n\n" +
 		"  " + ui.StyleHighlight.Render("CONFIG") + "\n\n" +
 		c("btrack config hours 8", "set daily work target (default: 8h)") + "\n" +

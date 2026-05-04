@@ -13,20 +13,25 @@ import (
 )
 
 var startCmd = &cobra.Command{
-	Use:   "start <task>",
-	Short: "Start tracking a task",
+	Use:     "start <task>",
+	Aliases: []string{"s"},
+	Short:   "Start tracking a task",
 	Long: `Start a new tracking session for a task.
 
-Examples:
+Usage:
   btrack start "fix login redirect bug"
-  btrack start "write unit tests for auth module"
-  btrack start "review PR #42"
+  btrack s "fix login redirect bug"      (short alias)
+
+Examples:
+  btrack s "fix login redirect bug"
+  btrack s "write unit tests for auth module"
+  btrack s "review PR #42"
 
 Tips:
   · Git branch and repo are captured automatically
   · Only one session can be active at a time
-  · Add notes while working: btrack note "found the issue"
-  · Finish with:           btrack stop -m "what you did"`,
+  · Add notes while working: btrack n "found the issue"
+  · Finish with:           btrack x -m "what you did"`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskName := strings.Join(args, " ")

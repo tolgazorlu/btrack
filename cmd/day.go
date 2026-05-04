@@ -12,14 +12,19 @@ import (
 )
 
 var dayCmd = &cobra.Command{
-	Use:   "day [today|yesterday|YYYY-MM-DD]",
-	Short: "Show all sessions for a day as a tree",
+	Use:     "day [today|yesterday|YYYY-MM-DD]",
+	Aliases: []string{"d"},
+	Short:   "Show all sessions for a day as a tree",
 	Long: `Show all sessions for a day in a tree view with notes and progress.
 
+Usage:
+  btrack day
+  btrack d       (short alias)
+
 Examples:
-  btrack day                 (today)
-  btrack day yesterday
-  btrack day 2026-05-01
+  btrack d               (today)
+  btrack d yesterday
+  btrack d 2026-05-01
 
 What you'll see:
   · Each session as a branch with time range and duration
@@ -29,7 +34,7 @@ What you'll see:
 
 Tips:
   · Set your daily target with: btrack config hours 8
-  · Add notes while working with: btrack note "what you found"`,
+  · Add notes while working with: btrack n "what you found"`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runDay,
 }

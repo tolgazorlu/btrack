@@ -15,25 +15,25 @@ var rootCmd = &cobra.Command{
 	Long: ui.StyleTitle.Render("btrack") + `  ` + ui.StyleDimmed.Render("— time tracker for developers") + `
 
   ` + ui.StyleHighlight.Render("DAILY WORKFLOW") + `
-    btrack start "fix login bug"           start a session
-    btrack note "found the JWT issue"      add a checkpoint note
-    btrack stop -m "fixed JWT #bugfix"     stop and save
-    btrack resume                          continue the last session
+    btrack s "fix login bug"               start a session       (start)
+    btrack n "found the JWT issue"         add a note            (note)
+    btrack x -m "fixed JWT #bugfix"        stop and save         (stop)
+    btrack r                               continue last session  (resume)
 
   ` + ui.StyleHighlight.Render("REVIEW YOUR WORK") + `
-    btrack status                          live view (press q to exit)
-    btrack day                             today as a tree with notes
-    btrack day yesterday                   yesterday's sessions
-    btrack day 2026-05-01                  any specific date
-    btrack history                         last 20 sessions in a table
-    btrack history -n 50 -v               50 sessions with notes
+    btrack w                               live view             (status)
+    btrack d                               today as a tree       (day)
+    btrack d yesterday                     yesterday's sessions
+    btrack d 2026-05-01                    any specific date
+    btrack h                               last 20 sessions      (history)
+    btrack h -n 50 -v                      50 sessions with notes
 
   ` + ui.StyleHighlight.Render("AI FEATURES") + `
     btrack ai setup                        configure an API key
-    btrack ai summarize                    standup summary from today
-    btrack ai summarize --days 3           last 3 days
-    btrack ai insights                     weekly productivity dashboard
-    btrack ai insights --no-ai            stats only, no AI key needed
+    btrack ai sum                          standup from today     (summarize)
+    btrack ai sum --days 3                 last 3 days
+    btrack ai ins                          productivity dashboard (insights)
+    btrack ai ins --no-ai                 stats only, no key needed
 
   ` + ui.StyleHighlight.Render("SETTINGS") + `
     btrack config                          show all current settings

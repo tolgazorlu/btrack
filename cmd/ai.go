@@ -84,8 +84,9 @@ func runSetupWizard() error {
 // ─── ai summarize ────────────────────────────────────────────────────────────
 
 var aiSummarizeCmd = &cobra.Command{
-	Use:   "summarize",
-	Short: "Generate a standup summary from your sessions",
+	Use:     "summarize",
+	Aliases: []string{"sum", "s"},
+	Short:   "Generate a standup summary from your sessions",
 	Long: `Use AI to write a standup-ready summary of your recent work.
 
 Examples:
@@ -146,8 +147,9 @@ Tips:
 // ─── ai insights ─────────────────────────────────────────────────────────────
 
 var aiInsightsCmd = &cobra.Command{
-	Use:   "insights",
-	Short: "Show productivity dashboard with AI analysis",
+	Use:     "insights",
+	Aliases: []string{"ins", "i"},
+	Short:   "Show productivity dashboard with AI analysis",
 	Long: `Display a stats dashboard and AI analysis of your work patterns.
 
 Examples:

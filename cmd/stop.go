@@ -15,14 +15,19 @@ import (
 )
 
 var stopCmd = &cobra.Command{
-	Use:   "stop",
-	Short: "Stop the active session and save it",
+	Use:     "stop",
+	Aliases: []string{"x"},
+	Short:   "Stop the active session and save it",
 	Long: `Stop the active session and save it with a closing message.
 
+Usage:
+  btrack stop -m "message"
+  btrack x -m "message"      (short alias)
+
 Examples:
-  btrack stop -m "fixed JWT expiry in auth middleware #bugfix"
-  btrack stop -m "added 12 unit tests, all passing #test"
-  btrack stop          (AI suggests a message based on your notes)
+  btrack x -m "fixed JWT expiry in auth middleware #bugfix"
+  btrack x -m "added 12 unit tests, all passing #test"
+  btrack x          (AI suggests a message based on your notes)
 
 Flags:
   -m, --message   Closing message describing what you did
@@ -31,7 +36,7 @@ Flags:
 Tips:
   · Add #tags at the end to categorize your work
   · Common tags: #bugfix #feature #test #docs #refactor #ci
-  · View past sessions with: btrack history`,
+  · View past sessions with: btrack h`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		message, _ := cmd.Flags().GetString("message")
 		noAI, _ := cmd.Flags().GetBool("no-ai")

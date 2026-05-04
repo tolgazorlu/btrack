@@ -9,12 +9,14 @@ import (
 )
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Show the active session with live elapsed time",
+	Use:     "status",
+	Aliases: []string{"w"},
+	Short:   "Watch the active session (live elapsed time)",
 	Long: `Show a live view of your current tracking session.
 
-Examples:
+Usage:
   btrack status
+  btrack w       (short alias — w = watch)
 
 Controls:
   q / esc   Quit

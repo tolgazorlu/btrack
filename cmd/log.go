@@ -11,17 +11,21 @@ import (
 
 var logCmd = &cobra.Command{
 	Use:     "note <text>",
-	Aliases: []string{"log"},
+	Aliases: []string{"n", "log"},
 	Short:   "Add a checkpoint note to the active session",
 	Long: `Add a note to the currently running session.
 
+Usage:
+  btrack note "text"
+  btrack n "text"      (short alias)
+
 Examples:
-  btrack note "reproduced the bug on staging"
-  btrack note "tried approach A, didn't work"
-  btrack note "found root cause: JWT clock skew"
+  btrack n "reproduced the bug on staging"
+  btrack n "tried approach A, didn't work"
+  btrack n "found root cause: JWT clock skew"
 
 Tips:
-  · Notes appear in: btrack day (tree view)
+  · Notes appear in: btrack d (tree view)
   · AI uses your notes to write standup summaries
   · Add as many as you want — they tell the story of your work`,
 	Args: cobra.MinimumNArgs(1),

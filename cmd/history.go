@@ -14,22 +14,25 @@ import (
 
 var historyCmd = &cobra.Command{
 	Use:     "history",
-	Aliases: []string{"hist"},
+	Aliases: []string{"h", "hist"},
 	Short:   "Show past sessions in a table",
 	Long: `List your past tracking sessions in a table view.
 
-Examples:
+Usage:
   btrack history
-  btrack history -n 50
-  btrack history -v        (includes notes under each session)
-  btrack hist              (short alias)
+  btrack h         (short alias)
+
+Examples:
+  btrack h
+  btrack h -n 50
+  btrack h -v        (includes notes under each session)
 
 Flags:
   -n, --limit   Number of sessions to show (default 20)
   -v, --notes   Also show checkpoint notes under each session
 
 Tips:
-  · For a tree view of a single day, use: btrack day
+  · For a tree view of a single day, use: btrack d
   · For AI analysis of your patterns, use: btrack ai insights`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		limit, _ := cmd.Flags().GetInt("limit")

@@ -10,12 +10,17 @@ import (
 )
 
 var resumeCmd = &cobra.Command{
-	Use:   "resume",
-	Short: "Resume the last stopped session",
+	Use:     "resume",
+	Aliases: []string{"r"},
+	Short:   "Resume the last stopped session",
 	Long: `Start a new session copying the task name from your last session.
 
+Usage:
+  btrack resume
+  btrack r        (short alias)
+
 Examples:
-  btrack resume   (picks up where you left off)
+  btrack r   (picks up where you left off)
 
 Tips:
   · Useful after a break, lunch, or interruption
