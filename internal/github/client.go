@@ -95,13 +95,17 @@ func (a *Activity) Summary() string {
 	return sb.String()
 }
 
-func (c *Client) do(path string, v interface{}) error {
+func (c *Client) do(path string, accept string, v interface{}) error {
 	req, err := http.NewRequest("GET", baseURL+path, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.pat)
-	req.Header.Set("Accept", "application/vnd.github+json")
+	if accept != "" {
+		req.Header.Set("Accept", accept)
+	} else {
+		req.Header.Set("Accept", "application/vnd.github+json")
+	}
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
 	resp, err := c.http.Do(req)
@@ -125,10 +129,62 @@ func (c *Client) do(path string, v interface{}) error {
 
 func (c *Client) GetUser() (*UserInfo, error) {
 	var u UserInfo
-	if err := c.do("/user", &u); err != nil {
+	if err := c.do("/user", "", &u); err != nil {
 		return nil, err
 	}
 	return &u, nil
+}
+
+// searchCommits uses the GitHub search API to find commits authored by the user
+// in a date range. More reliable than events API for private repos.
+func (c *Client) searchCommits(since, until time.Time) ([]*Commit, error) {
+	dateFilter := fmt.Sprintf("%s..%s",
+		since.UTC().Format("2006-01-02"),
+		until.UTC().Format("2006-01-02"),
+	)
+	path := fmt.Sprintf(
+		"/search/commits?q=author%%3A%s+committer-date%%3A%s&per_page=100&sort=committer-date&order=desc",
+		c.username, dateFilter,
+	)
+
+	type searchResult struct {
+		Items []struct {
+			SHA    string `json:"sha"`
+			HTMLURL string `json:"html_url"`
+			Commit struct {
+				Message   string `json:"message"`
+				Committer struct {
+					Date time.Time `json:"date"`
+				} `json:"committer"`
+			} `json:"commit"`
+			Repository struct {
+				FullName string `json:"full_name"`
+			} `json:"repository"`
+		} `json:"items"`
+	}
+
+	var result searchResult
+	// Search commits API requires the cloak preview header.
+	if err := c.do(path, "application/vnd.github.cloak-preview+json", &result); err != nil {
+		return nil, err
+	}
+
+	var commits []*Commit
+	for _, item := range result.Items {
+		sha := item.SHA
+		if len(sha) > 7 {
+			sha = sha[:7]
+		}
+		msg := strings.SplitN(item.Commit.Message, "\n", 2)[0]
+		commits = append(commits, &Commit{
+			SHA:     sha,
+			Message: msg,
+			Repo:    item.Repository.FullName,
+			Time:    item.Commit.Committer.Date,
+			URL:     item.HTMLURL,
+		})
+	}
+	return commits, nil
 }
 
 // raw event types used only for decoding
@@ -137,13 +193,6 @@ type ghEvent struct {
 	CreatedAt time.Time       `json:"created_at"`
 	Repo      struct{ Name string `json:"name"` } `json:"repo"`
 	Payload   json.RawMessage `json:"payload"`
-}
-
-type pushPayload struct {
-	Commits []struct {
-		SHA     string `json:"sha"`
-		Message string `json:"message"`
-	} `json:"commits"`
 }
 
 type prPayload struct {
@@ -174,15 +223,20 @@ type issuePayload struct {
 	} `json:"issue"`
 }
 
-// GetActivity fetches all GitHub events between since and until.
-// Events are fetched from the /users/{username}/events endpoint (newest-first).
+// GetActivity fetches commits (via search API) and PR/issue events (via events API)
+// between since and until.
 func (c *Client) GetActivity(since, until time.Time) (*Activity, error) {
 	act := &Activity{Date: since}
 
+	// Use search API for commits — more reliable than events API for private repos.
+	if commits, err := c.searchCommits(since, until); err == nil {
+		act.Commits = commits
+	}
+	// Fall back to events API for PR and issue activity.
 	for page := 1; page <= 5; page++ {
 		var events []ghEvent
 		path := fmt.Sprintf("/users/%s/events?per_page=100&page=%d", c.username, page)
-		if err := c.do(path, &events); err != nil {
+		if err := c.do(path, "", &events); err != nil {
 			return nil, err
 		}
 		if len(events) == 0 {
@@ -200,26 +254,6 @@ func (c *Client) GetActivity(since, until time.Time) (*Activity, error) {
 			}
 
 			switch e.Type {
-			case "PushEvent":
-				var p pushPayload
-				if json.Unmarshal(e.Payload, &p) != nil {
-					continue
-				}
-				for _, commit := range p.Commits {
-					msg := strings.SplitN(commit.Message, "\n", 2)[0]
-					sha := commit.SHA
-					if len(sha) > 7 {
-						sha = sha[:7]
-					}
-					act.Commits = append(act.Commits, &Commit{
-						SHA:     sha,
-						Message: msg,
-						Repo:    e.Repo.Name,
-						Time:    e.CreatedAt,
-						URL:     "https://github.com/" + e.Repo.Name + "/commit/" + commit.SHA,
-					})
-				}
-
 			case "PullRequestEvent":
 				var p prPayload
 				if json.Unmarshal(e.Payload, &p) != nil {
