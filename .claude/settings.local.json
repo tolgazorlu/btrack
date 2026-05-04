@@ -12,7 +12,20 @@
       "Bash(./btrack.exe start *)",
       "Bash(./btrack.exe history *)",
       "PowerShell(gh --version 2>$null)",
-      "Bash(go get *)"
+      "Bash(go get *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git tag *)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/tolgazorlu/homebrew-btrack/main/btrack.rb\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/tolgazorlu/homebrew-btrack/main/Formula/btrack.rb\")",
+      "Bash(curl -s \"https://api.github.com/repos/tolgazorlu/btrack/releases\")",
+      "Bash(python3 -c \"import json,sys; releases=json.load\\(sys.stdin\\); [print\\(r['tag_name'], r['assets'] and [a['name'] for a in r['assets']] or '\\(no assets\\)'\\) for r in releases]\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const r=JSON.parse\\(d\\); r.forEach\\(x=>console.log\\(x.tag_name, x.assets.map\\(a=>a.name\\)\\)\\)\")",
+      "Bash(curl -s \"https://api.github.com/repos/tolgazorlu/btrack/releases\" -o C:/tmp/releases.json)",
+      "Bash(findstr /i \"tag_name\\\\|browser_download\")",
+      "PowerShell($r = Invoke-RestMethod \"https://api.github.com/repos/tolgazorlu/btrack/releases\"; $r | ForEach-Object { Write-Host \"=== $\\($_.tag_name\\) ===\" ; $_.assets | ForEach-Object { $_.name } })",
+      "PowerShell($r = Invoke-RestMethod \"https://api.github.com/repos/tolgazorlu/btrack\"; Write-Host \"private: $\\($r.private\\)\")"
     ]
   }
 }

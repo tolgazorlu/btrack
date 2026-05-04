@@ -129,6 +129,10 @@ func (m StatusModel) View() string {
 	return b.String()
 }
 
+func RenderProgressBar(d time.Duration, dailyHours int) string {
+	return renderProgressBar(d, dailyHours)
+}
+
 func renderProgressBar(d time.Duration, dailyHours int) string {
 	const width = 40
 	pct := d.Hours() / float64(dailyHours)

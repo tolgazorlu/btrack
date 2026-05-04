@@ -12,7 +12,17 @@ import (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Show or set btrack configuration",
+	Short: "Show or update btrack settings",
+	Long: `Show all current btrack settings.
+
+Examples:
+  btrack config              (show all settings)
+  btrack config hours 6      (set daily work target to 6 hours)
+  btrack config hours 8      (set back to 8 hours)
+
+Settings:
+  hours     Daily work target used in progress bars (default 8)
+  provider  Active AI provider — set via: btrack ai setup`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -32,13 +42,13 @@ var configCmd = &cobra.Command{
 		fmt.Println("  " + sep)
 
 		fmt.Println("  " + dim("work"))
-		fmt.Println("  " + kv("daily_hours", fmt.Sprintf("%dh", cfg.Work.DailyHours)))
+		fmt.Println("  " + kv("hours", fmt.Sprintf("%dh / day", cfg.Work.DailyHours)))
 		fmt.Println()
 
 		fmt.Println("  " + dim("ai"))
 		provider := cfg.AI.Provider
 		if provider == "" {
-			provider = "(not set)"
+			provider = "(not set — run: btrack ai setup)"
 		}
 		fmt.Println("  " + kv("provider", provider))
 		model := cfg.AI.Model
@@ -57,27 +67,19 @@ var configCmd = &cobra.Command{
 	},
 }
 
-var configDayCmd = &cobra.Command{
-	Use:   "day",
-	Short: "Configure daily work settings",
+var configHoursCmd = &cobra.Command{
+	Use:   "hours <n>",
+	Short: "Set your daily work hours target",
+	Long: `Set the daily work hours target used in progress bars.
+
+Examples:
+  btrack config hours 6
+  btrack config hours 8
+
+Valid range: 1–24`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			cfg, err := config.Load()
-			if err != nil {
-				return err
-			}
-			fmt.Printf("\n  %s  %s\n\n",
-				ui.StyleDimmed.Render("daily_hours"),
-				ui.StyleHighlight.Render(fmt.Sprintf("%dh", cfg.Work.DailyHours)),
-			)
-			return nil
-		}
-
-		if len(args) != 2 || args[0] != "time" {
-			return fmt.Errorf("usage: btrack config day time <hours>")
-		}
-
-		hours, err := strconv.Atoi(args[1])
+		hours, err := strconv.Atoi(args[0])
 		if err != nil || hours < 1 || hours > 24 {
 			return fmt.Errorf("hours must be a number between 1 and 24")
 		}
@@ -95,6 +97,6 @@ var configDayCmd = &cobra.Command{
 }
 
 func init() {
-	configCmd.AddCommand(configDayCmd)
+	configCmd.AddCommand(configHoursCmd)
 	rootCmd.AddCommand(configCmd)
 }

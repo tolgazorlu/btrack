@@ -10,9 +10,21 @@ import (
 )
 
 var logCmd = &cobra.Command{
-	Use:   "log <note>",
-	Short: "Add a checkpoint note to the active session",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "note <text>",
+	Aliases: []string{"log"},
+	Short:   "Add a checkpoint note to the active session",
+	Long: `Add a note to the currently running session.
+
+Examples:
+  btrack note "reproduced the bug on staging"
+  btrack note "tried approach A, didn't work"
+  btrack note "found root cause: JWT clock skew"
+
+Tips:
+  · Notes appear in: btrack day (tree view)
+  · AI uses your notes to write standup summaries
+  · Add as many as you want — they tell the story of your work`,
+	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		note := strings.Join(args, " ")
 

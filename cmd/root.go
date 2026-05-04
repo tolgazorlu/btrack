@@ -11,17 +11,29 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "btrack",
-	Short: ui.StyleTitle.Render("btrack") + " — git-style time tracker for developers",
+	Short: ui.StyleTitle.Render("btrack") + " — time tracker for developers",
 	Long: ui.StyleTitle.Render("btrack") + `
 
-  A minimalist, AI-native CLI time tracker with git-style workflow.
+  A minimalist CLI time tracker with AI-powered summaries.
 
-  Examples:
-    btrack start "fix login bug"
-    btrack log "isolated the JWT expiry issue"
-    btrack stop -m "fixed JWT expiry in auth middleware #bugfix"
-    btrack status
-    btrack ai summarize`,
+  Workflow:
+    btrack start "fix login bug"           start tracking
+    btrack note "found the issue"          add a checkpoint note
+    btrack stop -m "fixed JWT #bugfix"     stop and save
+
+  Review:
+    btrack status                          live view of current session
+    btrack day                             today's sessions as a tree
+    btrack history                         past sessions in a table
+
+  AI:
+    btrack ai summarize                    generate a standup summary
+    btrack ai insights                     stats dashboard + AI analysis
+    btrack ai setup                        configure API key
+
+  Config:
+    btrack config                          show settings
+    btrack config hours 8                  set daily work target`,
 	SilenceUsage: true,
 }
 

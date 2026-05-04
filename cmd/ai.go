@@ -16,14 +16,36 @@ import (
 
 var aiCmd = &cobra.Command{
 	Use:   "ai",
-	Short: "AI-powered productivity commands",
+	Short: "AI-powered summaries and insights",
+	Long: `Use AI to summarize your work and analyze productivity patterns.
+
+Commands:
+  btrack ai setup       Configure an API key (OpenAI, Claude, or Gemini)
+  btrack ai summarize   Generate a standup summary from today's sessions
+  btrack ai insights    Show a stats dashboard with AI analysis
+
+Run any command with --help for details.`,
 }
 
 // ─── ai setup ────────────────────────────────────────────────────────────────
 
 var aiSetupCmd = &cobra.Command{
 	Use:   "setup",
-	Short: "Configure AI provider keys (interactive wizard)",
+	Short: "Configure an AI provider key (interactive)",
+	Long: `Walk through adding an API key for an AI provider.
+
+Supported providers:
+  · OpenAI  (GPT-4o)      — platform.openai.com/api-keys
+  · Claude  (Sonnet 4.6)  — console.anthropic.com/settings/keys
+  · Gemini  (2.0 Flash)   — aistudio.google.com/apikey
+
+What happens:
+  1. Pick a provider
+  2. Paste your API key (masked input)
+  3. Key is validated with a live API call
+  4. Saved to ~/.config/btrack/config.yaml
+
+You can add multiple providers and switch between them.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runSetupWizard()
 	},
@@ -63,7 +85,19 @@ func runSetupWizard() error {
 
 var aiSummarizeCmd = &cobra.Command{
 	Use:   "summarize",
-	Short: "Generate a daily standup from today's sessions",
+	Short: "Generate a standup summary from your sessions",
+	Long: `Use AI to write a standup-ready summary of your recent work.
+
+Examples:
+  btrack ai summarize
+  btrack ai summarize --days 3
+
+Flags:
+  -d, --days   Number of days to include (default 1 = today)
+
+Tips:
+  · The more notes you add with "btrack note", the better the summary
+  · Requires AI key — run: btrack ai setup`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		days, _ := cmd.Flags().GetInt("days")
 
@@ -113,7 +147,25 @@ var aiSummarizeCmd = &cobra.Command{
 
 var aiInsightsCmd = &cobra.Command{
 	Use:   "insights",
-	Short: "Show stats dashboard + AI productivity analysis",
+	Short: "Show productivity dashboard with AI analysis",
+	Long: `Display a stats dashboard and AI analysis of your work patterns.
+
+Examples:
+  btrack ai insights
+  btrack ai insights --days 14
+  btrack ai insights --no-ai    (stats only, no AI needed)
+
+Flags:
+  -d, --days   Days to analyze (default 7)
+      --no-ai  Show stats only, skip AI analysis
+
+What you'll see:
+  · Summary: total sessions, time, avg and longest session
+  · Daily activity chart with hours per day
+  · Top tasks by time spent
+  · Tag breakdown (#bugfix, #feature, etc.)
+  · Hourly activity pattern (when you work best)
+  · AI analysis of your patterns and suggestions`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		days, _ := cmd.Flags().GetInt("days")
 		noAI, _ := cmd.Flags().GetBool("no-ai")

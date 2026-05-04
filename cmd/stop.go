@@ -16,7 +16,22 @@ import (
 
 var stopCmd = &cobra.Command{
 	Use:   "stop",
-	Short: "Stop the active session",
+	Short: "Stop the active session and save it",
+	Long: `Stop the active session and save it with a closing message.
+
+Examples:
+  btrack stop -m "fixed JWT expiry in auth middleware #bugfix"
+  btrack stop -m "added 12 unit tests, all passing #test"
+  btrack stop          (AI suggests a message based on your notes)
+
+Flags:
+  -m, --message   Closing message describing what you did
+      --no-ai     Skip AI message suggestion
+
+Tips:
+  · Add #tags at the end to categorize your work
+  · Common tags: #bugfix #feature #test #docs #refactor #ci
+  · View past sessions with: btrack history`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		message, _ := cmd.Flags().GetString("message")
 		noAI, _ := cmd.Flags().GetBool("no-ai")

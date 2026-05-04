@@ -13,9 +13,25 @@ import (
 
 var dayCmd = &cobra.Command{
 	Use:   "day [today|yesterday|YYYY-MM-DD]",
-	Short: "Show all sessions for a day in a tree view",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runDay,
+	Short: "Show all sessions for a day as a tree",
+	Long: `Show all sessions for a day in a tree view with notes and progress.
+
+Examples:
+  btrack day                 (today)
+  btrack day yesterday
+  btrack day 2026-05-01
+
+What you'll see:
+  · Each session as a branch with time range and duration
+  · Notes indented under their session
+  · Progress bar toward your daily hour target
+  · Summary: total hours, sessions, target %
+
+Tips:
+  · Set your daily target with: btrack config hours 8
+  · Add notes while working with: btrack note "what you found"`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: runDay,
 }
 
 func runDay(cmd *cobra.Command, args []string) error {
@@ -68,9 +84,11 @@ func runDay(cmd *cobra.Command, args []string) error {
 		suffix = ui.StyleDimmed.Render("  yesterday")
 	}
 
+	sep := ui.StyleDimmed.Render(strings.Repeat("─", 58))
+
 	fmt.Println()
 	fmt.Printf("  %s  %s%s\n", ui.StyleTitle.Render("btrack"), ui.StyleHighlight.Render(dateLabel), suffix)
-	fmt.Println("  " + ui.StyleDimmed.Render(strings.Repeat("─", 58)))
+	fmt.Println("  " + sep)
 
 	if len(sessions) == 0 {
 		fmt.Println(ui.StyleSubtle.Render("\n  no sessions recorded for this day\n"))
@@ -83,14 +101,13 @@ func runDay(cmd *cobra.Command, args []string) error {
 		totalDur += d
 
 		isLast := i == len(sessions)-1
-		prefix := "  ├─"
-		childPrefix := "  │  "
+		branch := "  ├─"
+		childPfx := "  │  "
 		if isLast {
-			prefix = "  └─"
-			childPrefix = "     "
+			branch = "  └─"
+			childPfx = "     "
 		}
 
-		// Session header line
 		startStr := sess.StartTime.Local().Format("15:04")
 		endStr := "…"
 		if sess.EndTime != nil {
@@ -98,42 +115,37 @@ func runDay(cmd *cobra.Command, args []string) error {
 		}
 		timeRange := ui.StyleDimmed.Render(fmt.Sprintf("%s–%s", startStr, endStr))
 
-		taskStyle := ui.StyleHighlight
-		durStyle := ui.StyleElapsed
-
 		taskStr := sess.TaskName
 		if len(taskStr) > 32 {
 			taskStr = taskStr[:29] + "..."
 		}
 
 		fmt.Printf("%s %s  %s  %s\n",
-			ui.StyleDimmed.Render(prefix),
-			taskStyle.Render(fmt.Sprintf("%-33s", taskStr)),
+			ui.StyleDimmed.Render(branch),
+			ui.StyleHighlight.Render(fmt.Sprintf("%-33s", taskStr)),
 			timeRange,
-			durStyle.Render(formatDur(d)),
+			ui.StyleElapsed.Render(formatDur(d)),
 		)
 
-		// Tags
 		if len(sess.Tags) > 0 {
 			var tags string
 			for _, t := range sess.Tags {
 				tags += ui.StyleTag.Render(t) + " "
 			}
-			fmt.Printf("%s %s\n", ui.StyleDimmed.Render(childPrefix), strings.TrimSpace(tags))
+			fmt.Printf("%s %s\n", ui.StyleDimmed.Render(childPfx), strings.TrimSpace(tags))
 		}
 
-		// Log entries
 		logs, err := store.GetAllLogs(sess.ID)
 		if err == nil && len(logs) > 0 {
 			for j, log := range logs {
 				isLastLog := j == len(logs)-1
-				logPrefix := childPrefix + "├─"
+				logBranch := childPfx + "├─"
 				if isLastLog {
-					logPrefix = childPrefix + "└─"
+					logBranch = childPfx + "└─"
 				}
 				ts := log.Timestamp.Local().Format("15:04")
 				fmt.Printf("%s %s  %s\n",
-					ui.StyleDimmed.Render(logPrefix),
+					ui.StyleDimmed.Render(logBranch),
 					ui.StyleDimmed.Render(ts),
 					ui.StyleLogEntry.Render(log.Note),
 				)
@@ -145,13 +157,15 @@ func runDay(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Println("  " + ui.StyleDimmed.Render(strings.Repeat("─", 58)))
+	fmt.Println()
+	fmt.Println("  " + ui.RenderProgressBar(totalDur, dailyHours))
 
 	pct := int(totalDur.Hours() / float64(dailyHours) * 100)
 	if pct > 100 {
 		pct = 100
 	}
-	fmt.Printf("  %s  %s total  ·  %d sessions  ·  %s target (%d%%)\n\n",
+	fmt.Println("  " + sep)
+	fmt.Printf("  %s  %s total  ·  %d sessions  ·  %s target  ·  %d%%\n\n",
 		ui.StyleDimmed.Render("summary"),
 		ui.StyleElapsed.Render(formatDur(totalDur)),
 		len(sessions),
