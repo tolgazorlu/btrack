@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -67,7 +68,7 @@ Use cases:
 
 		out := os.Stdout
 		if outPath != "" {
-			f, err := os.Create(outPath)
+			f, err := os.Create(filepath.Clean(outPath))
 			if err != nil {
 				return fmt.Errorf("create file: %w", err)
 			}

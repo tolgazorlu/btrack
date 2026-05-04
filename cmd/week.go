@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
+	gh "github.com/tolgazorlu/btrack/internal/github"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -46,6 +47,9 @@ Tips:
 		}
 		defer store.Close()
 
+		// Fetch the full week's GitHub activity in one call if connected.
+		var weekGH map[string]*gh.Activity // key: "2006-01-02"
+
 		// Find Monday of current week.
 		now := time.Now()
 		weekday := int(now.Weekday())
@@ -55,6 +59,15 @@ Tips:
 		monday := now.AddDate(0, 0, -(weekday - 1))
 		y, m, d := monday.Local().Date()
 		weekStart := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+
+		// One GitHub fetch for the whole week.
+		if ghClient := ghClientFromConfig(cfg); ghClient != nil {
+			since := weekStart.UTC()
+			until := now.UTC()
+			if act, err := ghClient.GetActivity(since, until); err == nil {
+				weekGH = gh.SplitByDay(act)
+			}
+		}
 
 		sep := ui.StyleDimmed.Render(strings.Repeat("─", 60))
 
@@ -73,20 +86,32 @@ Tips:
 				break
 			}
 
+			// Look up this day's GitHub activity from the pre-fetched week bucket.
+			var dayGH *gh.Activity
+			if weekGH != nil {
+				dayGH = weekGH[day.Format("2006-01-02")]
+			}
+
 			sessions, err := store.GetSessionsForDate(day)
+
+			isToday := sameDay(day, now)
+			label := day.Format("Mon Jan 02")
+			todayMark := ""
+			if isToday {
+				todayMark = ui.StyleDimmed.Render("  ← today")
+			}
+
 			if err != nil || len(sessions) == 0 {
-				// Show empty day briefly
-				isToday := sameDay(day, now)
-				label := day.Format("Mon Jan 02")
-				todayMark := ""
-				if isToday {
-					todayMark = ui.StyleDimmed.Render("  ← today")
-				}
-				fmt.Printf("\n  %s%s\n",
+				// Show empty day with any GitHub activity
+				ghBadge := ghDayBadge(dayGH)
+				fmt.Printf("\n  %s%s%s\n",
 					ui.StyleDimmed.Render(label),
 					todayMark,
+					ghBadge,
 				)
-				fmt.Printf("  %s\n", ui.StyleDimmed.Render("  (no sessions)"))
+				if dayGH == nil || dayGH.IsEmpty() {
+					fmt.Printf("  %s\n", ui.StyleDimmed.Render("  (no sessions)"))
+				}
 				continue
 			}
 
@@ -98,17 +123,12 @@ Tips:
 			weekTotal += dayTotal
 			weekSessions += len(sessions)
 
-			isToday := sameDay(day, now)
-			label := day.Format("Mon Jan 02")
-			todayMark := ""
-			if isToday {
-				todayMark = ui.StyleDimmed.Render("  ← today")
-			}
-
-			fmt.Printf("\n  %s  %s%s\n",
+			ghBadge := ghDayBadge(dayGH)
+			fmt.Printf("\n  %s  %s%s%s\n",
 				ui.StyleHighlight.Render(label),
 				ui.StyleElapsed.Render(formatDur(dayTotal)),
 				todayMark,
+				ghBadge,
 			)
 
 			for j, sess := range sessions {
@@ -182,6 +202,39 @@ Tips:
 
 		return nil
 	},
+}
+
+// ghDayBadge returns a compact GitHub summary badge for a day, e.g. "  3↑ 1⎇"
+func ghDayBadge(act *gh.Activity) string {
+	if act == nil || act.IsEmpty() {
+		return ""
+	}
+	var parts []string
+	if n := len(act.Commits); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d commits", n))
+	}
+	prs := 0
+	for _, pr := range act.PullRequests {
+		if pr.Action == "opened" || pr.Action == "merged" {
+			prs++
+		}
+	}
+	if prs > 0 {
+		parts = append(parts, fmt.Sprintf("%d PRs", prs))
+	}
+	reviews := 0
+	for _, pr := range act.PullRequests {
+		if pr.Action == "reviewed" {
+			reviews++
+		}
+	}
+	if reviews > 0 {
+		parts = append(parts, fmt.Sprintf("%d reviews", reviews))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return ui.StyleDimmed.Render("  ·  " + strings.Join(parts, "  "))
 }
 
 func init() {

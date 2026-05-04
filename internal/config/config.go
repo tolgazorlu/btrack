@@ -9,11 +9,17 @@ import (
 	"github.com/spf13/viper"
 )
 
+type GitHubConfig struct {
+	PAT      string `mapstructure:"pat"`
+	Username string `mapstructure:"username"`
+}
+
 type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	AI       AIConfig       `mapstructure:"ai"`
 	Daemon   DaemonConfig   `mapstructure:"daemon"`
 	Work     WorkConfig     `mapstructure:"work"`
+	GitHub   GitHubConfig   `mapstructure:"github"`
 }
 
 type WorkConfig struct {
@@ -108,10 +114,10 @@ func Load() (*Config, error) {
 	}
 
 	dir := ConfigDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return nil, fmt.Errorf("create config dir: %w", err)
 	}
-	if err := os.MkdirAll(DataDir(), 0755); err != nil {
+	if err := os.MkdirAll(DataDir(), 0750); err != nil {
 		return nil, fmt.Errorf("create data dir: %w", err)
 	}
 
@@ -175,6 +181,20 @@ func SaveProviderKey(provider, key string) error {
 	return nil
 }
 
+// SaveGitHub persists the GitHub PAT and username.
+func SaveGitHub(pat, username string) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("github.pat", pat)
+	viper.Set("github.username", username)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
 // SaveDailyHours persists the daily work-hours target.
 func SaveDailyHours(hours int) error {
 	if _, err := Load(); err != nil {
@@ -207,9 +227,13 @@ ai:
 work:
   daily_hours: 8        # target working hours per day
 
+github:
+  pat: ""               # personal access token (read:user, repo)
+  username: ""          # your GitHub username (set automatically by: btrack github connect)
+
 daemon:
   # socket_path: ""
   # pid_file: ""
 `
-	os.WriteFile(path, []byte(content), 0600)
+	_ = os.WriteFile(filepath.Clean(path), []byte(content), 0600)
 }

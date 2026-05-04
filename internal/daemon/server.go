@@ -31,11 +31,11 @@ func NewServer(store db.Store) *Server {
 
 func (s *Server) Start() error {
 	socketPath := config.SocketPath()
-	if err := os.MkdirAll(filepath.Dir(socketPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(socketPath), 0750); err != nil {
 		return fmt.Errorf("create socket dir: %w", err)
 	}
 
-	os.Remove(socketPath)
+	_ = os.Remove(socketPath)
 
 	ln, err := net.Listen("unix", socketPath)
 	if err != nil {
@@ -66,15 +66,15 @@ func (s *Server) Start() error {
 
 func (s *Server) Stop() {
 	if s.listener != nil {
-		s.listener.Close()
+		_ = s.listener.Close()
 	}
-	os.Remove(config.PidFile())
-	os.Remove(config.SocketPath())
+	_ = os.Remove(config.PidFile())
+	_ = os.Remove(config.SocketPath())
 }
 
 func (s *Server) handleConn(conn net.Conn) {
 	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
 
 	data, err := io.ReadAll(conn)
 	if err != nil {
@@ -237,15 +237,15 @@ func (s *Server) handleResume() Response {
 
 func writeResponse(conn net.Conn, resp Response) {
 	data, _ := json.Marshal(resp)
-	conn.Write(data)
+	_, _ = conn.Write(data)
 }
 
 func writePid() error {
 	pidFile := config.PidFile()
-	if err := os.MkdirAll(filepath.Dir(pidFile), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(pidFile), 0750); err != nil {
 		return err
 	}
-	return os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
+	return os.WriteFile(filepath.Clean(pidFile), []byte(strconv.Itoa(os.Getpid())), 0600)
 }
 
 func sessionToDTO(s *db.Session) *SessionDTO {

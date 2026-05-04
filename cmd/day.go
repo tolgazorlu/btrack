@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
+	gh "github.com/tolgazorlu/btrack/internal/github"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -71,6 +72,16 @@ func runDay(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	defer store.Close()
+
+	// Fetch GitHub activity for the day if connected (non-blocking: ignore errors).
+	var ghActivity *gh.Activity
+	if ghClient := ghClientFromConfig(cfg); ghClient != nil {
+		dayStart := time.Date(target.Year(), target.Month(), target.Day(), 0, 0, 0, 0, time.Local).UTC()
+		dayEnd := dayStart.Add(24 * time.Hour)
+		if act, err := ghClient.GetActivity(dayStart, dayEnd); err == nil {
+			ghActivity = act
+		}
+	}
 
 	sessions, err := store.GetSessionsForDate(target)
 	if err != nil {
@@ -178,7 +189,76 @@ func runDay(cmd *cobra.Command, args []string) error {
 		pct,
 	)
 
+	// GitHub activity section
+	if ghActivity != nil && !ghActivity.IsEmpty() {
+		printDayGitHubSummary(ghActivity)
+	}
+
 	return nil
+}
+
+func printDayGitHubSummary(activity *gh.Activity) {
+	sep := ui.StyleDimmed.Render(strings.Repeat("─", 58))
+	fmt.Printf("  %s\n", ui.StyleDimmed.Render("github"))
+	fmt.Println("  " + sep)
+
+	if len(activity.Commits) > 0 {
+		fmt.Printf("  %s\n", ui.StyleDimmed.Render(fmt.Sprintf("commits  (%d)", len(activity.Commits))))
+		for _, c := range activity.Commits {
+			msg := c.Message
+			if len(msg) > 55 {
+				msg = msg[:52] + "..."
+			}
+			repo := c.Repo
+			if idx := strings.Index(repo, "/"); idx != -1 {
+				repo = repo[idx+1:]
+			}
+			fmt.Printf("  %s  %s  %s\n",
+				ui.StyleSubtle.Render(c.SHA),
+				ui.StyleDimmed.Render(msg),
+				ui.StyleSubtle.Render(repo),
+			)
+		}
+		fmt.Println()
+	}
+
+	if len(activity.PullRequests) > 0 {
+		fmt.Printf("  %s\n", ui.StyleDimmed.Render(fmt.Sprintf("pull requests  (%d)", len(activity.PullRequests))))
+		for _, pr := range activity.PullRequests {
+			t := pr.Title
+			if len(t) > 52 {
+				t = t[:49] + "..."
+			}
+			var badge string
+			switch pr.Action {
+			case "merged":
+				badge = ui.StyleSuccess.Render("[merged]")
+			case "opened":
+				badge = ui.StyleHighlight.Render("[opened]")
+			case "reviewed":
+				badge = ui.StyleWarning.Render("[reviewed]")
+			default:
+				badge = ui.StyleDimmed.Render("[" + pr.Action + "]")
+			}
+			fmt.Printf("  %s  %s\n", badge, ui.StyleDimmed.Render(t))
+		}
+		fmt.Println()
+	}
+
+	if len(activity.Issues) > 0 {
+		fmt.Printf("  %s\n", ui.StyleDimmed.Render(fmt.Sprintf("issues  (%d)", len(activity.Issues))))
+		for _, iss := range activity.Issues {
+			t := iss.Title
+			if len(t) > 55 {
+				t = t[:52] + "..."
+			}
+			fmt.Printf("  %s  %s\n",
+				ui.StyleDimmed.Render(fmt.Sprintf("[%s]", iss.Action)),
+				ui.StyleDimmed.Render(t),
+			)
+		}
+		fmt.Println()
+	}
 }
 
 func sameDay(a, b time.Time) bool {

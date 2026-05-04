@@ -51,7 +51,34 @@ func NewProviderFor(provider, key string) (Provider, error) {
 // SummarizeStandup generates a daily standup from recent sessions.
 func SummarizeStandup(ctx context.Context, p Provider, sessions []*db.Session, logs map[int64][]*db.LogEntry) (string, error) {
 	gitDiff, _ := getGitContext()
-	prompt := buildStandupPrompt(sessions, logs, gitDiff)
+	prompt := buildStandupPrompt(sessions, logs, gitDiff, "")
+	return p.Complete(ctx, prompt)
+}
+
+// SummarizeStandupWithGitHub generates a standup enriched with GitHub activity.
+func SummarizeStandupWithGitHub(ctx context.Context, p Provider, sessions []*db.Session, logs map[int64][]*db.LogEntry, githubActivity string) (string, error) {
+	gitDiff, _ := getGitContext()
+	prompt := buildStandupPrompt(sessions, logs, gitDiff, githubActivity)
+	return p.Complete(ctx, prompt)
+}
+
+// AnalyzeStatsWithGitHub asks the AI to interpret stats enriched with GitHub data.
+func AnalyzeStatsWithGitHub(ctx context.Context, p Provider, statsJSON, githubActivity string) (string, error) {
+	prompt := fmt.Sprintf(`Analyze these developer time-tracking statistics and GitHub activity, then provide actionable insights.
+Be specific, encouraging, and concise (under 200 words).
+
+Focus on:
+- Productivity patterns (best times, session lengths)
+- Tag/category distribution
+- GitHub contribution patterns (commits, PRs, reviews)
+- Correlation between tracked hours and GitHub output
+- One positive observation and one actionable suggestion
+
+Stats:
+%s
+
+GitHub Activity:
+%s`, statsJSON, githubActivity)
 	return p.Complete(ctx, prompt)
 }
 
@@ -116,7 +143,7 @@ func ValidateKey(ctx context.Context, p Provider) error {
 	return err
 }
 
-func buildStandupPrompt(sessions []*db.Session, logs map[int64][]*db.LogEntry, gitDiff string) string {
+func buildStandupPrompt(sessions []*db.Session, logs map[int64][]*db.LogEntry, gitDiff, githubActivity string) string {
 	var sb strings.Builder
 	sb.WriteString("Generate a concise professional daily standup from these time tracking entries:\n\n")
 	for _, s := range sessions {
@@ -131,8 +158,12 @@ func buildStandupPrompt(sessions []*db.Session, logs map[int64][]*db.LogEntry, g
 		}
 	}
 	if gitDiff != "" {
-		sb.WriteString("\nGit activity:\n")
+		sb.WriteString("\nLocal git changes:\n")
 		sb.WriteString(gitDiff)
+	}
+	if githubActivity != "" {
+		sb.WriteString("\nGitHub contributions:\n")
+		sb.WriteString(githubActivity)
 	}
 	sb.WriteString("\nFormat: What I did (bullets), blockers (if any), what's next. Keep under 150 words.")
 	return sb.String()

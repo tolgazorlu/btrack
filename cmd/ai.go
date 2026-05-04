@@ -133,10 +133,28 @@ Tips:
 			return err
 		}
 
+		// Enrich with GitHub activity if connected.
+		githubActivity := ""
+		if ghClient := ghClientFromConfig(cfg); ghClient != nil {
+			now := time.Now()
+			since := time.Date(now.Year(), now.Month(), now.Day()-days+1, 0, 0, 0, 0, time.Local).UTC()
+			until := now.UTC()
+			if act, err := ghClient.GetActivity(since, until); err == nil && !act.IsEmpty() {
+				githubActivity = act.Summary()
+			}
+		}
+
 		fmt.Print(ui.StyleDimmed.Render("\n  ✦ generating standup...\n\n"))
-		summary, err := ai.SummarizeStandup(context.Background(), provider, sessions, logsMap)
-		if err != nil {
-			return fmt.Errorf("AI error: %w", err)
+
+		var summary string
+		var sumErr error
+		if githubActivity != "" {
+			summary, sumErr = ai.SummarizeStandupWithGitHub(context.Background(), provider, sessions, logsMap, githubActivity)
+		} else {
+			summary, sumErr = ai.SummarizeStandup(context.Background(), provider, sessions, logsMap)
+		}
+		if sumErr != nil {
+			return fmt.Errorf("AI error: %w", sumErr)
 		}
 
 		fmt.Println(ui.RenderBox("Daily Standup  ·  "+provider.Name(), summary))
@@ -196,6 +214,17 @@ What you'll see:
 		printTagBreakdown(stats)
 		printPeakHours(stats)
 
+		// Fetch GitHub stats for the period if connected.
+		githubActivity := ""
+		if ghClient := ghClientFromConfig(cfg); ghClient != nil {
+			now := time.Now()
+			since := now.AddDate(0, 0, -days).UTC()
+			if act, err := ghClient.GetActivity(since, now.UTC()); err == nil && !act.IsEmpty() {
+				githubActivity = act.Summary()
+				printGitHubActivity(act, fmt.Sprintf("GitHub Activity — last %d days", days))
+			}
+		}
+
 		if noAI || cfg.AI.ActiveKey() == "" {
 			if cfg.AI.ActiveKey() == "" {
 				fmt.Printf("\n  %s\n\n",
@@ -212,9 +241,16 @@ What you'll see:
 		}
 
 		fmt.Print(ui.StyleDimmed.Render("\n  ✦ analysing with " + provider.Name() + "...\n\n"))
-		analysis, err := ai.AnalyzeStats(context.Background(), provider, stats.ToJSON())
-		if err != nil {
-			fmt.Printf("  %s\n\n", ui.StyleWarning.Render("AI error: "+err.Error()))
+
+		var analysis string
+		var anaErr error
+		if githubActivity != "" {
+			analysis, anaErr = ai.AnalyzeStatsWithGitHub(context.Background(), provider, stats.ToJSON(), githubActivity)
+		} else {
+			analysis, anaErr = ai.AnalyzeStats(context.Background(), provider, stats.ToJSON())
+		}
+		if anaErr != nil {
+			fmt.Printf("  %s\n\n", ui.StyleWarning.Render("AI error: "+anaErr.Error()))
 			return nil
 		}
 

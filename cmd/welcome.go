@@ -14,7 +14,7 @@ import (
 // checkWelcome prints a welcome or upgrade banner the first time a new version runs.
 func checkWelcome() {
 	versionFile := filepath.Join(config.ConfigDir(), ".version")
-	data, _ := os.ReadFile(versionFile)
+	data, _ := os.ReadFile(filepath.Clean(versionFile))
 	seen := strings.TrimSpace(string(data))
 
 	if seen == Version {
@@ -23,7 +23,7 @@ func checkWelcome() {
 
 	isUpgrade := seen != "" && seen != "dev"
 	printWelcome(isUpgrade, seen)
-	os.WriteFile(versionFile, []byte(Version), 0644) //nolint:errcheck
+	_ = os.WriteFile(filepath.Clean(versionFile), []byte(Version), 0600)
 }
 
 func printWelcome(isUpgrade bool, prevVersion string) {
