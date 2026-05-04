@@ -30,6 +30,46 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
+      - name: Fix Homebrew formula
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/tolgazorlu/homebrew-btrack.git
+          cd homebrew-btrack
+
+          python3 << 'EOF'
+          import re
+
+          with open("Formula/btrack.rb", "r") as f:
+              content = f.read()
+
+          # Remove define_method(:install) blocks
+          content = re.sub(
+              r'\n\s+define_method\(:install\) do\n\s+bin\.install "btrack"\n\s+end',
+              '',
+              content
+          )
+
+          # Add def install before test do
+          content = content.replace(
+              '  test do',
+              '  def install\n    bin.install "btrack"\n  end\n\n  test do'
+          )
+
+          with open("Formula/btrack.rb", "w") as f:
+              f.write(content)
+
+          print("Formula fixed.")
+          with open("Formula/btrack.rb") as f:
+              print(f.read())
+          EOF
+
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add Formula/btrack.rb
+          git commit -m "fix: use def install instead of define_method" || echo "No changes"
+          git push
+
   test:
     runs-on: ubuntu-latest
     steps:
