@@ -16,6 +16,8 @@ var statsCmd = &cobra.Command{
 	Short: "Quick productivity snapshot",
 	Long: `Show a compact productivity snapshot across today, this week, and this month.
 
+Only completed (stopped) sessions are counted — active sessions are excluded.
+
 Usage:
   btrack stats
 
@@ -26,8 +28,10 @@ What you'll see:
   · Most used tag this week
 
 Tips:
-  · For full analytics with charts, use: btrack ai insights
-  · For a day-by-day view, use: btrack week`,
+  · For full analytics with charts and AI analysis: btrack ai insights
+  · For a day-by-day breakdown: btrack week
+  · For a quick tag filter: btrack tag #bugfix
+  · Connect GitHub to enrich AI insights: btrack github connect`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {

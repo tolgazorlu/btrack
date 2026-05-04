@@ -18,14 +18,23 @@ Usage:
   btrack status
   btrack w       (short alias — w = watch)
 
+  Also: running btrack with no arguments opens this same view.
+
 Controls:
   q / esc   Quit
 
-What you'll see:
+What you'll see (session active):
   · Task name with pulsing indicator
-  · Elapsed time and progress toward your daily goal
+  · Elapsed time and progress bar toward your daily target
   · Git branch and repo
-  · Recent notes`,
+  · Recent checkpoint notes
+
+What you'll see (no session running):
+  · Idle indicator with today's total time so far
+
+Tips:
+  · Set your daily target with: btrack config hours 8
+  · Start a session with:       btrack s "your task"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, _ := config.Load()
 		dailyHours := 8

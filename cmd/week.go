@@ -26,11 +26,13 @@ What you'll see:
   · Each day as a section with all its sessions
   · Notes indented under each session
   · Daily progress bar toward your work target
+  · Per-day GitHub badge (e.g. "3 commits  1 PRs") if connected
   · Weekly summary at the bottom
 
 Tips:
   · Set your daily target with: btrack config hours 8
-  · Use btrack d <date> to drill into a specific day`,
+  · Drill into a specific day: btrack d 2026-05-01
+  · Connect GitHub for per-day contribution counts: btrack github connect`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {

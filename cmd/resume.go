@@ -13,7 +13,9 @@ var resumeCmd = &cobra.Command{
 	Use:     "resume",
 	Aliases: []string{"r"},
 	Short:   "Resume the last stopped session",
-	Long: `Start a new session copying the task name from your last session.
+	Long: `Start a new session copying the task name from your last stopped session.
+
+Requires at least one previous session — if none exists you will get an error.
 
 Usage:
   btrack resume
@@ -22,10 +24,14 @@ Usage:
 Examples:
   btrack r   (picks up where you left off)
 
+Common workflow:
+  btrack break      (pause — go grab coffee)
+  btrack r          (resume when you are back — same task name)
+
 Tips:
-  · Useful after a break, lunch, or interruption
-  · Copies the task name and git info from the previous session
-  · Creates a new session — does not modify the old one`,
+  · Creates a brand new session — does not modify the old one
+  · Copies task name and git branch/repo from the last session
+  · If a session is already running, stop it first: btrack x -m "msg"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client := daemon.NewClient()
 		resp, err := client.Send(daemon.ActionResume, nil)

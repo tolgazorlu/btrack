@@ -26,14 +26,20 @@ Examples:
   btrack h
   btrack h -n 50
   btrack h -v        (includes notes under each session)
+  btrack h -n 100 -v
 
 Flags:
   -n, --limit   Number of sessions to show (default 20)
   -v, --notes   Also show checkpoint notes under each session
 
+The first column shows a session ID. Use it with:
+  btrack edit <id> -t "new name"    edit a past session
+  btrack edit <id> -m "new msg"     fix a stop message
+
 Tips:
   · For a tree view of a single day, use: btrack d
-  · For AI analysis of your patterns, use: btrack ai insights`,
+  · For AI analysis of your patterns, use: btrack ai insights
+  · For full-text search across sessions, use: btrack search "query"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		limit, _ := cmd.Flags().GetInt("limit")
 		showNotes, _ := cmd.Flags().GetBool("notes")

@@ -20,9 +20,14 @@ Examples:
   btrack config hours 6      (set daily work target to 6 hours)
   btrack config hours 8      (set back to 8 hours)
 
-Settings:
-  hours     Daily work target used in progress bars (default 8)
-  provider  Active AI provider — set via: btrack ai setup`,
+Subcommands:
+  btrack config hours <n>    Set daily work hours target (1-24)
+
+Other settings are configured via their own commands:
+  btrack ai setup            Set AI provider and key (OpenAI, Claude, Gemini)
+  btrack github connect      Link your GitHub account
+
+Config file location is shown at the bottom of: btrack config`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -56,6 +61,14 @@ Settings:
 			model = "(default)"
 		}
 		fmt.Println("  " + kv("model", model))
+		fmt.Println()
+
+		fmt.Println("  " + dim("github"))
+		if cfg.GitHub.Username != "" {
+			fmt.Println("  " + kv("connected", "@"+cfg.GitHub.Username))
+		} else {
+			fmt.Println("  " + kv("connected", "(not set — run: btrack github connect)"))
+		}
 		fmt.Println()
 
 		fmt.Println("  " + dim("database"))

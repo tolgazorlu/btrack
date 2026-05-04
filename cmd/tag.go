@@ -18,18 +18,25 @@ var tagCmd = &cobra.Command{
 
 Usage:
   btrack tag #bugfix
-  btrack tag bugfix    (# prefix optional)
+  btrack tag bugfix    (# prefix is optional)
 
 Examples:
   btrack tag #bugfix
   btrack tag #feature
   btrack tag #test
 
+How tags are added:
+  1. Manually in your stop message:
+       btrack x -m "fixed login redirect #bugfix"
+  2. Auto-detected from keywords (fix/feat/refactor/test/doc):
+       btrack x -m "fixed the JWT issue"  ->  auto-adds #bugfix
+  3. Auto-extracted from GitHub commits when using: btrack github sync
+
+Common tags: #bugfix #feature #test #docs #refactor #ci
+
 Tips:
-  · Tags are added with # in your stop message
-    e.g. btrack x -m "fixed login redirect #bugfix"
-  · Common tags: #bugfix #feature #test #docs #refactor #ci
-  · See all your tags with: btrack ai insights`,
+  · See all your tags with a count: btrack ai insights
+  · Filter history to see all work in a category: btrack tag #feature`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tag := strings.ToLower(args[0])

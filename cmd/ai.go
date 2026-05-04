@@ -91,14 +91,25 @@ var aiSummarizeCmd = &cobra.Command{
 
 Examples:
   btrack ai summarize
+  btrack ai sum           (short alias)
   btrack ai summarize --days 3
 
 Flags:
   -d, --days   Number of days to include (default 1 = today)
 
+What's included in the summary:
+  · Your btrack session names and stop messages
+  · Checkpoint notes added with: btrack n "note"
+  · Local git diff (if in a git repo)
+  · GitHub commits and PRs for the period (if connected)
+
+Setup required:
+  · AI key:      btrack ai setup
+  · GitHub data: btrack github connect  (optional, enriches output)
+
 Tips:
-  · The more notes you add with "btrack note", the better the summary
-  · Requires AI key — run: btrack ai setup`,
+  · The more notes you add with "btrack n", the richer the summary
+  · Use --days 3 for a multi-day sprint summary`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		days, _ := cmd.Flags().GetInt("days")
 
@@ -172,8 +183,9 @@ var aiInsightsCmd = &cobra.Command{
 
 Examples:
   btrack ai insights
+  btrack ai ins             (short alias)
   btrack ai insights --days 14
-  btrack ai insights --no-ai    (stats only, no AI needed)
+  btrack ai insights --no-ai    (stats only, no AI key needed)
 
 Flags:
   -d, --days   Days to analyze (default 7)
@@ -185,7 +197,12 @@ What you'll see:
   · Top tasks by time spent
   · Tag breakdown (#bugfix, #feature, etc.)
   · Hourly activity pattern (when you work best)
-  · AI analysis of your patterns and suggestions`,
+  · GitHub activity panel with commits, PRs, reviews (if connected)
+  · AI analysis correlating tracked hours with GitHub output
+
+Setup:
+  · AI key:      btrack ai setup          (required for AI section)
+  · GitHub data: btrack github connect    (optional, enriches analysis)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		days, _ := cmd.Flags().GetInt("days")
 		noAI, _ := cmd.Flags().GetBool("no-ai")

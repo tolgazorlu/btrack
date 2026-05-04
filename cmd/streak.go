@@ -16,13 +16,21 @@ var streakCmd = &cobra.Command{
 	Short: "Show your consecutive working day streak",
 	Long: `Display your current and longest working day streaks.
 
+A "working day" = any day with at least one completed (stopped) session.
+Active sessions that haven't been stopped yet do not count.
+
 Usage:
   btrack streak
 
 What you'll see:
   · Current streak (consecutive days with at least one completed session)
-  · Longest streak ever
-  · Last 30 days activity calendar`,
+  · Longest streak ever recorded
+  · Last 30 days activity calendar (legend: active / today / inactive)
+
+Tips:
+  · Stop sessions with: btrack x -m "what you did"
+  · Even a 5-minute session counts — stop it to keep the streak alive
+  · Sessions from btrack github sync also count toward your streak`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {

@@ -32,10 +32,12 @@ What you'll see:
   · Notes indented under their session
   · Progress bar toward your daily hour target
   · Summary: total hours, sessions, target %
+  · GitHub activity section (commits, PRs, issues) if connected
 
 Tips:
   · Set your daily target with: btrack config hours 8
-  · Add notes while working with: btrack n "what you found"`,
+  · Add notes while working with: btrack n "what you found"
+  · Connect GitHub to see commit activity inline: btrack github connect`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runDay,
 }

@@ -40,14 +40,28 @@ How to get a token:
 var githubConnectCmd = &cobra.Command{
 	Use:   "connect",
 	Short: "Authenticate with a GitHub Personal Access Token",
-	Long: `Link btrack to your GitHub account.
+	Long: `Link btrack to your GitHub account with a Personal Access Token.
 
-Steps:
+Option A — Classic token (simpler):
   1. Go to: github.com/settings/tokens/new
-  2. Add scopes: read:user, repo
-  3. Paste the token below
+  2. Token name: btrack
+  3. Scopes: check "read:user" and "repo"
+  4. Click Generate token, copy it, paste below
 
-Token is stored in ~/.config/btrack/config.yaml`,
+Option B — Fine-grained token (more secure):
+  1. Go to: github.com/settings/tokens?type=beta
+  2. Repository access: All repositories (or select specific ones)
+  3. Permissions: Contents = Read-only, Metadata = Read-only
+  4. Click Generate token, copy it, paste below
+
+The token is stored in: ~/.config/btrack/config.yaml
+It is never sent anywhere except the GitHub API.
+
+After connecting, these commands are enriched:
+  btrack ai sum       standup includes your real commits and PRs
+  btrack ai ins       insights include GitHub contribution stats
+  btrack day          shows GitHub activity below sessions
+  btrack week         shows per-day commit/PR count`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 		fmt.Printf("  %s\n", ui.StyleTitle.Render("GitHub Connect"))
@@ -132,7 +146,20 @@ var githubSyncCmd = &cobra.Command{
 	Long: `Pull today's GitHub commits and create btrack sessions from them.
 
 Each repository's commits are grouped into a single session.
-Tags are auto-extracted from commit messages (#bugfix, #feature, etc.).`,
+Duration = time from first commit to last commit + 15 minutes.
+
+Auto-tagging from commit message keywords:
+  fix / bug      ->  #bugfix
+  feat / add     ->  #feature
+  refactor       ->  #refactor
+  test           ->  #test
+  doc / readme   ->  #docs
+  Explicit #tags in commit messages are carried over as-is.
+
+Note: each sync call creates new sessions — running it twice will create
+duplicate sessions. Use it once per day or after a long GitHub session.
+
+Requires: btrack github connect`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
