@@ -25,7 +25,8 @@
       "Bash(curl -s \"https://api.github.com/repos/tolgazorlu/btrack/releases\" -o C:/tmp/releases.json)",
       "Bash(findstr /i \"tag_name\\\\|browser_download\")",
       "PowerShell($r = Invoke-RestMethod \"https://api.github.com/repos/tolgazorlu/btrack/releases\"; $r | ForEach-Object { Write-Host \"=== $\\($_.tag_name\\) ===\" ; $_.assets | ForEach-Object { $_.name } })",
-      "PowerShell($r = Invoke-RestMethod \"https://api.github.com/repos/tolgazorlu/btrack\"; Write-Host \"private: $\\($r.private\\)\")"
+      "PowerShell($r = Invoke-RestMethod \"https://api.github.com/repos/tolgazorlu/btrack\"; Write-Host \"private: $\\($r.private\\)\")",
+      "Bash(go test *)"
     ]
   }
 }
