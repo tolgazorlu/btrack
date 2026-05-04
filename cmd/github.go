@@ -195,22 +195,40 @@ Requires: btrack github connect`,
 
 		printGitHubActivity(activity, "Imported activity")
 
-		count := syncToSessions(store, activity)
-		fmt.Printf("  %s  Created %d session(s) from GitHub commits\n\n",
-			ui.StyleSuccess.Render("✓"), count,
+		commits, prs := syncToSessions(store, activity)
+		total := commits + prs
+
+		if total == 0 {
+			fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("nothing new to import — no commits or PRs found for today"))
+			return nil
+		}
+
+		var parts []string
+		if commits > 0 {
+			parts = append(parts, fmt.Sprintf("%d commit session(s)", commits))
+		}
+		if prs > 0 {
+			parts = append(parts, fmt.Sprintf("%d PR session(s)", prs))
+		}
+		fmt.Printf("  %s  Imported: %s\n\n",
+			ui.StyleSuccess.Render("✓"),
+			strings.Join(parts, "  ·  "),
 		)
 		return nil
 	},
 }
 
-// syncToSessions groups commits by repo → one session per repo per day.
-func syncToSessions(store db.Store, activity *gh.Activity) int {
+// syncToSessions imports commits and PRs as btrack sessions.
+// Returns (commitSessions, prSessions) created counts.
+func syncToSessions(store db.Store, activity *gh.Activity) (int, int) {
+	commitCount := 0
+
+	// Group commits by repo → one session per repo.
 	repoCommits := map[string][]*gh.Commit{}
 	for _, c := range activity.Commits {
 		repoCommits[c.Repo] = append(repoCommits[c.Repo], c)
 	}
 
-	count := 0
 	for repo, commits := range repoCommits {
 		if len(commits) == 0 {
 			continue
@@ -230,9 +248,8 @@ func syncToSessions(store db.Store, activity *gh.Activity) int {
 
 		endTime := latest.Add(15 * time.Minute)
 
-		parts := strings.SplitN(repo, "/", 2)
 		repoName := repo
-		if len(parts) == 2 {
+		if parts := strings.SplitN(repo, "/", 2); len(parts) == 2 {
 			repoName = parts[1]
 		}
 
@@ -241,21 +258,58 @@ func syncToSessions(store db.Store, activity *gh.Activity) int {
 			message = message[:197] + "..."
 		}
 
-		tags := tagsFromMessages(msgs)
-
 		sess := &db.Session{
 			TaskName:  "GitHub: " + repoName,
 			StartTime: earliest.Local(),
 			EndTime:   &endTime,
 			Message:   message,
-			Tags:      tags,
+			Tags:      tagsFromMessages(msgs),
 			GitRepo:   repo,
 		}
 		if store.CreateSession(sess) == nil {
-			count++
+			commitCount++
 		}
 	}
-	return count
+
+	// Create a session for each merged or opened PR.
+	prCount := 0
+	for _, pr := range activity.PullRequests {
+		if pr.Action != "merged" && pr.Action != "opened" {
+			continue
+		}
+
+		repoName := pr.Repo
+		if parts := strings.SplitN(pr.Repo, "/", 2); len(parts) == 2 {
+			repoName = parts[1]
+		}
+
+		taskName := fmt.Sprintf("PR #%d: %s", pr.Number, pr.Title)
+		if len(taskName) > 60 {
+			taskName = taskName[:57] + "..."
+		}
+
+		endTime := pr.Time.Local().Add(30 * time.Minute)
+		startTime := pr.Time.Local()
+
+		tags := []string{"#pr"}
+		if pr.Action == "merged" {
+			tags = append(tags, "#merged")
+		}
+
+		sess := &db.Session{
+			TaskName:  taskName,
+			StartTime: startTime,
+			EndTime:   &endTime,
+			Message:   fmt.Sprintf("[%s] %s — %s", pr.Action, pr.Title, repoName),
+			Tags:      tags,
+			GitRepo:   pr.Repo,
+		}
+		if store.CreateSession(sess) == nil {
+			prCount++
+		}
+	}
+
+	return commitCount, prCount
 }
 
 // tagsFromMessages extracts btrack tags from commit message keywords.
