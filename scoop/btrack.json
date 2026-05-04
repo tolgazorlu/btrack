@@ -1,0 +1,26 @@
+{
+  "version": "0.1.0",
+  "description": "AI-native CLI time tracker with git-style workflow",
+  "homepage": "https://github.com/tolgaozgun/btrack",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/tolgaozgun/btrack/releases/download/v0.1.0/btrack-windows-amd64.exe",
+      "hash": "REPLACE_WITH_ACTUAL_SHA256",
+      "bin": [["btrack-windows-amd64.exe", "btrack"]]
+    }
+  },
+  "suggest": {
+    "Git": "git"
+  },
+  "checkver": {
+    "github": "https://github.com/tolgaozgun/btrack"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/tolgaozgun/btrack/releases/download/v$version/btrack-windows-amd64.exe"
+      }
+    }
+  }
+}

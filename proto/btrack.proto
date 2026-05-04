@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package btrack.v1;
+
+option go_package = "github.com/tolgaozgun/btrack/proto/btrackvl";
+
+// BtrackService is the gRPC interface for the daemon.
+// This file documents the service contract. The current implementation
+// uses a JSON-over-Unix-socket protocol (see internal/daemon/protocol.go)
+// for zero-dependency distribution. To switch to full gRPC, run:
+//   protoc --go_out=. --go-grpc_out=. proto/btrack.proto
+service BtrackService {
+  rpc Start(StartRequest)   returns (StartResponse);
+  rpc Stop(StopRequest)     returns (StopResponse);
+  rpc Log(LogRequest)       returns (LogResponse);
+  rpc Status(StatusRequest) returns (StatusResponse);
+  rpc Resume(ResumeRequest) returns (ResumeResponse);
+}
+
+message StartRequest {
+  string task_name  = 1;
+  string git_branch = 2;
+  string git_repo   = 3;
+}
+
+message StartResponse {
+  bool    success  = 1;
+  string  error    = 2;
+  Session session  = 3;
+}
+
+message StopRequest {
+  string message = 1;
+}
+
+message StopResponse {
+  bool    success  = 1;
+  string  error    = 2;
+  Session session  = 3;
+}
+
+message LogRequest {
+  string note = 1;
+}
+
+message LogResponse {
+  bool   success = 1;
+  string error   = 2;
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+  bool        active      = 1;
+  Session     session     = 2;
+  repeated LogEntry recent_log = 3;
+}
+
+message ResumeRequest {}
+
+message ResumeResponse {
+  bool    success = 1;
+  string  error   = 2;
+  Session session = 3;
+}
+
+message Session {
+  int64           id         = 1;
+  string          task_name  = 2;
+  string          start_time = 3; // RFC3339
+  repeated string tags       = 4;
+  string          git_branch = 5;
+  string          git_repo   = 6;
+}
+
+message LogEntry {
+  string note      = 1;
+  string timestamp = 2; // RFC3339
+}

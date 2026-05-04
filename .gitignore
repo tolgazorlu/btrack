@@ -1,0 +1,6 @@
+btrack
+btrack.exe
+dist/
+*.test
+*.out
+.env

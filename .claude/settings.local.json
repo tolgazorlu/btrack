@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go version *)",
+      "Bash(go build *)",
+      "Bash(go doc *)",
+      "Bash(go vet *)",
+      "Bash(./btrack.exe --help)",
+      "Bash(./btrack.exe ai *)",
+      "Bash(./btrack.exe stop *)",
+      "Bash(./btrack.exe version *)",
+      "Bash(./btrack.exe start *)",
+      "Bash(./btrack.exe history *)",
+      "PowerShell(gh --version 2>$null)",
+      "Bash(go get *)"
+    ]
+  }
+}
