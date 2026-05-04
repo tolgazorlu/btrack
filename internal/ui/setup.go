@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	aiPkg "github.com/tolgaozgun/btrack/internal/ai"
+	aiPkg "github.com/tolgazorlu/btrack/internal/ai"
 )
 
 type setupStep int

@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/tolgaozgun/btrack/internal/config"
-	"github.com/tolgaozgun/btrack/internal/db"
+	"github.com/tolgazorlu/btrack/internal/config"
+	"github.com/tolgazorlu/btrack/internal/db"
 )
 
 // Provider is the AI backend interface.

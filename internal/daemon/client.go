@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tolgaozgun/btrack/internal/config"
+	"github.com/tolgazorlu/btrack/internal/config"
 )
 
 type Client struct{}

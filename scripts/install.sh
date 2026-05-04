@@ -2,7 +2,7 @@
 # btrack installer for macOS and Linux
 set -euo pipefail
 
-REPO="tolgaozgun/btrack"
+REPO="tolgazorlu/btrack"
 BINARY="btrack"
 INSTALL_DIR="/usr/local/bin"
 

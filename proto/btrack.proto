@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package btrack.v1;
 
-option go_package = "github.com/tolgaozgun/btrack/proto/btrackvl";
+option go_package = "github.com/tolgazorlu/btrack/proto/btrackvl";
 
 // BtrackService is the gRPC interface for the daemon.
 // This file documents the service contract. The current implementation

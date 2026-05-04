@@ -171,7 +171,7 @@ func SaveProviderKey(provider, key string) error {
 
 func writeDefaultConfig(path string) {
 	content := `# btrack configuration
-# https://github.com/tolgaozgun/btrack
+# https://github.com/tolgazorlu/btrack
 
 database:
   type: sqlite

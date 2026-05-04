@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 
-	"github.com/tolgaozgun/btrack/internal/config"
+	"github.com/tolgazorlu/btrack/internal/config"
 )
 
 // Open returns the configured Store.

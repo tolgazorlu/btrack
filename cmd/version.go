@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tolgaozgun/btrack/internal/ui"
+	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
 // Version is set at build time via ldflags: -X main.Version=v1.2.3

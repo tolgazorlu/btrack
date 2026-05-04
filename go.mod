@@ -1,4 +1,4 @@
-module github.com/tolgaozgun/btrack
+module github.com/tolgazorlu/btrack
 
 go 1.24.2
 

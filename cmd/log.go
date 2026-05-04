@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/tolgaozgun/btrack/internal/daemon"
-	"github.com/tolgaozgun/btrack/internal/ui"
+	"github.com/tolgazorlu/btrack/internal/daemon"
+	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
 var logCmd = &cobra.Command{

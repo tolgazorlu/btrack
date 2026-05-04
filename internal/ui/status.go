@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/tolgaozgun/btrack/internal/daemon"
+	"github.com/tolgazorlu/btrack/internal/daemon"
 )
 
 type StatusModel struct {

@@ -1,12 +1,12 @@
 # btrack installer for Windows
-# Run with: irm https://raw.githubusercontent.com/tolgaozgun/btrack/main/scripts/install.ps1 | iex
+# Run with: irm https://raw.githubusercontent.com/tolgazorlu/btrack/main/scripts/install.ps1 | iex
 
 param(
     [string]$InstallDir = "$env:LOCALAPPDATA\btrack"
 )
 
 $ErrorActionPreference = "Stop"
-$Repo = "tolgaozgun/btrack"
+$Repo = "tolgazorlu/btrack"
 $Binary = "btrack.exe"
 
 Write-Host "→ Fetching latest btrack release..." -ForegroundColor Cyan

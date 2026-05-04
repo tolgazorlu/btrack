@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
-	"github.com/tolgaozgun/btrack/internal/config"
-	"github.com/tolgaozgun/btrack/internal/db"
-	"github.com/tolgaozgun/btrack/internal/ui"
+	"github.com/tolgazorlu/btrack/internal/config"
+	"github.com/tolgazorlu/btrack/internal/db"
+	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
 var historyCmd = &cobra.Command{

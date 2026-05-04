@@ -8,10 +8,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
-	"github.com/tolgaozgun/btrack/internal/ai"
-	"github.com/tolgaozgun/btrack/internal/config"
-	"github.com/tolgaozgun/btrack/internal/db"
-	"github.com/tolgaozgun/btrack/internal/ui"
+	"github.com/tolgazorlu/btrack/internal/ai"
+	"github.com/tolgazorlu/btrack/internal/config"
+	"github.com/tolgazorlu/btrack/internal/db"
+	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
 var aiCmd = &cobra.Command{

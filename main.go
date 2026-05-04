@@ -1,6 +1,6 @@
 package main
 
-import "github.com/tolgaozgun/btrack/cmd"
+import "github.com/tolgazorlu/btrack/cmd"
 
 func main() {
 	cmd.Execute()
