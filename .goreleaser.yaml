@@ -45,7 +45,7 @@ changelog:
 brews:
   - repository:
       owner: tolgazorlu
-      name: homebrew-tap
+      name: homebrew-btrack
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/tolgazorlu/btrack
     description: AI-native CLI time tracker with git-style workflow
@@ -53,10 +53,3 @@ brews:
     install: bin.install "btrack"
     test: system "#{bin}/btrack", "--version"
 
-scoop:
-  repository:
-    owner: tolgazorlu
-    name: scoop-bucket
-  homepage: https://github.com/tolgazorlu/btrack
-  description: AI-native CLI time tracker with git-style workflow
-  license: MIT
