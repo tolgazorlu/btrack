@@ -11,6 +11,7 @@ type Session struct {
 	Tags      []string
 	GitBranch string
 	GitRepo   string
+	Project   string // optional project grouping
 }
 
 func (s *Session) Duration() time.Duration {
@@ -37,6 +38,8 @@ type Store interface {
 	GetSessionsForDate(date time.Time) ([]*Session, error)
 	GetSessionByID(id int64) (*Session, error)
 	SearchSessions(query string) ([]*Session, error)
+	GetProjects() ([]string, error)
+	GetSessionsByProject(project string, limit int) ([]*Session, error)
 	CreateLogEntry(e *LogEntry) error
 	GetRecentLogs(sessionID int64, limit int) ([]*LogEntry, error)
 	GetAllLogs(sessionID int64) ([]*LogEntry, error)

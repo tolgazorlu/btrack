@@ -52,15 +52,25 @@ func (s *PostgresStore) migrate() error {
 		CREATE INDEX IF NOT EXISTS idx_sessions_end_time  ON sessions(end_time);
 		CREATE INDEX IF NOT EXISTS idx_log_session        ON log_entries(session_id);
 	`)
+	if err != nil {
+		return err
+	}
+	// Add project column to existing databases (idempotent).
+	_, err = s.db.Exec(`
+		DO $$ BEGIN
+			ALTER TABLE sessions ADD COLUMN project TEXT NOT NULL DEFAULT '';
+		EXCEPTION WHEN duplicate_column THEN NULL;
+		END $$;
+	`)
 	return err
 }
 
 func (s *PostgresStore) CreateSession(sess *Session) error {
 	tagsJSON, _ := json.Marshal(sess.Tags)
 	return s.db.QueryRow(
-		`INSERT INTO sessions (task_name, start_time, tags, git_branch, git_repo)
-		 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		sess.TaskName, sess.StartTime, string(tagsJSON), sess.GitBranch, sess.GitRepo,
+		`INSERT INTO sessions (task_name, start_time, tags, git_branch, git_repo, project)
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		sess.TaskName, sess.StartTime, string(tagsJSON), sess.GitBranch, sess.GitRepo, sess.Project,
 	).Scan(&sess.ID)
 }
 
@@ -75,7 +85,7 @@ func (s *PostgresStore) UpdateSession(sess *Session) error {
 
 func (s *PostgresStore) GetActiveSession() (*Session, error) {
 	row := s.db.QueryRow(
-		`SELECT id, task_name, start_time, git_branch, git_repo, tags
+		`SELECT id, task_name, start_time, git_branch, git_repo, tags, project
 		 FROM sessions WHERE end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
 	)
 	return scanSessionPG(row)
@@ -83,7 +93,7 @@ func (s *PostgresStore) GetActiveSession() (*Session, error) {
 
 func (s *PostgresStore) GetLastSession() (*Session, error) {
 	row := s.db.QueryRow(
-		`SELECT id, task_name, start_time, git_branch, git_repo, tags
+		`SELECT id, task_name, start_time, git_branch, git_repo, tags, project
 		 FROM sessions ORDER BY start_time DESC LIMIT 1`,
 	)
 	return scanSessionPG(row)
@@ -91,7 +101,7 @@ func (s *PostgresStore) GetLastSession() (*Session, error) {
 
 func (s *PostgresStore) GetRecentSessions(limit int) ([]*Session, error) {
 	rows, err := s.db.Query(
-		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
 		 FROM sessions ORDER BY start_time DESC LIMIT $1`, limit,
 	)
 	if err != nil {
@@ -103,7 +113,7 @@ func (s *PostgresStore) GetRecentSessions(limit int) ([]*Session, error) {
 
 func (s *PostgresStore) GetSessionByID(id int64) (*Session, error) {
 	rows, err := s.db.Query(
-		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
 		 FROM sessions WHERE id=$1 LIMIT 1`, id,
 	)
 	if err != nil {
@@ -120,7 +130,7 @@ func (s *PostgresStore) GetSessionByID(id int64) (*Session, error) {
 func (s *PostgresStore) SearchSessions(query string) ([]*Session, error) {
 	q := "%" + strings.ToLower(query) + "%"
 	rows, err := s.db.Query(
-		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
 		 FROM sessions WHERE LOWER(task_name) LIKE $1 OR LOWER(message) LIKE $1
 		 ORDER BY start_time DESC LIMIT 200`, q,
 	)
@@ -136,9 +146,40 @@ func (s *PostgresStore) GetSessionsForDate(date time.Time) ([]*Session, error) {
 	from := time.Date(y, m, d, 0, 0, 0, 0, time.Local).UTC()
 	to := from.Add(24 * time.Hour)
 	rows, err := s.db.Query(
-		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
 		 FROM sessions WHERE start_time >= $1 AND start_time < $2
 		 ORDER BY start_time ASC`, from, to,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanSessionsPG(rows)
+}
+
+func (s *PostgresStore) GetProjects() ([]string, error) {
+	rows, err := s.db.Query(
+		`SELECT DISTINCT project FROM sessions WHERE project != '' ORDER BY project ASC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var projects []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		projects = append(projects, p)
+	}
+	return projects, rows.Err()
+}
+
+func (s *PostgresStore) GetSessionsByProject(project string, limit int) ([]*Session, error) {
+	rows, err := s.db.Query(
+		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
+		 FROM sessions WHERE project=$1 ORDER BY start_time DESC LIMIT $2`, project, limit,
 	)
 	if err != nil {
 		return nil, err
@@ -183,7 +224,7 @@ func (s *PostgresStore) Close() error { return s.db.Close() }
 func scanSessionPG(row *sql.Row) (*Session, error) {
 	var sess Session
 	var tagsJSON []byte
-	err := row.Scan(&sess.ID, &sess.TaskName, &sess.StartTime, &sess.GitBranch, &sess.GitRepo, &tagsJSON)
+	err := row.Scan(&sess.ID, &sess.TaskName, &sess.StartTime, &sess.GitBranch, &sess.GitRepo, &tagsJSON, &sess.Project)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -201,7 +242,7 @@ func scanSessionsPG(rows *sql.Rows) ([]*Session, error) {
 		var tagsJSON []byte
 		var endTime sql.NullTime
 		err := rows.Scan(&sess.ID, &sess.TaskName, &sess.StartTime, &endTime,
-			&sess.Message, &tagsJSON, &sess.GitBranch, &sess.GitRepo)
+			&sess.Message, &tagsJSON, &sess.GitBranch, &sess.GitRepo, &sess.Project)
 		if err != nil {
 			return nil, err
 		}
