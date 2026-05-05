@@ -70,6 +70,30 @@ func (s *SQLiteStore) migrate() error {
 	}
 	if !hasProject {
 		_, err = s.db.Exec(`ALTER TABLE sessions ADD COLUMN project TEXT NOT NULL DEFAULT ''`)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add parent_id column to log_entries (idempotent).
+	logRows, _ := s.db.Query(`PRAGMA table_info(log_entries)`)
+	hasParentID := false
+	if logRows != nil {
+		for logRows.Next() {
+			var cid int
+			var name, typ string
+			var notNull int
+			var dflt sql.NullString
+			var pk int
+			_ = logRows.Scan(&cid, &name, &typ, &notNull, &dflt, &pk)
+			if name == "parent_id" {
+				hasParentID = true
+			}
+		}
+		logRows.Close()
+	}
+	if !hasParentID {
+		_, err = s.db.Exec(`ALTER TABLE log_entries ADD COLUMN parent_id INTEGER REFERENCES log_entries(id) ON DELETE SET NULL`)
 	}
 	return err
 }
@@ -204,9 +228,13 @@ func (s *SQLiteStore) GetSessionsByProject(project string, limit int) ([]*Sessio
 }
 
 func (s *SQLiteStore) CreateLogEntry(e *LogEntry) error {
+	var parentID interface{}
+	if e.ParentID != nil {
+		parentID = *e.ParentID
+	}
 	res, err := s.db.Exec(
-		`INSERT INTO log_entries (session_id, note, timestamp) VALUES (?, ?, ?)`,
-		e.SessionID, e.Note, e.Timestamp.UTC(),
+		`INSERT INTO log_entries (session_id, note, timestamp, parent_id) VALUES (?, ?, ?, ?)`,
+		e.SessionID, e.Note, e.Timestamp.UTC(), parentID,
 	)
 	if err != nil {
 		return fmt.Errorf("create log entry: %w", err)
@@ -217,7 +245,7 @@ func (s *SQLiteStore) CreateLogEntry(e *LogEntry) error {
 
 func (s *SQLiteStore) GetRecentLogs(sessionID int64, limit int) ([]*LogEntry, error) {
 	rows, err := s.db.Query(
-		`SELECT id, session_id, note, timestamp FROM log_entries
+		`SELECT id, session_id, note, timestamp, parent_id FROM log_entries
 		 WHERE session_id=? ORDER BY timestamp DESC LIMIT ?`, sessionID, limit,
 	)
 	if err != nil {
@@ -229,7 +257,7 @@ func (s *SQLiteStore) GetRecentLogs(sessionID int64, limit int) ([]*LogEntry, er
 
 func (s *SQLiteStore) GetAllLogs(sessionID int64) ([]*LogEntry, error) {
 	rows, err := s.db.Query(
-		`SELECT id, session_id, note, timestamp FROM log_entries
+		`SELECT id, session_id, note, timestamp, parent_id FROM log_entries
 		 WHERE session_id=? ORDER BY timestamp ASC`, sessionID,
 	)
 	if err != nil {
@@ -285,10 +313,15 @@ func scanLogs(rows *sql.Rows) ([]*LogEntry, error) {
 	for rows.Next() {
 		var e LogEntry
 		var tsStr string
-		if err := rows.Scan(&e.ID, &e.SessionID, &e.Note, &tsStr); err != nil {
+		var parentID sql.NullInt64
+		if err := rows.Scan(&e.ID, &e.SessionID, &e.Note, &tsStr, &parentID); err != nil {
 			return nil, err
 		}
 		e.Timestamp = parseTime(tsStr)
+		if parentID.Valid {
+			v := parentID.Int64
+			e.ParentID = &v
+		}
 		result = append(result, &e)
 	}
 	return result, rows.Err()

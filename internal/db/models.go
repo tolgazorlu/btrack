@@ -24,6 +24,7 @@ func (s *Session) Duration() time.Duration {
 type LogEntry struct {
 	ID        int64
 	SessionID int64
+	ParentID  *int64 // nil = top-level note; non-nil = sub-note
 	Note      string
 	Timestamp time.Time
 }

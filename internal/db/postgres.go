@@ -62,6 +62,16 @@ func (s *PostgresStore) migrate() error {
 		EXCEPTION WHEN duplicate_column THEN NULL;
 		END $$;
 	`)
+	if err != nil {
+		return err
+	}
+	// Add parent_id column to log_entries (idempotent).
+	_, err = s.db.Exec(`
+		DO $$ BEGIN
+			ALTER TABLE log_entries ADD COLUMN parent_id BIGINT REFERENCES log_entries(id) ON DELETE SET NULL;
+		EXCEPTION WHEN duplicate_column THEN NULL;
+		END $$;
+	`)
 	return err
 }
 
@@ -189,15 +199,19 @@ func (s *PostgresStore) GetSessionsByProject(project string, limit int) ([]*Sess
 }
 
 func (s *PostgresStore) CreateLogEntry(e *LogEntry) error {
+	var parentID interface{}
+	if e.ParentID != nil {
+		parentID = *e.ParentID
+	}
 	return s.db.QueryRow(
-		`INSERT INTO log_entries (session_id, note, timestamp) VALUES ($1, $2, $3) RETURNING id`,
-		e.SessionID, e.Note, e.Timestamp,
+		`INSERT INTO log_entries (session_id, note, timestamp, parent_id) VALUES ($1, $2, $3, $4) RETURNING id`,
+		e.SessionID, e.Note, e.Timestamp, parentID,
 	).Scan(&e.ID)
 }
 
 func (s *PostgresStore) GetRecentLogs(sessionID int64, limit int) ([]*LogEntry, error) {
 	rows, err := s.db.Query(
-		`SELECT id, session_id, note, timestamp FROM log_entries
+		`SELECT id, session_id, note, timestamp, parent_id FROM log_entries
 		 WHERE session_id=$1 ORDER BY timestamp DESC LIMIT $2`, sessionID, limit,
 	)
 	if err != nil {
@@ -209,7 +223,7 @@ func (s *PostgresStore) GetRecentLogs(sessionID int64, limit int) ([]*LogEntry, 
 
 func (s *PostgresStore) GetAllLogs(sessionID int64) ([]*LogEntry, error) {
 	rows, err := s.db.Query(
-		`SELECT id, session_id, note, timestamp FROM log_entries
+		`SELECT id, session_id, note, timestamp, parent_id FROM log_entries
 		 WHERE session_id=$1 ORDER BY timestamp ASC`, sessionID,
 	)
 	if err != nil {
@@ -259,8 +273,13 @@ func scanLogsPG(rows *sql.Rows) ([]*LogEntry, error) {
 	var result []*LogEntry
 	for rows.Next() {
 		var e LogEntry
-		if err := rows.Scan(&e.ID, &e.SessionID, &e.Note, &e.Timestamp); err != nil {
+		var parentID sql.NullInt64
+		if err := rows.Scan(&e.ID, &e.SessionID, &e.Note, &e.Timestamp, &parentID); err != nil {
 			return nil, err
+		}
+		if parentID.Valid {
+			v := parentID.Int64
+			e.ParentID = &v
 		}
 		result = append(result, &e)
 	}
