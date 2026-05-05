@@ -81,6 +81,10 @@ func runDay(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load sessions: %w", err)
 	}
 
+	// Compute streak from recent session history.
+	recentSessions, _ := store.GetRecentSessions(500)
+	streak := computeStreak(recentSessions)
+
 	y, m, d := target.Local().Date()
 	dateLabel := time.Date(y, m, d, 0, 0, 0, 0, time.Local).Format("Monday, January 02 2006")
 
@@ -93,10 +97,15 @@ func runDay(cmd *cobra.Command, args []string) error {
 		suffix = ui.StyleDimmed.Render("  yesterday")
 	}
 
+	streakStr := ""
+	if streak > 0 {
+		streakStr = "  " + ui.StyleWarning.Render(fmt.Sprintf("🔥 %dd streak", streak))
+	}
+
 	sep := ui.StyleDimmed.Render(strings.Repeat("─", 58))
 
 	fmt.Println()
-	fmt.Printf("  %s  %s%s\n", ui.StyleTitle.Render("btrack"), ui.StyleHighlight.Render(dateLabel), suffix)
+	fmt.Printf("  %s  %s%s%s\n", ui.StyleTitle.Render("btrack"), ui.StyleHighlight.Render(dateLabel), suffix, streakStr)
 	fmt.Println("  " + sep)
 
 	if len(sessions) == 0 {
@@ -189,6 +198,39 @@ func sameDay(a, b time.Time) bool {
 	ay, am, ad := a.Local().Date()
 	by, bm, bd := b.Local().Date()
 	return ay == by && am == bm && ad == bd
+}
+
+// computeStreak counts how many consecutive days (ending at today or yesterday)
+// have at least one completed session.
+func computeStreak(sessions []*db.Session) int {
+	daySet := map[string]bool{}
+	for _, s := range sessions {
+		if s.EndTime != nil {
+			daySet[s.StartTime.Local().Format("2006-01-02")] = true
+		}
+	}
+
+	today := time.Now()
+	cursor := today
+
+	// If today has no sessions yet, try starting from yesterday.
+	if !daySet[today.Format("2006-01-02")] {
+		cursor = today.AddDate(0, 0, -1)
+		if !daySet[cursor.Format("2006-01-02")] {
+			return 0
+		}
+	}
+
+	streak := 0
+	for {
+		if daySet[cursor.Format("2006-01-02")] {
+			streak++
+			cursor = cursor.AddDate(0, 0, -1)
+		} else {
+			break
+		}
+	}
+	return streak
 }
 
 func init() {
