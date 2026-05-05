@@ -1,12 +1,12 @@
 # btrack
 
-> A fast, developer-native CLI time tracker with AI summaries and GitHub integration.
+> A fast, developer-native CLI time tracker with AI chat, summaries, and GitHub integration.
 
 [![Release](https://img.shields.io/github/v/release/tolgazorlu/btrack)](https://github.com/tolgazorlu/btrack/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go)](go.mod)
 
-Track your work the way you code — from the terminal, with git context, notes, tags, and AI-generated standups.
+Track your work the way you code — from the terminal, with git context, notes, tags, and AI-powered standups and chat.
 
 ---
 
@@ -14,7 +14,8 @@ Track your work the way you code — from the terminal, with git context, notes,
 
 - **Git-style workflow** — `btrack s "fix login bug"` · `btrack x -m "fixed JWT #bugfix"`
 - **Live status TUI** — progress bar toward your daily target, elapsed time, recent notes
-- **Day & week tree views** — sessions with timestamps, notes, and per-day progress bars
+- **History master view** — `btrack h` for day/week/month/year/table with one command
+- **AI chat** — `btrack ai` opens an interactive chat with context about your sessions
 - **AI standups** — generate a daily standup from your sessions with OpenAI, Claude, or Gemini
 - **AI insights** — weekly productivity dashboard with charts and pattern analysis
 - **GitHub integration** — connect your account to pull real commits and PRs into standups and day views
@@ -65,7 +66,7 @@ btrack n "JWT clock skew — need to sync server time"
 btrack x -m "fixed JWT clock skew #bugfix"
 
 # See today's work as a tree
-btrack d
+btrack h
 
 # Live status (or just: btrack)
 btrack w
@@ -84,26 +85,35 @@ btrack w
 | `btrack resume` | `r` | Continue last session |
 | `btrack break` | — | Pause for a break |
 
-## Review Your Work
+## View Your Work
 
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `btrack status` | `w` | Live TUI (also: bare `btrack`) |
-| `btrack day` | `d` | Today as a tree |
-| `btrack day yesterday` | `d yesterday` | Specific day |
-| `btrack week` | `wk` | Full week tree |
-| `btrack history` | `h` | Last 20 sessions |
-| `btrack history -n 50 -v` | — | With notes |
-| `btrack stats` | — | Today / week / month snapshot |
-| `btrack streak` | — | Working-day streak + 30-day calendar |
-| `btrack tag #bugfix` | — | Filter by tag |
-| `btrack search "JWT"` | `f` | Full-text search |
+All history is accessible through `btrack h` (alias: `hist`, `log`, `l`):
+
+| Command | Description |
+|---------|-------------|
+| `btrack h` | Today as a tree (default) |
+| `btrack h yesterday` | Yesterday's tree |
+| `btrack h 2026-05-01` | Specific date |
+| `btrack h -w` | This week |
+| `btrack h -m` | This month (week-by-week) |
+| `btrack h -y` | This year (month-by-month) |
+| `btrack h -n 20` | Last 20 sessions as a table |
+| `btrack h -n 20 -v` | With checkpoint notes |
+| `btrack h -l 5` | Last 5 hours |
+| `btrack w` | Live TUI status |
+| `btrack stats` | Today / week / month snapshot |
+| `btrack streak` | Working-day streak + 30-day calendar |
+| `btrack tag #bugfix` | Filter by tag |
+| `btrack search "JWT"` | Full-text search (alias: `f`) |
 
 ## AI Features
 
 ```bash
 # Configure an AI provider (OpenAI, Claude, or Gemini)
 btrack ai setup
+
+# Open interactive AI chat — asks about your sessions, standups, patterns
+btrack ai
 
 # Standup summary from today's sessions
 btrack ai sum
@@ -117,6 +127,11 @@ btrack ai ins
 # Stats only, no AI key needed
 btrack ai ins --no-ai
 ```
+
+The interactive chat (`btrack ai`) has full context about your recent sessions. Ask anything:
+- *"What did I work on today?"*
+- *"Write me a standup for this week"*
+- *"When am I most productive?"*
 
 ## GitHub Integration
 
@@ -134,8 +149,8 @@ btrack github sync
 Once connected:
 - `btrack ai sum` includes your real commits and PRs in the standup
 - `btrack ai ins` includes GitHub contribution stats
-- `btrack day` shows GitHub activity below your sessions
-- `btrack week` shows per-day commit/PR counts
+- `btrack h` shows GitHub activity below your sessions
+- `btrack h -w` shows per-day commit/PR counts
 
 ## Tags
 
@@ -181,11 +196,20 @@ btrack export --days 30 --out april.csv
 
 ```bash
 # Find session IDs
-btrack h
+btrack h -n 20
 
 # Edit task name or message
 btrack edit 42 -t "fix JWT expiry bug"
 btrack edit 42 -m "fixed clock skew in auth middleware #bugfix"
+```
+
+## Project Links
+
+```bash
+btrack repo             # show all links
+btrack repo star        # open GitHub repository
+btrack repo issue       # open a new issue / feedback
+btrack repo releases    # see the changelog
 ```
 
 ---
