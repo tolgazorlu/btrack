@@ -12,10 +12,12 @@ import (
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
+// dayCmd is kept for backward compatibility but hidden — use: btrack h [date]
 var dayCmd = &cobra.Command{
 	Use:     "day [today|yesterday|YYYY-MM-DD]",
 	Aliases: []string{"d"},
-	Short:   "Show all sessions for a day as a tree",
+	Hidden:  true,
+	Short:   "Show sessions for a day (use: btrack h [date])",
 	Long: `Show all sessions for a day in a tree view with notes and progress.
 
 Usage:
