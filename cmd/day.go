@@ -112,6 +112,10 @@ func runDay(cmd *cobra.Command, args []string) error {
 
 	if len(sessions) == 0 {
 		fmt.Println(ui.StyleSubtle.Render("\n  no sessions recorded for this day\n"))
+		// Still show GitHub activity even if no btrack sessions exist
+		if ghActivity != nil && !ghActivity.IsEmpty() {
+			printDayGitHubSummary(ghActivity)
+		}
 		return nil
 	}
 
