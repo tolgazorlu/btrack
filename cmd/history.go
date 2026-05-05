@@ -20,7 +20,7 @@ var historyCmd = &cobra.Command{
 
 Usage:
   btrack h                     today as a tree (default)
-  btrack h -d                  today (explicit)
+  btrack h -d                  today as a tree + GitHub commits for the day
   btrack h -w                  this week
   btrack h -m                  this month
   btrack h -y                  this year
@@ -45,6 +45,7 @@ The date argument accepts: today, yesterday, or YYYY-MM-DD`,
 		weekly, _ := cmd.Flags().GetBool("week")
 		monthly, _ := cmd.Flags().GetBool("month")
 		yearly, _ := cmd.Flags().GetBool("year")
+		daily, _ := cmd.Flags().GetBool("day")
 		limit, _ := cmd.Flags().GetInt("limit")
 		lastHours, _ := cmd.Flags().GetFloat64("last")
 		verbose, _ := cmd.Flags().GetBool("notes")
@@ -61,8 +62,11 @@ The date argument accepts: today, yesterday, or YYYY-MM-DD`,
 			return runTable(limit, verbose, project)
 		case lastHours > 0:
 			return runLastHours(lastHours)
+		case daily:
+			// Explicit -d: day tree including GitHub commits for that day
+			return runDay(cmd, args)
 		default:
-			// Day view — pass date arg through to runDay
+			// Default: day tree for today (or date arg)
 			return runDay(cmd, args)
 		}
 	},
