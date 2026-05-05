@@ -47,12 +47,28 @@ var rootCmd = &cobra.Command{
     btrack ai ins --no-ai                  stats only, no key needed
     btrack ai setup                        configure API key
 
+  ` + ui.StyleHighlight.Render("PROJECTS & BILLING") + `
+    btrack s "task" -p myapp               assign to a project
+    btrack projects                        list projects with time
+    btrack invoice -p myapp -r 150         generate invoice
+    btrack invoice --month 2026-05 -r 100  specific month
+
+  ` + ui.StyleHighlight.Render("FOCUS") + `
+    btrack pomo "write tests"              25/5 pomodoro timer
+    btrack pomo "task" --work 45           custom interval
+
   ` + ui.StyleHighlight.Render("DATA & SETTINGS") + `
     btrack export                          export to CSV
     btrack export --format json --out f    export to JSON file
     btrack edit <id> -t "new name"         edit a past session
     btrack config hours 6                  set daily target
+    btrack config idle 15                  auto-stop after 15 min idle
+    btrack config project myapp rate 150   set hourly rate
     btrack config                          show all settings
+
+  ` + ui.StyleHighlight.Render("SHELL PROMPT") + `
+    btrack prompt                          current session for PS1
+    btrack prompt --format starship        Starship JSON module
 
   ` + ui.StyleHighlight.Render("LINKS") + `
     btrack repo                            project links
@@ -69,11 +85,15 @@ var rootCmd = &cobra.Command{
 		// btrack with no args shows live status instead of help.
 		cfg, _ := config.Load()
 		dailyHours := 8
-		if cfg != nil && cfg.Work.DailyHours > 0 {
-			dailyHours = cfg.Work.DailyHours
+		idleMinutes := 0
+		if cfg != nil {
+			if cfg.Work.DailyHours > 0 {
+				dailyHours = cfg.Work.DailyHours
+			}
+			idleMinutes = cfg.Work.IdleMinutes
 		}
 		client := daemon.NewClient()
-		model := ui.NewStatusModel(client, dailyHours)
+		model := ui.NewStatusModel(client, dailyHours, idleMinutes)
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		_, err := p.Run()
 		return err

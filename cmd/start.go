@@ -35,11 +35,13 @@ Tips:
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskName := strings.Join(args, " ")
+		project, _ := cmd.Flags().GetString("project")
 
 		payload := daemon.StartPayload{
 			TaskName:  taskName,
 			GitBranch: gitBranch(),
 			GitRepo:   gitRepo(),
+			Project:   project,
 		}
 
 		client := daemon.NewClient()
@@ -58,6 +60,9 @@ Tips:
 			ui.StyleSuccess.Render("▶"),
 			ui.StyleTitle.Render(sess.TaskName),
 		)
+		if sess.Project != "" {
+			fmt.Printf("  %s\n", ui.StyleTag.Render("@"+sess.Project))
+		}
 		if sess.GitBranch != "" {
 			fmt.Printf("  %s\n", ui.StyleSubtle.Render("⎇  "+sess.GitBranch))
 		}
@@ -69,6 +74,7 @@ Tips:
 }
 
 func init() {
+	startCmd.Flags().StringP("project", "p", "", "assign session to a project")
 	rootCmd.AddCommand(startCmd)
 }
 

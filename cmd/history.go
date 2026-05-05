@@ -48,6 +48,7 @@ The date argument accepts: today, yesterday, or YYYY-MM-DD`,
 		limit, _ := cmd.Flags().GetInt("limit")
 		lastHours, _ := cmd.Flags().GetFloat64("last")
 		verbose, _ := cmd.Flags().GetBool("notes")
+		project, _ := cmd.Flags().GetString("project")
 
 		switch {
 		case weekly:
@@ -57,7 +58,7 @@ The date argument accepts: today, yesterday, or YYYY-MM-DD`,
 		case yearly:
 			return runYear()
 		case limit > 0:
-			return runTable(limit, verbose)
+			return runTable(limit, verbose, project)
 		case lastHours > 0:
 			return runLastHours(lastHours)
 		default:
@@ -69,7 +70,7 @@ The date argument accepts: today, yesterday, or YYYY-MM-DD`,
 
 // ─── table view ──────────────────────────────────────────────────────────────
 
-func runTable(limit int, showNotes bool) error {
+func runTable(limit int, showNotes bool, project string) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -80,7 +81,12 @@ func runTable(limit int, showNotes bool) error {
 	}
 	defer store.Close()
 
-	sessions, err := store.GetRecentSessions(limit)
+	var sessions []*db.Session
+	if project != "" {
+		sessions, err = store.GetSessionsByProject(project, limit)
+	} else {
+		sessions, err = store.GetRecentSessions(limit)
+	}
 	if err != nil {
 		return fmt.Errorf("load sessions: %w", err)
 	}
@@ -517,12 +523,15 @@ func printSessionRow(s *db.Session, d time.Duration) {
 		colMessage.Render(truncate(s.Message, 25)),
 	)
 	fmt.Println(line)
-	if len(s.Tags) > 0 {
-		tags := ""
-		for _, t := range s.Tags {
-			tags += ui.StyleTag.Render(t) + " "
-		}
-		fmt.Printf("  %s\n", strings.TrimSpace(tags))
+	var badges string
+	if s.Project != "" {
+		badges += ui.StyleHighlight.Render("@"+s.Project) + " "
+	}
+	for _, t := range s.Tags {
+		badges += ui.StyleTag.Render(t) + " "
+	}
+	if badges != "" {
+		fmt.Printf("  %s\n", strings.TrimSpace(badges))
 	}
 }
 
@@ -562,5 +571,6 @@ func init() {
 	historyCmd.Flags().IntP("limit", "n", 0, "show last N sessions as a table")
 	historyCmd.Flags().Float64P("last", "l", 0, "show last N hours")
 	historyCmd.Flags().BoolP("notes", "v", false, "show checkpoint notes (table view)")
+	historyCmd.Flags().StringP("project", "p", "", "filter by project")
 	rootCmd.AddCommand(historyCmd)
 }

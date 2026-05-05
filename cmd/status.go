@@ -38,12 +38,16 @@ Tips:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, _ := config.Load()
 		dailyHours := 8
-		if cfg != nil && cfg.Work.DailyHours > 0 {
-			dailyHours = cfg.Work.DailyHours
+		idleMinutes := 0
+		if cfg != nil {
+			if cfg.Work.DailyHours > 0 {
+				dailyHours = cfg.Work.DailyHours
+			}
+			idleMinutes = cfg.Work.IdleMinutes
 		}
 
 		client := daemon.NewClient()
-		model := ui.NewStatusModel(client, dailyHours)
+		model := ui.NewStatusModel(client, dailyHours, idleMinutes)
 
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		_, err := p.Run()
