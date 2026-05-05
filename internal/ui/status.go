@@ -18,6 +18,7 @@ type inputMode int
 const (
 	modeNormal inputMode = iota
 	modeNote
+	modeSubNote
 	modeStop
 )
 
@@ -31,14 +32,15 @@ type StatusModel struct {
 	dailyHours   int
 	idleMinutes  int
 	lastKey      time.Time
-	store        db.Store
-	sessions     []*db.Session
-	mode         inputMode
-	inputText    string
-	updateAvail  string
-	version      string
-	actionResult string
-	actionIsErr  bool
+	store            db.Store
+	sessions         []*db.Session
+	mode             inputMode
+	inputText        string
+	subNoteParentID  int64 // ID of the last top-level note (for sub-note attachment)
+	updateAvail      string
+	version          string
+	actionResult     string
+	actionIsErr      bool
 }
 
 // ── message types ─────────────────────────────────────────────────────────────
@@ -94,10 +96,14 @@ func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				text := strings.TrimSpace(m.inputText)
 				m.mode = modeNormal
 				m.inputText = ""
-				if mode == modeNote {
+				switch mode {
+				case modeNote:
 					return m, sendNoteCmd(m.client, text)
+				case modeSubNote:
+					return m, sendSubNoteCmd(m.client, text, m.subNoteParentID)
+				default:
+					return m, sendStopCmd(m.client, text)
 				}
-				return m, sendStopCmd(m.client, text)
 			case tea.KeyBackspace, tea.KeyDelete:
 				if len(m.inputText) > 0 {
 					m.inputText = m.inputText[:len(m.inputText)-1]
@@ -122,6 +128,12 @@ func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.inputText = ""
 				m.actionResult = ""
 			}
+		case "s":
+			if m.status != nil && m.status.Active && m.subNoteParentID > 0 {
+				m.mode = modeSubNote
+				m.inputText = ""
+				m.actionResult = ""
+			}
 		case "x":
 			if m.status != nil && m.status.Active {
 				m.mode = modeStop
@@ -142,6 +154,13 @@ func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg != nil && msg.Active && msg.Session != nil {
 			t, _ := time.Parse(time.RFC3339, msg.Session.StartTime)
 			m.startTime = t.Local()
+			// Track the most recent top-level note for sub-note attachment
+			m.subNoteParentID = 0
+			for _, log := range msg.RecentLog {
+				if log.ParentID == 0 && log.ID > m.subNoteParentID {
+					m.subNoteParentID = log.ID
+				}
+			}
 		}
 
 	case errMsg:
@@ -281,16 +300,37 @@ func (m StatusModel) View() string {
 		}
 	}
 
-	// Recent notes
+	// Recent notes — tree view (top-level + indented sub-notes)
 	if len(m.status.RecentLog) > 0 {
 		b.WriteString(StyleHighlight.Render("  recent notes") + "\n")
-		for i := len(m.status.RecentLog) - 1; i >= 0; i-- {
-			entry := m.status.RecentLog[i]
-			ts, _ := time.Parse(time.RFC3339, entry.Timestamp)
+
+		// Separate top-level from sub-notes
+		subNoteMap := map[int64][]daemon.LogDTO{}
+		var topLevel []daemon.LogDTO
+		for _, entry := range m.status.RecentLog {
+			if entry.ParentID == 0 {
+				topLevel = append(topLevel, entry)
+			} else {
+				subNoteMap[entry.ParentID] = append(subNoteMap[entry.ParentID], entry)
+			}
+		}
+
+		// Render top-level notes (most recent first), sub-notes indented below each
+		for i := len(topLevel) - 1; i >= 0; i-- {
+			note := topLevel[i]
+			ts, _ := time.Parse(time.RFC3339, note.Timestamp)
 			timeStr := StyleDimmed.Render(ts.Local().Format("15:04"))
 			b.WriteString(fmt.Sprintf("%s  %s %s\n",
-				timeStr, StyleDimmed.Render("·"), StyleLogEntry.Render(entry.Note),
+				timeStr, StyleDimmed.Render("·"), StyleLogEntry.Render(note.Note),
 			))
+			for _, child := range subNoteMap[note.ID] {
+				cts, _ := time.Parse(time.RFC3339, child.Timestamp)
+				b.WriteString(fmt.Sprintf("       %s %s  %s\n",
+					StyleDimmed.Render("↳"),
+					StyleDimmed.Render(cts.Local().Format("15:04")),
+					StyleLogEntry.Render(child.Note),
+				))
+			}
 		}
 		b.WriteString("\n")
 	}
@@ -314,6 +354,14 @@ func (m StatusModel) View() string {
 		))
 		b.WriteString(StyleDimmed.Render("  enter to save  ·  esc to cancel\n"))
 
+	case modeSubNote:
+		b.WriteString(StyleDimmed.Render("  ─────────────────────────────────────\n"))
+		b.WriteString(fmt.Sprintf("  %s %s_\n",
+			StyleHighlight.Render("  ↳ sub-note:"),
+			StyleTitle.Render(m.inputText),
+		))
+		b.WriteString(StyleDimmed.Render("  enter to save  ·  esc to cancel\n"))
+
 	case modeStop:
 		b.WriteString(StyleDimmed.Render("  ─────────────────────────────────────\n"))
 		b.WriteString(fmt.Sprintf("  %s %s_\n",
@@ -328,7 +376,12 @@ func (m StatusModel) View() string {
 				"  ↑ "+m.updateAvail+" available  ·  go install github.com/tolgazorlu/btrack@latest\n",
 			))
 		}
-		b.WriteString(StyleDimmed.Render("  n note  ·  x stop  ·  q quit\n"))
+		hints := "  n note"
+		if m.subNoteParentID > 0 {
+			hints += "  ·  s sub-note"
+		}
+		hints += "  ·  x stop  ·  q quit"
+		b.WriteString(StyleDimmed.Render(hints + "\n"))
 	}
 
 	return b.String()
@@ -439,6 +492,22 @@ func sendNoteCmd(client *daemon.Client, note string) tea.Cmd {
 			return actionResultMsg{resp.Error, true}
 		}
 		return actionResultMsg{"note added", false}
+	}
+}
+
+func sendSubNoteCmd(client *daemon.Client, note string, parentID int64) tea.Cmd {
+	return func() tea.Msg {
+		if note == "" {
+			return actionResultMsg{"nothing to add", false}
+		}
+		resp, err := client.Send(daemon.ActionLog, daemon.LogPayload{Note: note, ParentID: parentID})
+		if err != nil {
+			return actionResultMsg{err.Error(), true}
+		}
+		if !resp.Success {
+			return actionResultMsg{resp.Error, true}
+		}
+		return actionResultMsg{"sub-note added", false}
 	}
 }
 

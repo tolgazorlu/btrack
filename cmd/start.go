@@ -7,8 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/daemon"
+	"github.com/tolgazorlu/btrack/internal/db"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -30,8 +33,7 @@ Examples:
 Tips:
   · Git branch and repo are captured automatically
   · Only one session can be active at a time
-  · Add notes while working: btrack n "found the issue"
-  · Finish with:           btrack x -m "what you did"`,
+  · In the status view: n to add a note, s for sub-note, x to stop`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskName := strings.Join(args, " ")
@@ -56,6 +58,7 @@ Tips:
 		var sess daemon.SessionDTO
 		json.Unmarshal(resp.Data, &sess)
 
+		// Print brief confirmation before opening TUI
 		fmt.Printf("\n  %s  %s\n",
 			ui.StyleSuccess.Render("▶"),
 			ui.StyleTitle.Render(sess.TaskName),
@@ -64,12 +67,34 @@ Tips:
 			fmt.Printf("  %s\n", ui.StyleTag.Render("@"+sess.Project))
 		}
 		if sess.GitBranch != "" {
-			fmt.Printf("  %s\n", ui.StyleSubtle.Render("⎇  "+sess.GitBranch))
+			fmt.Printf("  %s\n\n", ui.StyleSubtle.Render("⎇  "+sess.GitBranch))
+		} else {
+			fmt.Println()
 		}
-		fmt.Printf("\n  %s\n\n",
-			ui.StyleDimmed.Render("run `btrack status` to watch · `btrack stop -m \"msg\"` to finish"),
-		)
-		return nil
+
+		// Open status TUI automatically
+		cfg, _ := config.Load()
+		dailyHours := 8
+		idleMinutes := 0
+		if cfg != nil {
+			if cfg.Work.DailyHours > 0 {
+				dailyHours = cfg.Work.DailyHours
+			}
+			idleMinutes = cfg.Work.IdleMinutes
+		}
+
+		var store db.Store
+		if cfg != nil {
+			if s, err := db.Open(cfg); err == nil {
+				store = s
+				defer store.Close()
+			}
+		}
+
+		model := ui.NewStatusModel(client, dailyHours, idleMinutes, store, Version)
+		p := tea.NewProgram(model, tea.WithAltScreen())
+		_, err = p.Run()
+		return err
 	},
 }
 
