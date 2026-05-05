@@ -422,16 +422,23 @@ func renderProgressBar(d time.Duration, dailyHours int) string {
 //   orange = active session elapsed time
 func renderProgressBarDual(completed, active time.Duration, dailyHours int) string {
 	const width = 40
+	if dailyHours <= 0 {
+		dailyHours = 8
+	}
 	target := float64(dailyHours) * float64(time.Hour)
 
-	completedCells := int(float64(width) * float64(completed) / target)
-	totalCells := int(float64(width) * float64(completed+active) / target)
-	if completedCells > width {
-		completedCells = width
+	clamp := func(v, lo, hi int) int {
+		if v < lo {
+			return lo
+		}
+		if v > hi {
+			return hi
+		}
+		return v
 	}
-	if totalCells > width {
-		totalCells = width
-	}
+
+	completedCells := clamp(int(float64(width)*float64(completed)/target), 0, width)
+	totalCells := clamp(int(float64(width)*float64(completed+active)/target), completedCells, width)
 	activeCells := totalCells - completedCells
 	emptyCells := width - totalCells
 
