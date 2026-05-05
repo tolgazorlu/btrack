@@ -27,6 +27,7 @@ type StartPayload struct {
 	TaskName  string `json:"task_name"`
 	GitBranch string `json:"git_branch,omitempty"`
 	GitRepo   string `json:"git_repo,omitempty"`
+	Project   string `json:"project,omitempty"`
 }
 
 type StopPayload struct {
@@ -50,6 +51,7 @@ type SessionDTO struct {
 	Tags      []string `json:"tags,omitempty"`
 	GitBranch string   `json:"git_branch,omitempty"`
 	GitRepo   string   `json:"git_repo,omitempty"`
+	Project   string   `json:"project,omitempty"`
 }
 
 type LogDTO struct {

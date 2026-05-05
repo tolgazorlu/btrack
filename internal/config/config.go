@@ -15,15 +15,21 @@ type GitHubConfig struct {
 }
 
 type Config struct {
-	Database DatabaseConfig `mapstructure:"database"`
-	AI       AIConfig       `mapstructure:"ai"`
-	Daemon   DaemonConfig   `mapstructure:"daemon"`
-	Work     WorkConfig     `mapstructure:"work"`
-	GitHub   GitHubConfig   `mapstructure:"github"`
+	Database DatabaseConfig            `mapstructure:"database"`
+	AI       AIConfig                  `mapstructure:"ai"`
+	Daemon   DaemonConfig              `mapstructure:"daemon"`
+	Work     WorkConfig                `mapstructure:"work"`
+	GitHub   GitHubConfig              `mapstructure:"github"`
+	Projects map[string]ProjectConfig  `mapstructure:"projects"`
 }
 
 type WorkConfig struct {
-	DailyHours int `mapstructure:"daily_hours"`
+	DailyHours  int `mapstructure:"daily_hours"`
+	IdleMinutes int `mapstructure:"idle_minutes"` // 0 = disabled
+}
+
+type ProjectConfig struct {
+	Rate float64 `mapstructure:"rate"` // hourly billing rate
 }
 
 type DatabaseConfig struct {
@@ -201,6 +207,32 @@ func SaveDailyHours(hours int) error {
 		return err
 	}
 	viper.Set("work.daily_hours", hours)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
+// SaveIdleMinutes persists the idle auto-stop threshold (0 = disabled).
+func SaveIdleMinutes(minutes int) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("work.idle_minutes", minutes)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
+// SaveProjectRate persists an hourly billing rate for a project.
+func SaveProjectRate(project string, rate float64) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("projects."+project+".rate", rate)
 	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}

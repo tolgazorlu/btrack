@@ -16,9 +16,11 @@ import (
 )
 
 type Server struct {
-	store    db.Store
-	listener net.Listener
-	state    *activeState
+	store        db.Store
+	listener     net.Listener
+	state        *activeState
+	lastActivity time.Time
+	idleMinutes  int
 }
 
 type activeState struct {
@@ -26,7 +28,17 @@ type activeState struct {
 }
 
 func NewServer(store db.Store) *Server {
-	return &Server{store: store, state: &activeState{}}
+	cfg, _ := config.Load()
+	idleMinutes := 0
+	if cfg != nil {
+		idleMinutes = cfg.Work.IdleMinutes
+	}
+	return &Server{
+		store:        store,
+		state:        &activeState{},
+		lastActivity: time.Now(),
+		idleMinutes:  idleMinutes,
+	}
 }
 
 func (s *Server) Start() error {
@@ -50,6 +62,11 @@ func (s *Server) Start() error {
 	// Restore any in-progress session from db.
 	if sess, err := s.store.GetActiveSession(); err == nil && sess != nil {
 		s.state.session = sess
+	}
+
+	// Start idle-detection goroutine if configured.
+	if s.idleMinutes > 0 {
+		go s.idleWatcher()
 	}
 
 	for {
@@ -93,6 +110,7 @@ func (s *Server) handleConn(conn net.Conn) {
 }
 
 func (s *Server) dispatch(req Request) Response {
+	s.lastActivity = time.Now()
 	switch req.Action {
 	case ActionPing:
 		return Response{Success: true}
@@ -129,6 +147,7 @@ func (s *Server) handleStart(req Request) Response {
 		StartTime: time.Now(),
 		GitBranch: p.GitBranch,
 		GitRepo:   p.GitRepo,
+		Project:   p.Project,
 	}
 	if err := s.store.CreateSession(sess); err != nil {
 		return Response{Success: false, Error: err.Error()}
@@ -256,7 +275,35 @@ func sessionToDTO(s *db.Session) *SessionDTO {
 		Tags:      s.Tags,
 		GitBranch: s.GitBranch,
 		GitRepo:   s.GitRepo,
+		Project:   s.Project,
 	}
+}
+
+// idleWatcher runs in a goroutine and auto-stops the session if idle too long.
+func (s *Server) idleWatcher() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		if s.state.session == nil {
+			continue
+		}
+		if time.Since(s.lastActivity) > time.Duration(s.idleMinutes)*time.Minute {
+			s.autoStopIdle()
+		}
+	}
+}
+
+func (s *Server) autoStopIdle() {
+	if s.state.session == nil {
+		return
+	}
+	now := time.Now()
+	s.state.session.EndTime = &now
+	s.state.session.Message = "auto-stopped: idle"
+	s.state.session.Tags = append(s.state.session.Tags, "#idle")
+	_ = s.store.UpdateSession(s.state.session)
+	fmt.Fprintf(os.Stderr, "[btrack daemon] idle auto-stop: %q\n", s.state.session.TaskName)
+	s.state.session = nil
 }
 
 func extractTags(msg string) []string {
