@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -38,6 +39,18 @@ Tips:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskName := strings.Join(args, " ")
 		project, _ := cmd.Flags().GetString("project")
+
+		// Apply .btrack project file defaults (overridden by explicit flags).
+		if cwd, err := os.Getwd(); err == nil {
+			if pf, _ := config.FindProjectFile(cwd); pf != nil {
+				if project == "" && pf.Project != "" {
+					project = pf.Project
+				}
+				if pf.TaskPrefix != "" && !strings.HasPrefix(taskName, pf.TaskPrefix) {
+					taskName = pf.TaskPrefix + " " + taskName
+				}
+			}
+		}
 
 		payload := daemon.StartPayload{
 			TaskName:  taskName,
