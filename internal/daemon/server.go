@@ -194,8 +194,15 @@ func (s *Server) handleLog(req Request) Response {
 		return Response{Success: false, Error: err.Error()}
 	}
 
+	var parentID *int64
+	if p.ParentID > 0 {
+		pid := p.ParentID
+		parentID = &pid
+	}
+
 	entry := &db.LogEntry{
 		SessionID: s.state.session.ID,
+		ParentID:  parentID,
 		Note:      p.Note,
 		Timestamp: time.Now(),
 	}
@@ -203,7 +210,7 @@ func (s *Server) handleLog(req Request) Response {
 		return Response{Success: false, Error: err.Error()}
 	}
 
-	raw, _ := json.Marshal(map[string]string{"note": p.Note})
+	raw, _ := json.Marshal(map[string]interface{}{"note": p.Note, "id": entry.ID})
 	return Response{Success: true, Data: raw}
 }
 
@@ -213,13 +220,18 @@ func (s *Server) handleStatus() Response {
 		dto := sessionToDTO(s.state.session)
 		status.Session = dto
 
-		logs, err := s.store.GetRecentLogs(s.state.session.ID, 5)
+		logs, err := s.store.GetRecentLogs(s.state.session.ID, 12)
 		if err == nil {
 			for _, l := range logs {
-				status.RecentLog = append(status.RecentLog, LogDTO{
+				dto := LogDTO{
+					ID:        l.ID,
 					Note:      l.Note,
 					Timestamp: l.Timestamp.Format(time.RFC3339),
-				})
+				}
+				if l.ParentID != nil {
+					dto.ParentID = *l.ParentID
+				}
+				status.RecentLog = append(status.RecentLog, dto)
 			}
 		}
 	}

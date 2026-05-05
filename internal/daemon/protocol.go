@@ -35,7 +35,8 @@ type StopPayload struct {
 }
 
 type LogPayload struct {
-	Note string `json:"note"`
+	Note     string `json:"note"`
+	ParentID int64  `json:"parent_id,omitempty"` // 0 = top-level note
 }
 
 type StatusData struct {
@@ -55,6 +56,8 @@ type SessionDTO struct {
 }
 
 type LogDTO struct {
+	ID        int64  `json:"id"`
+	ParentID  int64  `json:"parent_id,omitempty"` // 0 = top-level
 	Note      string `json:"note"`
 	Timestamp string `json:"timestamp"` // RFC3339
 }
