@@ -87,7 +87,45 @@ var daemonStatusCmd = &cobra.Command{
 	},
 }
 
+var daemonKillCmd = &cobra.Command{
+	Use:   "kill",
+	Short: "Force-kill the daemon (use after updating btrack binary)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		data, err := os.ReadFile(config.PidFile())
+		if err != nil {
+			fmt.Printf("  %s  daemon not running\n", ui.StyleDimmed.Render("○"))
+			return nil
+		}
+		pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+		if err != nil {
+			return fmt.Errorf("invalid pid file")
+		}
+		proc, err := os.FindProcess(pid)
+		if err != nil {
+			return fmt.Errorf("process not found: %w", err)
+		}
+		_ = proc.Kill()
+		_ = os.Remove(config.PidFile())
+		_ = os.Remove(config.SocketPath())
+		fmt.Printf("  %s  daemon (pid %d) killed\n", ui.StyleSuccess.Render("■"), pid)
+		return nil
+	},
+}
+
+var daemonRestartCmd = &cobra.Command{
+	Use:   "restart",
+	Short: "Kill the daemon so the next command starts a fresh one",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Reuse kill logic
+		if err := daemonKillCmd.RunE(cmd, args); err != nil {
+			return err
+		}
+		fmt.Printf("  %s\n", ui.StyleDimmed.Render("next btrack command will start a fresh daemon"))
+		return nil
+	},
+}
+
 func init() {
-	daemonCmd.AddCommand(daemonStartCmd, daemonStopCmd, daemonStatusCmd)
+	daemonCmd.AddCommand(daemonStartCmd, daemonStopCmd, daemonStatusCmd, daemonKillCmd, daemonRestartCmd)
 	rootCmd.AddCommand(daemonCmd)
 }
