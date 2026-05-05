@@ -3,9 +3,12 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/daemon"
+	"github.com/tolgazorlu/btrack/internal/db"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -35,7 +38,43 @@ Tips:
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		note := strings.Join(args, " ")
+		sessionID, _ := cmd.Flags().GetInt64("session")
 
+		// --session flag: add note to a past session directly via DB.
+		if sessionID > 0 {
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+			store, err := db.Open(cfg)
+			if err != nil {
+				return err
+			}
+			defer store.Close()
+
+			sess, err := store.GetSessionByID(sessionID)
+			if err != nil || sess == nil {
+				return fmt.Errorf("session %d not found", sessionID)
+			}
+
+			entry := &db.LogEntry{
+				SessionID: sessionID,
+				Note:      note,
+				Timestamp: time.Now(),
+			}
+			if err := store.CreateLogEntry(entry); err != nil {
+				return fmt.Errorf("add note: %w", err)
+			}
+
+			fmt.Printf("  %s  %s  %s\n",
+				ui.StyleSuccess.Render("✓"),
+				ui.StyleDimmed.Render(fmt.Sprintf("session %d", sessionID)),
+				ui.StyleHighlight.Render(note),
+			)
+			return nil
+		}
+
+		// Default: add note to the active session via daemon.
 		payload := daemon.LogPayload{Note: note}
 		client := daemon.NewClient()
 		resp, err := client.Send(daemon.ActionLog, payload)
@@ -55,5 +94,6 @@ Tips:
 }
 
 func init() {
+	logCmd.Flags().Int64P("session", "i", 0, "add note to a past session by ID")
 	rootCmd.AddCommand(logCmd)
 }
