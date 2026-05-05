@@ -25,24 +25,27 @@ var rootCmd = &cobra.Command{
     btrack r                               continue last session  (resume)
     btrack break                           pause for a break
 
-  ` + ui.StyleHighlight.Render("REVIEW YOUR WORK") + `
-    btrack w                               live view             (status)
-    btrack d                               today as a tree       (day)
-    btrack d yesterday / 2026-05-01        specific day
-    btrack week                            full week tree
-    btrack h                               last 20 sessions      (history)
-    btrack h -n 50 -v                      with notes
+  ` + ui.StyleHighlight.Render("VIEW YOUR WORK") + `
+    btrack w                               live status           (status)
+    btrack h                               today as a tree       (history)
+    btrack h yesterday / 2026-05-01        specific day
+    btrack h -w                            this week
+    btrack h -m                            this month
+    btrack h -y                            this year
+    btrack h -n 20                         last 20 sessions (table)
+    btrack h -l 5                          last 5 hours
     btrack stats                           quick snapshot
     btrack streak                          working day streak
     btrack tag #bugfix                     filter by tag
     btrack search "JWT"                    search sessions       (find, f)
 
-  ` + ui.StyleHighlight.Render("AI FEATURES") + `
-    btrack ai setup                        configure API key
-    btrack ai sum                          standup from today     (summarize)
+  ` + ui.StyleHighlight.Render("AI") + `
+    btrack ai                              interactive chat
+    btrack ai sum                          standup from today
     btrack ai sum --days 3                 last 3 days
-    btrack ai ins                          productivity dashboard (insights)
-    btrack ai ins --no-ai                 stats only, no key needed
+    btrack ai ins                          productivity dashboard
+    btrack ai ins --no-ai                  stats only, no key needed
+    btrack ai setup                        configure API key
 
   ` + ui.StyleHighlight.Render("DATA & SETTINGS") + `
     btrack export                          export to CSV
@@ -52,9 +55,8 @@ var rootCmd = &cobra.Command{
     btrack config                          show all settings
 
   ` + ui.StyleHighlight.Render("LINKS") + `
-    btrack star                            open GitHub repo
-    btrack issue / feedback / bug          open issue tracker
-    btrack releases                        see changelog
+    btrack repo                            project links
+    btrack repo star / issue / releases    open in browser
 
   ` + ui.StyleHighlight.Render("SHELL AUTOCOMPLETE") + `
     btrack completion zsh >> ~/.zshrc      zsh

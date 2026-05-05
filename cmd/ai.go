@@ -16,15 +16,76 @@ import (
 
 var aiCmd = &cobra.Command{
 	Use:   "ai",
-	Short: "AI-powered summaries and insights",
-	Long: `Use AI to summarize your work and analyze productivity patterns.
+	Short: "AI chat, summaries, and insights",
+	Long: `Open an AI chat or run automated commands.
 
-Commands:
-  btrack ai setup       Configure an API key (OpenAI, Claude, or Gemini)
-  btrack ai summarize   Generate a standup summary from today's sessions
-  btrack ai insights    Show a stats dashboard with AI analysis
+  btrack ai                    interactive chat (default)
+  btrack ai setup              configure an API key
+  btrack ai sum                standup summary from today
+  btrack ai sum --days 3       last 3 days
+  btrack ai ins                productivity dashboard
+  btrack ai ins --no-ai        stats only, no key needed
 
-Run any command with --help for details.`,
+The interactive chat has context about your recent sessions — ask about
+your standups, work patterns, what you worked on, or anything else.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := loadConfigWithAICheck()
+		if err != nil {
+			return err
+		}
+		store, err := db.Open(cfg)
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+
+		sessions, err := store.GetRecentSessions(50)
+		if err != nil {
+			return fmt.Errorf("load sessions: %w", err)
+		}
+
+		provider, err := ai.NewProvider(cfg)
+		if err != nil {
+			return err
+		}
+
+		// Build a compact context prompt from recent sessions.
+		var sb strings.Builder
+		sb.WriteString("You are a helpful assistant for a developer time tracker called btrack.\n")
+		sb.WriteString("Here are the user's recent sessions:\n\n")
+		for _, s := range sessions {
+			d := s.Duration()
+			h := int(d.Hours())
+			m := int(d.Minutes()) % 60
+			var durStr string
+			if h > 0 {
+				durStr = fmt.Sprintf("%dh%02dm", h, m)
+			} else {
+				durStr = fmt.Sprintf("%dm", m)
+			}
+			start := s.StartTime.Local().Format("Mon Jan 02 15:04")
+			line := fmt.Sprintf("- [%s] %s (%s)", start, s.TaskName, durStr)
+			if s.Message != "" {
+				line += " — " + s.Message
+			}
+			if len(s.Tags) > 0 {
+				line += " " + strings.Join(s.Tags, " ")
+			}
+			sb.WriteString(line + "\n")
+
+			if logs, err := store.GetAllLogs(s.ID); err == nil {
+				for _, l := range logs {
+					sb.WriteString(fmt.Sprintf("  note: %s\n", l.Note))
+				}
+			}
+		}
+		sb.WriteString("\nHelp the user understand their work, generate standups, or analyze patterns.")
+
+		model := ui.NewChatModel(sb.String(), provider.Complete)
+		p := tea.NewProgram(model)
+		_, err = p.Run()
+		return err
+	},
 }
 
 // ─── ai setup ────────────────────────────────────────────────────────────────

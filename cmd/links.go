@@ -29,9 +29,10 @@ func openBrowser(url string) error {
 }
 
 var starCmd = &cobra.Command{
-	Use:   "star",
-	Short: "Open the btrack GitHub page",
-	Long:  `Open the btrack repository on GitHub in your browser.`,
+	Use:    "star",
+	Hidden: true,
+	Short:  "Open the btrack GitHub page (use: btrack repo star)",
+	Long:   `Open the btrack repository on GitHub in your browser.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("\n  %s  %s\n\n",
 			ui.StyleSuccess.Render("→"),
@@ -47,7 +48,8 @@ var starCmd = &cobra.Command{
 var issueCmd = &cobra.Command{
 	Use:     "issue",
 	Aliases: []string{"feedback", "report", "bug"},
-	Short:   "Open a new GitHub issue (bug report or feedback)",
+	Hidden:  true,
+	Short:   "Open a new GitHub issue (use: btrack repo issue)",
 	Long: `Open a new issue on GitHub to report a bug or share feedback.
 
 Aliases: feedback, report, bug
@@ -69,9 +71,10 @@ Examples:
 }
 
 var releasesCmd = &cobra.Command{
-	Use:   "releases",
-	Short: "Open the btrack releases page",
-	Long:  `Open the btrack releases page on GitHub to see the changelog.`,
+	Use:    "releases",
+	Hidden: true,
+	Short:  "Open the btrack releases page (use: btrack repo releases)",
+	Long:   `Open the btrack releases page on GitHub to see the changelog.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("\n  %s  %s\n\n",
 			ui.StyleSuccess.Render("→"),
