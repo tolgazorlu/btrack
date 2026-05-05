@@ -109,8 +109,12 @@ func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.inputText = m.inputText[:len(m.inputText)-1]
 				}
 			default:
+				// Accept printable characters; space may arrive as KeyRunes or
+				// as a bare " " string depending on the terminal.
 				if msg.Type == tea.KeyRunes {
 					m.inputText += string(msg.Runes)
+				} else if s := msg.String(); len(s) == 1 && s != "\x00" {
+					m.inputText += s
 				}
 			}
 			return m, nil
@@ -248,9 +252,21 @@ func (m StatusModel) View() string {
 		b.WriteString("  " + sep + "\n\n")
 	}
 
+	// ── Sum of today's completed sessions ────────────────────────────────────
+	var completedToday time.Duration
+	for _, s := range completed {
+		completedToday += s.EndTime.Sub(s.StartTime)
+	}
+
 	// ── Active session ────────────────────────────────────────────────────────
 	if !m.status.Active || m.status.Session == nil {
 		b.WriteString(StyleSubtle.Render("  no active session\n\n"))
+		if completedToday > 0 {
+			b.WriteString(renderProgressBarDual(completedToday, 0, m.dailyHours) + "\n")
+			b.WriteString(fmt.Sprintf("  %s\n\n", StyleDimmed.Render(
+				fmt.Sprintf("%s today  ·  %dh target", compactDur(completedToday), m.dailyHours),
+			)))
+		}
 		b.WriteString(StyleDimmed.Render("  start one with: ") + StyleHighlight.Render("btrack s \"task\"\n"))
 		b.WriteString(StyleDimmed.Render("\n  q quit\n"))
 		return b.String()
@@ -283,8 +299,12 @@ func (m StatusModel) View() string {
 		b.WriteString("\n\n")
 	}
 
-	b.WriteString(renderProgressBar(elapsed, m.dailyHours) + "\n")
-	b.WriteString(fmt.Sprintf("  %s\n\n", StyleDimmed.Render(fmt.Sprintf("%dh daily target", m.dailyHours))))
+	// Progress bar: green = completed today, orange = current active session
+	b.WriteString(renderProgressBarDual(completedToday, elapsed, m.dailyHours) + "\n")
+	totalToday := completedToday + elapsed
+	b.WriteString(fmt.Sprintf("  %s\n\n", StyleDimmed.Render(
+		fmt.Sprintf("%s / %dh today", compactDur(totalToday), m.dailyHours),
+	)))
 
 	// Idle warning when within last 20% of threshold
 	if m.idleMinutes > 0 {
@@ -394,21 +414,32 @@ func RenderProgressBar(d time.Duration, dailyHours int) string {
 }
 
 func renderProgressBar(d time.Duration, dailyHours int) string {
+	return renderProgressBarDual(d, 0, dailyHours)
+}
+
+// renderProgressBarDual draws a two-colour progress bar:
+//   green  = completed work (past sessions today)
+//   orange = active session elapsed time
+func renderProgressBarDual(completed, active time.Duration, dailyHours int) string {
 	const width = 40
-	pct := d.Hours() / float64(dailyHours)
-	if pct > 1 {
-		pct = 1
+	target := float64(dailyHours) * float64(time.Hour)
+
+	completedCells := int(float64(width) * float64(completed) / target)
+	totalCells := int(float64(width) * float64(completed+active) / target)
+	if completedCells > width {
+		completedCells = width
 	}
-	filled := int(float64(width) * pct)
-	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
-	color := colorSuccess
-	if pct > 0.75 {
-		color = colorWarning
+	if totalCells > width {
+		totalCells = width
 	}
-	if pct > 0.95 {
-		color = colorError
-	}
-	return "  " + lipgloss.NewStyle().Foreground(color).Render(bar)
+	activeCells := totalCells - completedCells
+	emptyCells := width - totalCells
+
+	bar := lipgloss.NewStyle().Foreground(colorSuccess).Render(strings.Repeat("█", completedCells)) +
+		lipgloss.NewStyle().Foreground(colorWarning).Render(strings.Repeat("█", activeCells)) +
+		lipgloss.NewStyle().Foreground(colorMuted).Render(strings.Repeat("░", emptyCells))
+
+	return "  " + bar
 }
 
 // ─── tea.Cmd helpers ──────────────────────────────────────────────────────────
