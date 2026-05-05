@@ -11,17 +11,17 @@ const { rewrite: rewriteSuffix } = rewritePath(
   `${docsContentRoute}{/*path}/content.md`,
 );
 
-export default function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const result = rewriteSuffix(request.nextUrl.pathname);
   if (result) {
     return NextResponse.rewrite(new URL(result, request.nextUrl));
   }
 
   if (isMarkdownPreferred(request)) {
-    const result = rewriteDocs(request.nextUrl.pathname);
+    const rewritten = rewriteDocs(request.nextUrl.pathname);
 
-    if (result) {
-      return NextResponse.rewrite(new URL(result, request.nextUrl));
+    if (rewritten) {
+      return NextResponse.rewrite(new URL(rewritten, request.nextUrl));
     }
   }
 

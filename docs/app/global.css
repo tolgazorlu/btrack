@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @import 'fumadocs-ui/css/emerald.css';
-@import './lib/default-colors.css';
 @import 'fumadocs-ui/css/preset.css';
 
 html {
