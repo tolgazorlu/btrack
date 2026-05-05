@@ -116,8 +116,8 @@ func (s *SQLiteStore) CreateSession(sess *Session) error {
 func (s *SQLiteStore) UpdateSession(sess *Session) error {
 	tagsJSON, _ := json.Marshal(sess.Tags)
 	_, err := s.db.Exec(
-		`UPDATE sessions SET end_time=?, message=?, tags=? WHERE id=?`,
-		nullTime(sess.EndTime), sess.Message, string(tagsJSON), sess.ID,
+		`UPDATE sessions SET task_name=?, start_time=?, end_time=?, message=?, tags=?, project=? WHERE id=?`,
+		sess.TaskName, sess.StartTime.UTC(), nullTime(sess.EndTime), sess.Message, string(tagsJSON), sess.Project, sess.ID,
 	)
 	return err
 }

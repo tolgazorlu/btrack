@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
@@ -13,23 +14,28 @@ import (
 
 var editCmd = &cobra.Command{
 	Use:   "edit <id>",
-	Short: "Edit a past session's task name or message",
-	Long: `Edit the task name or closing message of a past session.
-Find session IDs with: btrack history
+	Short: "Edit a past session's task, times, project, or message",
+	Long: `Edit any field of a past session.
+Find session IDs with: btrack history -n 20
 
 Usage:
   btrack edit <id> -t "new task name"
   btrack edit <id> -m "new message"
-  btrack edit <id> -t "new task" -m "new message"
+  btrack edit <id> --start 09:30 --end 11:45
+  btrack edit <id> -p myapp
 
 Examples:
   btrack edit 42 -t "fix JWT expiry bug"
-  btrack edit 42 -m "fixed JWT clock skew in auth middleware #bugfix"
-  btrack edit 42 -t "auth work" -m "refactored token handling #refactor"
+  btrack edit 42 -m "fixed JWT clock skew #bugfix"
+  btrack edit 42 --start 09:00 --end 17:30
+  btrack edit 42 -p myapp -t "auth refactor"
 
 Flags:
   -t, --task      New task name
-  -m, --message   New closing message`,
+  -m, --message   New closing message
+  -s, --start     New start time (HH:MM, same day as session)
+  -e, --end       New end time (HH:MM, same day as session)
+  -p, --project   Assign to project`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := strconv.ParseInt(args[0], 10, 64)
@@ -39,9 +45,12 @@ Flags:
 
 		newTask, _ := cmd.Flags().GetString("task")
 		newMsg, _ := cmd.Flags().GetString("message")
+		newStart, _ := cmd.Flags().GetString("start")
+		newEnd, _ := cmd.Flags().GetString("end")
+		newProject, _ := cmd.Flags().GetString("project")
 
-		if newTask == "" && newMsg == "" {
-			return fmt.Errorf("provide at least -t (task) or -m (message)")
+		if newTask == "" && newMsg == "" && newStart == "" && newEnd == "" && newProject == "" {
+			return fmt.Errorf("provide at least one flag: -t (task), -m (message), --start, --end, -p (project)")
 		}
 
 		cfg, err := config.Load()
@@ -59,11 +68,11 @@ Flags:
 			return fmt.Errorf("session %d not found", id)
 		}
 
-		// Show what's changing.
 		fmt.Println()
+
 		if newTask != "" && newTask != sess.TaskName {
 			fmt.Printf("  %s  %s  %s  %s\n",
-				ui.StyleDimmed.Render("task"),
+				ui.StyleDimmed.Render("task   "),
 				ui.StyleDimmed.Render(truncate(sess.TaskName, 30)),
 				ui.StyleDimmed.Render("→"),
 				ui.StyleHighlight.Render(newTask),
@@ -72,14 +81,52 @@ Flags:
 		}
 		if newMsg != "" && newMsg != sess.Message {
 			fmt.Printf("  %s  %s  %s  %s\n",
-				ui.StyleDimmed.Render("msg "),
+				ui.StyleDimmed.Render("message"),
 				ui.StyleDimmed.Render(truncate(sess.Message, 30)),
 				ui.StyleDimmed.Render("→"),
 				ui.StyleHighlight.Render(newMsg),
 			)
-			// Re-extract tags from new message.
 			sess.Message = newMsg
 			sess.Tags = extractTagsFromMessage(newMsg)
+		}
+		if newProject != "" && newProject != sess.Project {
+			fmt.Printf("  %s  %s  %s  %s\n",
+				ui.StyleDimmed.Render("project"),
+				ui.StyleDimmed.Render(sess.Project),
+				ui.StyleDimmed.Render("→"),
+				ui.StyleTag.Render("@"+newProject),
+			)
+			sess.Project = newProject
+		}
+		if newStart != "" {
+			t, err := parseTimeOnDay(newStart, sess.StartTime)
+			if err != nil {
+				return fmt.Errorf("--start: %w", err)
+			}
+			fmt.Printf("  %s  %s  %s  %s\n",
+				ui.StyleDimmed.Render("start  "),
+				ui.StyleDimmed.Render(sess.StartTime.Local().Format("15:04")),
+				ui.StyleDimmed.Render("→"),
+				ui.StyleHighlight.Render(t.Format("15:04")),
+			)
+			sess.StartTime = t
+		}
+		if newEnd != "" {
+			t, err := parseTimeOnDay(newEnd, sess.StartTime)
+			if err != nil {
+				return fmt.Errorf("--end: %w", err)
+			}
+			endStr := "…"
+			if sess.EndTime != nil {
+				endStr = sess.EndTime.Local().Format("15:04")
+			}
+			fmt.Printf("  %s  %s  %s  %s\n",
+				ui.StyleDimmed.Render("end    "),
+				ui.StyleDimmed.Render(endStr),
+				ui.StyleDimmed.Render("→"),
+				ui.StyleHighlight.Render(t.Format("15:04")),
+			)
+			sess.EndTime = &t
 		}
 
 		if err := store.UpdateSession(sess); err != nil {
@@ -110,8 +157,21 @@ func extractTagsFromMessage(msg string) []string {
 	return tags
 }
 
+// parseTimeOnDay parses "HH:MM" and places it on the same calendar day as ref.
+func parseTimeOnDay(hhmm string, ref time.Time) (time.Time, error) {
+	var h, m int
+	if _, err := fmt.Sscanf(hhmm, "%d:%d", &h, &m); err != nil || h < 0 || h > 23 || m < 0 || m > 59 {
+		return time.Time{}, fmt.Errorf("invalid time %q — use HH:MM (e.g. 09:30)", hhmm)
+	}
+	y, mo, d := ref.Local().Date()
+	return time.Date(y, mo, d, h, m, 0, 0, time.Local), nil
+}
+
 func init() {
 	editCmd.Flags().StringP("task", "t", "", "new task name")
 	editCmd.Flags().StringP("message", "m", "", "new closing message")
+	editCmd.Flags().StringP("start", "s", "", "new start time HH:MM (same day)")
+	editCmd.Flags().StringP("end", "e", "", "new end time HH:MM (same day)")
+	editCmd.Flags().StringP("project", "p", "", "assign to project")
 	rootCmd.AddCommand(editCmd)
 }

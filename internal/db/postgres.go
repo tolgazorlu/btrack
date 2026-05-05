@@ -87,8 +87,8 @@ func (s *PostgresStore) CreateSession(sess *Session) error {
 func (s *PostgresStore) UpdateSession(sess *Session) error {
 	tagsJSON, _ := json.Marshal(sess.Tags)
 	_, err := s.db.Exec(
-		`UPDATE sessions SET end_time=$1, message=$2, tags=$3 WHERE id=$4`,
-		nullTime(sess.EndTime), sess.Message, string(tagsJSON), sess.ID,
+		`UPDATE sessions SET task_name=$1, start_time=$2, end_time=$3, message=$4, tags=$5, project=$6 WHERE id=$7`,
+		sess.TaskName, sess.StartTime, nullTime(sess.EndTime), sess.Message, string(tagsJSON), sess.Project, sess.ID,
 	)
 	return err
 }
