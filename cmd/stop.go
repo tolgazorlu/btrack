@@ -11,6 +11,7 @@ import (
 	"github.com/tolgazorlu/btrack/internal/ai"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/daemon"
+	"github.com/tolgazorlu/btrack/internal/gcal"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -77,7 +78,8 @@ Tips:
 		json.Unmarshal(resp.Data, &sess)
 
 		start, _ := time.Parse(time.RFC3339, sess.StartTime)
-		elapsed := time.Since(start)
+		end := time.Now()
+		elapsed := end.Sub(start)
 
 		fmt.Printf("\n  %s  %s\n",
 			ui.StyleSuccess.Render("■"),
@@ -91,6 +93,22 @@ Tips:
 			ui.StyleDimmed.Render("message "),
 			ui.StyleHighlight.Render(message),
 		)
+
+		// Auto-push to Google Calendar if configured.
+		if cfg, err := config.Load(); err == nil && cfg.GCal.AutoSync && cfg.GCal.ClientID != "" {
+			fmt.Printf("  %s  syncing to Google Calendar...\r", ui.StyleDimmed.Render("↑"))
+			svc, err := gcal.NewService(cfg.GCal.ClientID, cfg.GCal.ClientSecret, config.DataDir())
+			if err == nil {
+				link, err := gcal.PushSession(svc, cfg.GCal.CalendarID, sess.TaskName, sess.Project, start, end)
+				if err == nil {
+					fmt.Printf("  %s  synced to Google Calendar  %s\n",
+						ui.StyleSuccess.Render("↑"),
+						ui.StyleDimmed.Render(link),
+					)
+				}
+			}
+		}
+		fmt.Println()
 		return nil
 	},
 }

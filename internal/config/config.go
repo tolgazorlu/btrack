@@ -15,12 +15,20 @@ type GitHubConfig struct {
 }
 
 type Config struct {
-	Database DatabaseConfig            `mapstructure:"database"`
-	AI       AIConfig                  `mapstructure:"ai"`
-	Daemon   DaemonConfig              `mapstructure:"daemon"`
-	Work     WorkConfig                `mapstructure:"work"`
-	GitHub   GitHubConfig              `mapstructure:"github"`
-	Projects map[string]ProjectConfig  `mapstructure:"projects"`
+	Database DatabaseConfig           `mapstructure:"database"`
+	AI       AIConfig                 `mapstructure:"ai"`
+	Daemon   DaemonConfig             `mapstructure:"daemon"`
+	Work     WorkConfig               `mapstructure:"work"`
+	GitHub   GitHubConfig             `mapstructure:"github"`
+	Projects map[string]ProjectConfig `mapstructure:"projects"`
+	GCal     GCalConfig               `mapstructure:"gcal"`
+}
+
+type GCalConfig struct {
+	ClientID     string `mapstructure:"client_id"`
+	ClientSecret string `mapstructure:"client_secret"`
+	CalendarID   string `mapstructure:"calendar_id"` // default: "primary"
+	AutoSync     bool   `mapstructure:"auto_sync"`   // push event after every stop
 }
 
 type WorkConfig struct {
@@ -233,6 +241,24 @@ func SaveProjectRate(project string, rate float64) error {
 		return err
 	}
 	viper.Set("projects."+project+".rate", rate)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
+// SaveGCal persists Google Calendar credentials.
+func SaveGCal(clientID, clientSecret, calendarID string, autoSync bool) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("gcal.client_id", clientID)
+	viper.Set("gcal.client_secret", clientSecret)
+	if calendarID != "" {
+		viper.Set("gcal.calendar_id", calendarID)
+	}
+	viper.Set("gcal.auto_sync", autoSync)
 	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}
