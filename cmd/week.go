@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
-	gh "github.com/tolgazorlu/btrack/internal/github"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -46,14 +45,6 @@ func runWeek(cmd *cobra.Command, args []string) error {
 	y, m, d := monday.Local().Date()
 	weekStart := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
 
-	// One GitHub fetch for the whole week.
-	var weekGH map[string]*gh.Activity
-	if ghClient := ghClientFromConfig(cfg); ghClient != nil {
-		if act, err := ghClient.GetActivity(weekStart.UTC(), now.UTC()); err == nil {
-			weekGH = gh.SplitByDay(act)
-		}
-	}
-
 	sep := ui.StyleDimmed.Render(strings.Repeat("─", 60))
 	fmt.Println()
 	fmt.Printf("  %s  %s\n", ui.StyleTitle.Render("btrack"), ui.StyleHighlight.Render("week of "+weekStart.Format("January 02")))
@@ -68,11 +59,6 @@ func runWeek(cmd *cobra.Command, args []string) error {
 			break
 		}
 
-		var dayGH *gh.Activity
-		if weekGH != nil {
-			dayGH = weekGH[day.Format("2006-01-02")]
-		}
-
 		sessions, _ := store.GetSessionsForDate(day)
 
 		isToday := sameDay(day, now)
@@ -83,11 +69,8 @@ func runWeek(cmd *cobra.Command, args []string) error {
 		}
 
 		if len(sessions) == 0 {
-			ghBadge := ghDayBadge(dayGH)
-			fmt.Printf("\n  %s%s%s\n", ui.StyleDimmed.Render(label), todayMark, ghBadge)
-			if dayGH == nil || dayGH.IsEmpty() {
-				fmt.Printf("  %s\n", ui.StyleDimmed.Render("  (no sessions)"))
-			}
+			fmt.Printf("\n  %s%s\n", ui.StyleDimmed.Render(label), todayMark)
+			fmt.Printf("  %s\n", ui.StyleDimmed.Render("  (no sessions)"))
 			continue
 		}
 
@@ -99,12 +82,10 @@ func runWeek(cmd *cobra.Command, args []string) error {
 		weekTotal += dayTotal
 		weekSessions += len(sessions)
 
-		ghBadge := ghDayBadge(dayGH)
-		fmt.Printf("\n  %s  %s%s%s\n",
+		fmt.Printf("\n  %s  %s%s\n",
 			ui.StyleHighlight.Render(label),
 			ui.StyleElapsed.Render(formatDur(dayTotal)),
 			todayMark,
-			ghBadge,
 		)
 
 		for j, sess := range sessions {
@@ -161,35 +142,6 @@ func runWeek(cmd *cobra.Command, args []string) error {
 		weekSessions, activeDays, pct,
 	)
 	return nil
-}
-
-// ghDayBadge returns a compact inline GitHub summary, e.g. "  ·  3 commits  1 PRs"
-func ghDayBadge(act *gh.Activity) string {
-	if act == nil || act.IsEmpty() {
-		return ""
-	}
-	var parts []string
-	if n := len(act.Commits); n > 0 {
-		parts = append(parts, fmt.Sprintf("%d commits", n))
-	}
-	prs, reviews := 0, 0
-	for _, pr := range act.PullRequests {
-		if pr.Action == "opened" || pr.Action == "merged" {
-			prs++
-		} else if pr.Action == "reviewed" {
-			reviews++
-		}
-	}
-	if prs > 0 {
-		parts = append(parts, fmt.Sprintf("%d PRs", prs))
-	}
-	if reviews > 0 {
-		parts = append(parts, fmt.Sprintf("%d reviews", reviews))
-	}
-	if len(parts) == 0 {
-		return ""
-	}
-	return ui.StyleDimmed.Render("  ·  " + strings.Join(parts, "  "))
 }
 
 func init() {
