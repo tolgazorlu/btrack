@@ -487,11 +487,11 @@ func runYear() error {
 // ─── table rendering helpers ─────────────────────────────────────────────────
 
 var (
-	colDate     = lipgloss.NewStyle().Width(11).Foreground(lipgloss.Color("#565F89"))
-	colTime     = lipgloss.NewStyle().Width(6).Foreground(lipgloss.Color("#565F89"))
-	colDuration = lipgloss.NewStyle().Width(10).Foreground(lipgloss.Color("#7AA2F7")).Bold(true)
-	colTask     = lipgloss.NewStyle().Width(30).Foreground(lipgloss.Color("#A9B1D6"))
-	colMessage  = lipgloss.NewStyle().Foreground(lipgloss.Color("#565F89"))
+	colDate     = lipgloss.NewStyle().Width(11).Foreground(ui.ColorMuted)
+	colTime     = lipgloss.NewStyle().Width(6).Foreground(ui.ColorMuted)
+	colDuration = lipgloss.NewStyle().Width(10).Foreground(ui.ColorPrimary).Bold(true)
+	colTask     = lipgloss.NewStyle().Width(30).Foreground(ui.ColorSecondary)
+	colMessage  = lipgloss.NewStyle().Foreground(ui.ColorMuted)
 )
 
 func printTableHeader() {

@@ -299,7 +299,7 @@ func (m StatusModel) View() string {
 		b.WriteString("\n\n")
 	}
 
-	// Progress bar: green = completed today, orange = current active session
+	// Progress bar: fd-primary = completed today, fd-accent-foreground = active segment
 	b.WriteString(renderProgressBarDual(completedToday, elapsed, m.dailyHours) + "\n")
 	totalToday := completedToday + elapsed
 	b.WriteString(fmt.Sprintf("  %s\n\n", StyleDimmed.Render(
@@ -418,8 +418,8 @@ func renderProgressBar(d time.Duration, dailyHours int) string {
 }
 
 // renderProgressBarDual draws a two-colour progress bar:
-//   green  = completed work (past sessions today)
-//   orange = active session elapsed time
+//   fd-primary            = completed work (past sessions today)
+//   fd-accent-foreground  = active session elapsed time
 func renderProgressBarDual(completed, active time.Duration, dailyHours int) string {
 	const width = 40
 	if dailyHours <= 0 {

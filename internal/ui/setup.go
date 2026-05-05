@@ -302,7 +302,7 @@ func RenderBox(title, body string) string {
 }
 
 func RenderStat(label string, value string) string {
-	lbl := lipgloss.NewStyle().Width(22).Foreground(lipgloss.Color("#565F89")).Render(label)
+	lbl := lipgloss.NewStyle().Width(22).Foreground(ColorMuted).Render(label)
 	return fmt.Sprintf("  %s  %s", lbl, value)
 }
 
@@ -321,6 +321,6 @@ func RenderBar(label string, val, max float64, width int) string {
 		color = colorWarning
 	}
 	barStr := lipgloss.NewStyle().Foreground(color).Render(bar)
-	lbl := lipgloss.NewStyle().Width(24).Foreground(lipgloss.Color("#565F89")).Render(label)
+	lbl := lipgloss.NewStyle().Width(24).Foreground(ColorMuted).Render(label)
 	return fmt.Sprintf("  %s %s  %.0f%%", lbl, barStr, pct*100)
 }

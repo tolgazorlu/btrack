@@ -34,7 +34,7 @@ Shell integration:
     command = "btrack prompt --format starship"
     when    = "btrack prompt"
     format  = "[$output]($style) "
-    style   = "blue"
+    style   = "fg:#52e0c4 bold"
 
   Fish — add to ~/.config/fish/config.fish:
     function fish_prompt
@@ -96,7 +96,7 @@ Shell integration:
 		case "starship":
 			out := map[string]string{
 				"text":  task + " · " + elapsedStr,
-				"style": "fg:blue bold",
+				"style": "fg:#52e0c4 bold",
 			}
 			b, _ := json.Marshal(out)
 			fmt.Print(string(b))

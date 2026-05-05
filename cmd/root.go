@@ -122,6 +122,11 @@ func init() {
 		if _, err := config.Load(); err != nil {
 			fmt.Fprintln(os.Stderr, ui.StyleError.Render("config error: ")+err.Error())
 		}
-		checkWelcome()
 	})
+	// Welcome after the command is known — skip TUI / machine-parseable commands (see cmd/welcome.go).
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		if !welcomeSuppressed(cmd) {
+			checkWelcome()
+		}
+	}
 }

@@ -7,9 +7,31 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
+
+// welcomeSuppressed skips the banner when stdout must stay clean (prompt, completion)
+// or when the command immediately opens a fullscreen TUI (welcome would flash unseen).
+func welcomeSuppressed(cmd *cobra.Command) bool {
+	if cmd == nil {
+		return false
+	}
+	path := cmd.CommandPath()
+	if strings.Contains(path, " prompt") || strings.Contains(path, " completion") {
+		return true
+	}
+	if cmd == rootCmd {
+		return true
+	}
+	switch cmd {
+	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd:
+		return true
+	default:
+		return false
+	}
+}
 
 // checkWelcome prints a welcome or upgrade banner the first time a new version runs.
 func checkWelcome() {
@@ -29,7 +51,7 @@ func checkWelcome() {
 func printWelcome(isUpgrade bool, prevVersion string) {
 	border := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#3B4261")).
+		BorderForeground(ui.ColorBorder).
 		Padding(1, 3)
 
 	c := func(command, desc string) string {

@@ -7,15 +7,50 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Palette — dark-mode vibe coder aesthetic (Tokyo Night inspired).
+// Palette — docs Emerald fd-* theme (@theme + .dark), hex from the same HSL values.
+// lipgloss.AdaptiveColor: Light = @theme (light UI), Dark = .dark
+//
+// Docs also define fd-background, fd-primary-foreground, fd-secondary, fd-card,
+// fd-popover, fd-ring (same hue as primary) — available for future full-bleed UI;
+// this file maps the tokens used by btrack TUI and plain-text helpers.
+const (
+	// @theme (light) — hex from docs fd-* HSL
+	hexLightForeground          = "#1c4037" // hsl(165, 40%, 18%)  fd-foreground
+	hexLightPrimary             = "#1fad91" // hsl(168, 70%, 40%)  fd-primary
+	hexLightAccent              = "#d9f2ec" // hsl(165, 50%, 90%)  fd-accent
+	hexLightAccentForeground    = "#0f5748" // hsl(168, 70%, 20%)  fd-accent-foreground
+	hexLightMuted               = "#e2f3ef" // hsl(165, 40%, 92%)  fd-muted
+	hexLightMutedForeground     = "#509584" // hsl(165, 30%, 45%)  fd-muted-foreground
+	hexLightSecondaryForeground = "#12493e" // hsl(168, 60%, 18%)  fd-secondary-foreground
+	hexLightBorderOpaque        = "#94d1c5" // hsl(168, 40%, 70%)  fd-border (opaque TUI stand-in)
+
+	// .dark
+	hexDarkForeground          = "#d4ede8" // hsl(168, 40%, 88%)  fd-foreground
+	hexDarkPrimary             = "#52e0c4" // hsl(168, 70%, 60%)  fd-primary
+	hexDarkAccent              = "#20323c" // hsl(200, 30%, 18%)  fd-accent
+	hexDarkAccentForeground    = "#93ecda" // hsl(168, 70%, 75%)  fd-accent-foreground
+	hexDarkMuted               = "#152228" // hsl(200, 30%, 12%)  fd-muted
+	hexDarkMutedForeground     = "#8fbcb3" // hsl(168, 25%, 65%)  fd-muted-foreground
+	hexDarkSecondaryForeground = "#d4ede8" // hsl(168, 40%, 88%)  fd-secondary-foreground
+	hexDarkBorderOpaque        = "#367d6f" // hsl(168, 40%, 35%)  fd-border (opaque TUI stand-in)
+)
+
+func ac(light, dark string) lipgloss.AdaptiveColor {
+	return lipgloss.AdaptiveColor{Light: light, Dark: dark}
+}
+
 var (
-	colorPrimary   = lipgloss.Color("#7AA2F7")
-	colorSecondary = lipgloss.Color("#A9B1D6")
-	colorMuted     = lipgloss.Color("#565F89")
-	colorSuccess   = lipgloss.Color("#9ECE6A")
-	colorWarning   = lipgloss.Color("#E0AF68")
-	colorError     = lipgloss.Color("#F7768E")
-	colorBorder    = lipgloss.Color("#3B4261")
+	colorForeground       = ac(hexLightForeground, hexDarkForeground)
+	colorPrimary          = ac(hexLightPrimary, hexDarkPrimary)
+	colorSecondary          = ac(hexLightSecondaryForeground, hexDarkSecondaryForeground)
+	colorMuted              = ac(hexLightMutedForeground, hexDarkMutedForeground)
+	colorAccent             = ac(hexLightAccent, hexDarkAccent)
+	colorAccentForeground   = ac(hexLightAccentForeground, hexDarkAccentForeground)
+	colorMutedFill          = ac(hexLightMuted, hexDarkMuted)
+	colorBorder             = ac(hexLightBorderOpaque, hexDarkBorderOpaque)
+	colorSuccess            = colorPrimary // completed / positive — fd-primary
+	colorWarning            = colorAccentForeground
+	colorError              = colorForeground
 )
 
 var (
@@ -35,7 +70,9 @@ var (
 
 	StyleError = lipgloss.NewStyle().
 			Foreground(colorError).
-			Bold(true)
+			Background(colorMutedFill).
+			Bold(true).
+			Padding(0, 1)
 
 	StyleWarning = lipgloss.NewStyle().
 			Foreground(colorWarning)
@@ -45,8 +82,8 @@ var (
 			Faint(true)
 
 	StyleTag = lipgloss.NewStyle().
-			Foreground(colorWarning).
-			Background(lipgloss.Color("#2A2D3E")).
+			Foreground(colorPrimary).
+			Background(colorAccent).
 			Padding(0, 1)
 
 	StyleBorder = lipgloss.NewStyle().
@@ -61,6 +98,15 @@ var (
 	StyleElapsed = lipgloss.NewStyle().
 			Foreground(colorPrimary).
 			Bold(true)
+)
+
+// ColorBorder, ColorMuted, ColorPrimary, ColorSecondary — for cmd-local lipgloss
+// (tables, welcome). Other fd tokens drive Style* above and the hex const block.
+var (
+	ColorBorder    = colorBorder
+	ColorMuted     = colorMuted
+	ColorPrimary   = colorPrimary
+	ColorSecondary = colorSecondary
 )
 
 // PulseFrames are animation frames for the active indicator.
