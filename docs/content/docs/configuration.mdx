@@ -1,0 +1,70 @@
+---
+title: Configuration
+description: Configure btrack settings like working hours, idle timeout, and project rates.
+---
+
+# Configuration
+
+btrack stores configuration in `~/.config/btrack/config.yaml`.
+
+## Setting Options
+
+Use `btrack config` to set values without editing the file directly:
+
+### Working Hours
+
+```bash
+btrack config hours 8
+```
+
+Sets the expected number of working hours per day. Used in progress indicators and daily summaries.
+
+### Idle Timeout
+
+```bash
+btrack config idle 30
+```
+
+Sets the idle timeout in minutes. If btrack detects no activity for this period, it warns you that your session may have drifted.
+
+### Project Rates
+
+```bash
+btrack config project myapp rate 150
+```
+
+Sets the hourly billing rate for project `myapp`. Used by `btrack invoice`.
+
+## Config File
+
+Location: `~/.config/btrack/config.yaml`
+
+```yaml
+hours: 8
+idle: 30
+
+projects:
+  myapp:
+    rate: 150
+  clientco:
+    rate: 120
+
+# AI provider settings (written by `btrack ai setup`)
+ai:
+  provider: openai
+  api_key: sk-...
+
+# Google Calendar (written by `btrack gcal connect`)
+gcal:
+  client_id: ...
+  client_secret: ...
+  auto_sync: false
+```
+
+## Viewing Config
+
+```bash
+btrack config
+```
+
+Prints the current configuration as YAML.

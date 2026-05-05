@@ -1,0 +1,65 @@
+---
+title: Quick Start
+description: Track your first session with btrack in under a minute.
+---
+
+# Quick Start
+
+This guide walks you through a typical btrack workflow from starting a session to stopping it.
+
+## 1. Start a Session
+
+```bash
+btrack s "fix login bug"
+```
+
+Starts a new tracking session with a description. Alias: `btrack start`.
+
+## 2. Add a Note
+
+```bash
+btrack n "found the issue — JWT clock skew between services"
+```
+
+Attaches a timestamped note to the currently running session. Alias: `btrack note`.
+
+You can also add notes to past sessions using the `--session` flag:
+
+```bash
+btrack n "follow-up: add monitoring" --session 42
+```
+
+## 3. Check Live Status
+
+```bash
+btrack w
+```
+
+Shows a live-updating status display with elapsed time, session description, and any notes. Press `q` to exit.
+
+## 4. Stop the Session
+
+```bash
+btrack x -m "fixed JWT clock skew, deployed to staging"
+```
+
+Stops the running session and optionally attaches a final commit message. Alias: `btrack stop`.
+
+## 5. View History
+
+```bash
+btrack h
+```
+
+Shows today's sessions with durations and notes.
+
+```bash
+btrack h -w   # this week
+btrack h -m   # this month
+```
+
+## What's Next
+
+- [Commands](/docs/commands) — full reference for all btrack commands
+- [Projects](/docs/projects) — organize sessions by project
+- [AI Summaries](/docs/ai) — generate standups from your sessions

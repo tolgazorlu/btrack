@@ -1,0 +1,57 @@
+---
+title: Pomodoro
+description: Use btrack's built-in Pomodoro timer to focus with automatic session tracking.
+---
+
+# Pomodoro
+
+btrack includes a built-in Pomodoro timer. Sessions started via `btrack pomo` are automatically tagged with `#pomo` and tracked like any other session.
+
+## Basic Usage
+
+```bash
+btrack pomo "write unit tests"
+```
+
+Starts a 25-minute work session followed by a 5-minute break. The cycle repeats automatically.
+
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--work N` | 25 | Work interval in minutes |
+| `--break N` | 5 | Short break duration in minutes |
+| `--long-break N` | 15 | Long break after every 4 rounds |
+| `--rounds N` | 4 | Number of work sessions before a long break |
+
+## Examples
+
+```bash
+# Default Pomodoro (25/5)
+btrack pomo "deep work: refactor auth module"
+
+# Shorter cycles for review tasks
+btrack pomo "PR review" --work 15 --break 3
+
+# Extended focus sessions
+btrack pomo "architecture design" --work 50 --break 10 --long-break 30
+```
+
+## How It Works
+
+1. A btrack session is started with your task description and the `#pomo` tag
+2. A timer counts down the work interval in your terminal
+3. When the interval ends, btrack records a note marking the completed round
+4. A break timer starts automatically
+5. After the configured number of rounds, a longer break is taken
+6. Press `q` at any time to end the session
+
+## Session Tagging
+
+Pomodoro sessions appear in history with the `#pomo` tag:
+
+```bash
+btrack h -l
+# 09:00–09:25  write unit tests #pomo  [round 1/4 complete]
+# 09:30–09:55  write unit tests #pomo  [round 2/4 complete]
+```

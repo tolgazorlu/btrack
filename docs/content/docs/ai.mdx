@@ -1,0 +1,66 @@
+---
+title: AI
+description: Use AI to summarize your work, generate standups, and get productivity insights.
+---
+
+# AI Integration
+
+btrack integrates with leading AI providers to turn your session history into useful summaries, standup notes, and productivity dashboards.
+
+## Setup
+
+```bash
+btrack ai setup
+```
+
+Interactive setup that configures your AI provider and API key. Supported providers:
+
+| Provider | Models |
+|----------|--------|
+| OpenAI | GPT-4o, GPT-4 Turbo |
+| Anthropic | Claude Sonnet, Claude Haiku |
+| Google | Gemini Pro, Gemini Flash |
+
+Your API key is stored locally in `~/.config/btrack/config.yaml` and is never sent to btrack servers.
+
+## Commands
+
+### Interactive Chat
+
+```bash
+btrack ai
+```
+
+Opens an interactive chat session with context from your recent btrack sessions. Ask questions like "what did I work on yesterday?" or "how much time did I spend on auth this week?".
+
+### Standup Summary
+
+```bash
+btrack ai sum
+```
+
+Generates a concise standup update from yesterday's and today's sessions:
+
+```
+Yesterday:
+- Fixed JWT authentication issue (2h 15m)
+- Reviewed PR for OAuth flow (45m)
+
+Today:
+- Implementing refresh token rotation
+- Team sync at 2pm
+
+Blockers: None
+```
+
+### Productivity Insights
+
+```bash
+btrack ai ins
+```
+
+Generates a productivity dashboard analyzing your sessions over the past week:
+- Peak productivity hours
+- Most worked-on projects
+- Focus vs. context-switching patterns
+- Suggestions for improvement

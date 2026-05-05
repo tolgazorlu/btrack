@@ -12,7 +12,7 @@ A time tracker for developers. Runs in the terminal, stays out of your way.
 
 **macOS / Linux**
 ```bash
-brew install tolgazorlu/btrack/btrack
+brew install btrack
 ```
 
 **Windows**

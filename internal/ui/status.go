@@ -273,7 +273,7 @@ func (m StatusModel) View() string {
 	}
 
 	sess := m.status.Session
-	pulse := StyleSuccess.Render(PulseFrames[m.frame])
+	pulse := StyleWarning.Render(PulseFrames[m.frame])
 	elapsed := time.Since(m.startTime)
 
 	b.WriteString(fmt.Sprintf("  %s  %s\n", pulse, StyleTitle.Render(sess.TaskName)))

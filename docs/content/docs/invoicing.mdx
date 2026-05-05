@@ -1,0 +1,68 @@
+---
+title: Invoicing
+description: Generate invoice reports from your tracked time.
+---
+
+# Invoicing
+
+btrack can generate invoice-ready time reports from your sessions. Set per-project hourly rates and export a formatted summary for billing.
+
+## Basic Usage
+
+```bash
+btrack invoice -p myapp -r 150
+```
+
+Generates an invoice for project `myapp` at $150/hr.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-p <name>` | Project name to invoice |
+| `-r <rate>` | Hourly rate (overrides config) |
+| `--month <YYYY-MM>` | Month to invoice (default: current month) |
+| `--round` | Round session durations to nearest 15 minutes |
+| `--out <file>` | Write output to a file instead of stdout |
+
+## Examples
+
+```bash
+# Invoice current month for "clientco" at $120/hr
+btrack invoice -p clientco -r 120
+
+# Invoice a specific month
+btrack invoice -p clientco -r 120 --month 2025-04
+
+# Round to nearest 15 min and save to file
+btrack invoice -p clientco -r 120 --round --out invoice-april.txt
+```
+
+## Example Output
+
+```
+Invoice: clientco — April 2025
+─────────────────────────────────────────
+Date         Description              Hours
+2025-04-01   Set up CI pipeline       2.50
+2025-04-02   Fix authentication bug   1.75
+2025-04-03   Code review              1.00
+─────────────────────────────────────────
+Total Hours: 5.25
+Rate:        $120.00/hr
+Amount Due:  $630.00
+```
+
+## Setting Rates in Config
+
+Rates persist per project so you don't need to pass `-r` every time:
+
+```bash
+btrack config project myapp rate 150
+```
+
+Then:
+
+```bash
+btrack invoice -p myapp   # uses $150/hr automatically
+```

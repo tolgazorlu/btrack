@@ -1,0 +1,65 @@
+---
+title: Installation
+description: Install btrack on macOS, Linux, or Windows.
+---
+
+# Installation
+
+Install the `btrack` binary on your system. Pick the method that matches your platform.
+
+## Install
+
+<CodeBlockTabs defaultValue="brew" groupId="btrack-install">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="brew">
+      Homebrew
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="windows">
+      Windows
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="go">
+      Go
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="brew">
+    ```bash
+    brew install btrack
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="windows">
+    ```powershell
+    irm https://raw.githubusercontent.com/tolgazorlu/btrack/main/install.ps1 | iex
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```bash
+    go install github.com/tolgazorlu/btrack@latest
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+Use **Homebrew** on macOS or Linux ([brew.sh](https://brew.sh/)). **Go** needs 1.21+ and `$(go env GOPATH)/bin` on your `PATH`.
+
+## Manual Install
+
+Download the latest binary for your platform from the [GitHub Releases](https://github.com/tolgazorlu/btrack/releases) page.
+
+1. Download the archive for your OS and architecture
+2. Extract the `btrack` binary
+3. Move it to a directory on your `PATH` (for example `/usr/local/bin` on Unix)
+
+## Verify
+
+```bash
+btrack --version
+```
+
+## Next Steps
+
+- [Quick Start](/docs/quick-start) — track your first session
+- [Configuration](/docs/configuration) — set working hours, idle timeout, and more

@@ -1,0 +1,80 @@
+---
+title: Shell Prompt
+description: Show your active btrack session in your terminal prompt.
+---
+
+# Shell Prompt Integration
+
+Display your active btrack session directly in your shell prompt so you always know what you're tracking.
+
+## Basic Usage
+
+```bash
+btrack prompt
+```
+
+Outputs the current session description if one is running. Outputs nothing if no session is active.
+
+## Formats
+
+| Flag | Description |
+|------|-------------|
+| `--format starship` | Output in Starship custom module JSON format |
+| `--format json` | Output as raw JSON |
+
+## Bash / Zsh PS1
+
+Add active session info to your PS1:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+export PS1='$(btrack prompt) \$ '
+```
+
+Or with more context:
+
+```bash
+btrack_session() {
+  local session
+  session=$(btrack prompt 2>/dev/null)
+  if [ -n "$session" ]; then
+    echo " [⏱ $session]"
+  fi
+}
+
+export PS1='\u@\h:\w$(btrack_session)\$ '
+```
+
+## Starship
+
+Add to your `~/.config/starship.toml`:
+
+```toml
+[custom.btrack]
+command = "btrack prompt --format starship"
+when = "btrack prompt"
+format = "[$output]($style) "
+style = "yellow bold"
+```
+
+Then add `custom.btrack` to your `format` string:
+
+```toml
+format = """
+$username$directory$git_branch$custom.btrack$character
+"""
+```
+
+## Fish
+
+Add to `~/.config/fish/config.fish`:
+
+```fish
+function fish_prompt
+    set -l btrack_session (btrack prompt 2>/dev/null)
+    if test -n "$btrack_session"
+        echo -n (set_color yellow)"[$btrack_session] "(set_color normal)
+    end
+    echo -n (set_color green)$USER(set_color normal)':'(set_color blue)(pwd)(set_color normal)'$ '
+end
+```

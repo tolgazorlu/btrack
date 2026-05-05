@@ -1,0 +1,103 @@
+---
+title: Commands
+description: Full reference for all btrack commands and flags.
+---
+
+# Command Reference
+
+## Core Workflow
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `btrack start "description"` | `btrack s` | Start a new tracking session |
+| `btrack note "text"` | `btrack n` | Add a note to the active session |
+| `btrack note "text" --session N` | `btrack n --session N` | Add a note to a specific past session |
+| `btrack stop` | `btrack x` | Stop the active session |
+| `btrack stop -m "message"` | `btrack x -m` | Stop with a final commit message |
+| `btrack switch "description"` | `btrack sw` | Stop current session and start a new one |
+| `btrack resume` | `btrack r` | Resume the most recently stopped session |
+| `btrack break` | | Start a break (untracked pause) |
+| `btrack w` | | Live status display with elapsed time |
+
+## History (`btrack h`)
+
+| Flag | Description |
+|------|-------------|
+| _(none)_ | Show today's sessions |
+| `-w` | Show this week's sessions |
+| `-m` | Show this month's sessions |
+| `-y` | Show this year's sessions |
+| `-n N` | Show last N sessions |
+| `-l` | Long format (include notes) |
+| `-v` | Verbose (include metadata) |
+| `-p <name>` | Filter by project name |
+
+### Examples
+
+```bash
+btrack h          # today
+btrack h -w       # this week
+btrack h -m -l    # this month, long format
+btrack h -p myapp # sessions for project "myapp"
+btrack h -n 10    # last 10 sessions
+```
+
+## Projects
+
+| Command | Description |
+|---------|-------------|
+| `btrack projects` | List all known projects |
+| `btrack init` | Interactive project setup wizard |
+| `btrack config project <name> rate <N>` | Set hourly rate for a project |
+
+See [Projects](/docs/projects) for full documentation.
+
+## Session Editing
+
+Sessions can be annotated with notes at any time. Use `btrack n --session N` to attach a note to any past session by its ID. Session IDs are shown in `btrack h -v`.
+
+## Pomodoro
+
+```bash
+btrack pomo "task description"
+```
+
+See [Pomodoro](/docs/pomodoro) for flags and details.
+
+## AI
+
+```bash
+btrack ai        # interactive chat
+btrack ai sum    # standup summary
+btrack ai ins    # productivity insights
+```
+
+See [AI](/docs/ai) for setup and usage.
+
+## Google Calendar
+
+```bash
+btrack gcal connect
+btrack gcal sync
+btrack gcal push
+```
+
+See [Google Calendar](/docs/google-calendar) for setup.
+
+## Export & Invoice
+
+```bash
+btrack export
+btrack invoice
+```
+
+See [Export](/docs/export) and [Invoicing](/docs/invoicing).
+
+## Shell Prompt
+
+```bash
+btrack prompt
+btrack prompt --format starship
+```
+
+See [Shell Prompt](/docs/shell-prompt).

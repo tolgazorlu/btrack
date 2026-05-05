@@ -1,0 +1,21 @@
+{
+  "title": "btrack",
+  "pages": [
+    "---Getting Started---",
+    "index",
+    "installation",
+    "quick-start",
+    "---Usage---",
+    "commands",
+    "projects",
+    "invoicing",
+    "pomodoro",
+    "---Integrations---",
+    "google-calendar",
+    "ai",
+    "shell-prompt",
+    "---Reference---",
+    "configuration",
+    "export"
+  ]
+}

@@ -4,3 +4,6 @@ dist/
 *.test
 *.out
 .env
+node_modules
+/.next
+/.source

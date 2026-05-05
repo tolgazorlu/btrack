@@ -1,0 +1,53 @@
+---
+title: Google Calendar
+description: Sync btrack sessions with Google Calendar.
+---
+
+# Google Calendar Integration
+
+btrack can push sessions to Google Calendar or pull calendar events as sessions. The integration uses Google's free Calendar API — you set up your own OAuth credentials so your data stays in your own Google account.
+
+## Setup
+
+### 1. Create a Google Cloud Project
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project (or select an existing one)
+3. Enable the **Google Calendar API**
+4. Go to **APIs & Services → Credentials**
+5. Click **Create Credentials → OAuth client ID**
+6. Choose **Desktop app** as the application type
+7. Download the credentials JSON
+
+### 2. Connect btrack
+
+```bash
+btrack gcal connect --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
+```
+
+This opens a browser for OAuth authorization. After approval, the token is stored locally.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `btrack gcal connect` | Authorize btrack with your Google account |
+| `btrack gcal sync` | Pull calendar events as btrack sessions |
+| `btrack gcal push` | Push btrack sessions to Google Calendar |
+| `btrack gcal status` | Show connection status and last sync time |
+| `btrack gcal auto-sync on` | Enable automatic sync in the background |
+| `btrack gcal auto-sync off` | Disable automatic sync |
+
+## Auto-Sync
+
+When auto-sync is enabled, btrack will periodically push sessions to your calendar without requiring manual commands:
+
+```bash
+btrack gcal auto-sync on
+```
+
+## Notes
+
+- The Google Calendar API is free to use within normal usage limits
+- Each user sets up their own OAuth credentials — btrack never handles your Google credentials on any server
+- Credentials and tokens are stored locally in `~/.config/btrack/`

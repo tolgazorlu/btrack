@@ -1,0 +1,63 @@
+---
+title: Export
+description: Export your btrack sessions to CSV or JSON.
+---
+
+# Export
+
+Export your btrack sessions for use in spreadsheets, billing tools, or other applications.
+
+## Basic Usage
+
+```bash
+btrack export
+```
+
+Exports all sessions as CSV to stdout.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--format json` | Export as JSON instead of CSV (default: CSV) |
+| `--days N` | Export only the last N days |
+| `--out <file>` | Write to a file instead of stdout |
+| `-p <name>` | Filter by project name |
+
+## Examples
+
+```bash
+# Export last 30 days as CSV
+btrack export --days 30
+
+# Export as JSON to a file
+btrack export --format json --out sessions.json
+
+# Export a specific project for the last 7 days
+btrack export -p myapp --days 7 --out myapp-week.csv
+```
+
+## CSV Format
+
+```csv
+id,date,start,end,duration_min,description,notes,project
+42,2025-04-01,09:00,11:30,150,"Fix login bug","Found JWT issue",myapp
+43,2025-04-01,13:00,14:45,105,"Code review","",myapp
+```
+
+## JSON Format
+
+```json
+[
+  {
+    "id": 42,
+    "date": "2025-04-01",
+    "start": "09:00",
+    "end": "11:30",
+    "duration_min": 150,
+    "description": "Fix login bug",
+    "notes": ["Found JWT issue"],
+    "project": "myapp"
+  }
+]
+```

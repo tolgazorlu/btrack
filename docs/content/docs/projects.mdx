@@ -1,0 +1,68 @@
+---
+title: Projects
+description: Organize sessions by project using btrack's project system and .btrack files.
+---
+
+# Projects
+
+btrack supports project-based organization so you can track time across multiple clients or codebases and generate per-project reports and invoices.
+
+## Starting a Session with a Project
+
+Use the `-p` flag with `btrack start`:
+
+```bash
+btrack s "add OAuth flow" -p myapp
+```
+
+All sessions for `myapp` are grouped together in history and invoices.
+
+## Listing Projects
+
+```bash
+btrack projects
+```
+
+Shows all projects with total tracked hours.
+
+## The `.btrack` File
+
+Place a `.btrack` file in any project directory to configure project settings that apply automatically when you start a session from that directory.
+
+```yaml
+project: myapp
+task_prefix: "APP-"
+daily_hours: 8
+```
+
+| Field | Description |
+|-------|-------------|
+| `project` | Project name (used in reports and invoices) |
+| `task_prefix` | Prepended to session descriptions automatically |
+| `daily_hours` | Expected daily hours for burndown calculations |
+
+When you run `btrack s` from a directory containing a `.btrack` file, btrack automatically associates the session with that project.
+
+## Setup Wizard
+
+```bash
+btrack init
+```
+
+Interactive wizard that creates a `.btrack` file in the current directory. Prompts for project name, task prefix, daily hours, and hourly rate.
+
+## Setting Rates
+
+```bash
+btrack config project myapp rate 150
+```
+
+Sets the hourly rate for `myapp` to $150/hr. This rate is used by `btrack invoice`.
+
+## Viewing Project History
+
+```bash
+btrack h -p myapp
+```
+
+Filter history to a specific project.

@@ -26,7 +26,21 @@
       "Bash(findstr /i \"tag_name\\\\|browser_download\")",
       "PowerShell($r = Invoke-RestMethod \"https://api.github.com/repos/tolgazorlu/btrack/releases\"; $r | ForEach-Object { Write-Host \"=== $\\($_.tag_name\\) ===\" ; $_.assets | ForEach-Object { $_.name } })",
       "PowerShell($r = Invoke-RestMethod \"https://api.github.com/repos/tolgazorlu/btrack\"; Write-Host \"private: $\\($r.private\\)\")",
-      "Bash(go test *)"
+      "Bash(go test *)",
+      "Bash(./btrack_test_bin.exe --help)",
+      "Bash(./btrack_test.exe --help)",
+      "Bash(./btrack_test.exe pomo *)",
+      "Bash(./btrack_test.exe invoice *)",
+      "Bash(./btrack_test.exe prompt *)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(npx create-fumadocs-app@latest docs --template=default)",
+      "Bash(npx create-fumadocs-app@latest docs --template=\"+next+fuma-docs-mdx\")",
+      "Bash(npm install *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('exports',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(node -e ' *)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }
