@@ -12,24 +12,31 @@ import (
 )
 
 type StatusModel struct {
-	status     *daemon.StatusData
-	startTime  time.Time
-	frame      int
-	err        error
-	quitting   bool
-	client     *daemon.Client
-	dailyHours int
+	status      *daemon.StatusData
+	startTime   time.Time
+	frame       int
+	err         error
+	quitting    bool
+	client      *daemon.Client
+	dailyHours  int
+	idleMinutes int
+	lastKey     time.Time
 }
 
 type tickMsg time.Time
 type statusMsg *daemon.StatusData
 type errMsg error
 
-func NewStatusModel(client *daemon.Client, dailyHours int) *StatusModel {
+func NewStatusModel(client *daemon.Client, dailyHours int, idleMinutes int) *StatusModel {
 	if dailyHours <= 0 {
 		dailyHours = 8
 	}
-	return &StatusModel{client: client, dailyHours: dailyHours}
+	return &StatusModel{
+		client:      client,
+		dailyHours:  dailyHours,
+		idleMinutes: idleMinutes,
+		lastKey:     time.Now(),
+	}
 }
 
 func (m StatusModel) Init() tea.Cmd {
@@ -39,6 +46,7 @@ func (m StatusModel) Init() tea.Cmd {
 func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		m.lastKey = time.Now()
 		switch msg.String() {
 		case "q", "ctrl+c", "esc":
 			m.quitting = true
@@ -93,6 +101,10 @@ func (m StatusModel) View() string {
 	b.WriteString(fmt.Sprintf("  %s  %s\n", pulse, StyleTitle.Render(sess.TaskName)))
 	b.WriteString(fmt.Sprintf("     %s\n\n", FormatDuration(elapsed)))
 
+	if sess.Project != "" {
+		b.WriteString(fmt.Sprintf("  %s\n\n", StyleHighlight.Render("@"+sess.Project)))
+	}
+
 	if len(sess.Tags) > 0 {
 		b.WriteString("  ")
 		for _, tag := range sess.Tags {
@@ -111,6 +123,20 @@ func (m StatusModel) View() string {
 
 	b.WriteString(renderProgressBar(elapsed, m.dailyHours) + "\n")
 	b.WriteString(fmt.Sprintf("  %s\n\n", StyleDimmed.Render(fmt.Sprintf("%dh daily target", m.dailyHours))))
+
+	// Idle warning when within last 20% of threshold.
+	if m.idleMinutes > 0 {
+		idleThreshold := time.Duration(m.idleMinutes) * time.Minute
+		idleElapsed := time.Since(m.lastKey)
+		if idleElapsed > idleThreshold*8/10 {
+			remaining := idleThreshold - idleElapsed
+			if remaining < 0 {
+				remaining = 0
+			}
+			mins := int(remaining.Minutes()) + 1
+			b.WriteString(StyleWarning.Render(fmt.Sprintf("  ⚠  idle — auto-stop in ~%dm\n\n", mins)))
+		}
+	}
 
 	if len(m.status.RecentLog) > 0 {
 		b.WriteString(StyleHighlight.Render("  recent notes") + "\n")
