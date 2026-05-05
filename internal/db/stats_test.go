@@ -117,9 +117,10 @@ func TestComputeStats_DailyBreakdownLength(t *testing.T) {
 
 func TestComputeStats_HourlyPattern(t *testing.T) {
 	now := time.Now()
-	hour := now.Hour()
+	start := now.Add(-30 * time.Minute)
+	hour := start.Local().Hour() // use the session's actual start hour, not current hour
 	sessions := []*Session{
-		makeSession("task", now.Add(-30*time.Minute), 20, nil),
+		makeSession("task", start, 20, nil),
 	}
 
 	s := ComputeStats(sessions, 7)
