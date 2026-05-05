@@ -27,8 +27,8 @@ Commands:
 Once connected:
   · btrack ai sum    includes your real commits and PRs in the standup
   · btrack ai ins    includes GitHub contribution stats in insights
-  · btrack day       shows GitHub activity below your sessions
-  · btrack week      shows per-day commit/PR counts
+  · btrack h         shows GitHub activity below your sessions
+  · btrack h -w      shows per-day commit/PR counts
 
 How to get a token:
   github.com/settings/tokens/new
@@ -60,8 +60,8 @@ It is never sent anywhere except the GitHub API.
 After connecting, these commands are enriched:
   btrack ai sum       standup includes your real commits and PRs
   btrack ai ins       insights include GitHub contribution stats
-  btrack day          shows GitHub activity below sessions
-  btrack week         shows per-day commit/PR count`,
+  btrack h            shows GitHub activity below sessions
+  btrack h -w         shows per-day commit/PR count`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 		fmt.Printf("  %s\n", ui.StyleTitle.Render("GitHub Connect"))

@@ -89,7 +89,7 @@ func (m StatusModel) View() string {
 
 	if !m.status.Active || m.status.Session == nil {
 		b.WriteString(StyleSubtle.Render("  no active session\n\n"))
-		b.WriteString(StyleDimmed.Render("  start one with: ") + StyleHighlight.Render("btrack start <task>\n"))
+		b.WriteString(StyleDimmed.Render("  start one with: ") + StyleHighlight.Render("btrack s \"task\"\n"))
 		b.WriteString(StyleDimmed.Render("\n  press q to quit\n"))
 		return b.String()
 	}
@@ -143,7 +143,7 @@ func (m StatusModel) View() string {
 		for i := len(m.status.RecentLog) - 1; i >= 0; i-- {
 			entry := m.status.RecentLog[i]
 			ts, _ := time.Parse(time.RFC3339, entry.Timestamp)
-			timeStr := StyleDimmed.Render(ts.Format("15:04"))
+			timeStr := StyleDimmed.Render(ts.Local().Format("15:04"))
 			b.WriteString(fmt.Sprintf("%s  %s %s\n",
 				timeStr, StyleDimmed.Render("·"), StyleLogEntry.Render(entry.Note),
 			))
@@ -151,7 +151,7 @@ func (m StatusModel) View() string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString(StyleDimmed.Render("  q quit  ·  btrack log \"note\"  ·  btrack stop -m \"msg\"\n"))
+	b.WriteString(StyleDimmed.Render("  q quit  ·  btrack n \"note\"  ·  btrack x -m \"msg\"\n"))
 	return b.String()
 }
 

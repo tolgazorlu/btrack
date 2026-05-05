@@ -29,7 +29,7 @@ What you'll see:
 
 Tips:
   · For full analytics with charts and AI analysis: btrack ai insights
-  · For a day-by-day breakdown: btrack week
+  · For a day-by-day breakdown: btrack h -w
   · For a quick tag filter: btrack tag #bugfix
   · Connect GitHub to enrich AI insights: btrack github connect`,
 	RunE: func(cmd *cobra.Command, args []string) error {

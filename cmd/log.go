@@ -28,7 +28,7 @@ Examples:
   btrack n "PR ready for review"
 
 Tips:
-  · Notes appear as a tree under their session in: btrack d
+  · Notes appear as a tree under their session in: btrack h
   · AI uses your notes to write better standup summaries
   · Add as many as you want — they tell the story of your work
   · No active session? Start one first: btrack s "task name"`,

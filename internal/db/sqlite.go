@@ -252,7 +252,8 @@ func scanSession(row *sql.Row) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess.StartTime, _ = time.Parse(time.RFC3339, strings.Replace(startStr, " ", "T", 1)+"Z")
+	t, _ := time.Parse(time.RFC3339, strings.Replace(startStr, " ", "T", 1)+"Z")
+	sess.StartTime = t.Local()
 	json.Unmarshal([]byte(tagsJSON), &sess.Tags)
 	return &sess, nil
 }
@@ -299,7 +300,7 @@ func parseTime(s string) time.Time {
 		s += "Z"
 	}
 	t, _ := time.Parse(time.RFC3339, s)
-	return t
+	return t.Local()
 }
 
 func nullTime(t *time.Time) any {
