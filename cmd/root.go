@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/daemon"
+	"github.com/tolgazorlu/btrack/internal/db"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -92,8 +93,17 @@ var rootCmd = &cobra.Command{
 			}
 			idleMinutes = cfg.Work.IdleMinutes
 		}
+
+		var store db.Store
+		if cfg != nil {
+			if s, err := db.Open(cfg); err == nil {
+				store = s
+				defer store.Close()
+			}
+		}
+
 		client := daemon.NewClient()
-		model := ui.NewStatusModel(client, dailyHours, idleMinutes)
+		model := ui.NewStatusModel(client, dailyHours, idleMinutes, store, Version)
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		_, err := p.Run()
 		return err
