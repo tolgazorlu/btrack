@@ -66,10 +66,9 @@ Tips:
 				return fmt.Errorf("add note: %w", err)
 			}
 
-			fmt.Printf("  %s  %s  %s\n",
-				ui.StyleSuccess.Render("✓"),
-				ui.StyleDimmed.Render(fmt.Sprintf("session %d", sessionID)),
-				ui.StyleHighlight.Render(note),
+			ui.Sign(
+				ui.StyleSuccess.Render(ui.Sym.OK),
+				ui.StyleDimmed.Render(fmt.Sprintf("#%d", sessionID))+"  "+ui.StyleHighlight.Render(note),
 			)
 			return nil
 		}
@@ -85,10 +84,7 @@ Tips:
 			return fmt.Errorf("%s", resp.Error)
 		}
 
-		fmt.Printf("  %s  %s\n",
-			ui.StyleSuccess.Render("✓"),
-			ui.StyleHighlight.Render(note),
-		)
+		ui.OK(ui.StyleHighlight.Render(note))
 		return nil
 	},
 }

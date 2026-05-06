@@ -68,34 +68,25 @@ Flags:
 			return fmt.Errorf("session %d not found", id)
 		}
 
-		fmt.Println()
+		ui.Header("edit", fmt.Sprintf("#%d", id))
+
+		change := func(key, oldV, newV string) {
+			ui.KV(key, ui.StyleDimmed.Render(oldV)+" "+
+				ui.StyleDimmed.Render(ui.Sym.Arrow)+" "+
+				ui.StyleHighlight.Render(newV))
+		}
 
 		if newTask != "" && newTask != sess.TaskName {
-			fmt.Printf("  %s  %s  %s  %s\n",
-				ui.StyleDimmed.Render("task   "),
-				ui.StyleDimmed.Render(truncate(sess.TaskName, 30)),
-				ui.StyleDimmed.Render("→"),
-				ui.StyleHighlight.Render(newTask),
-			)
+			change("task", truncate(sess.TaskName, 28), newTask)
 			sess.TaskName = newTask
 		}
 		if newMsg != "" && newMsg != sess.Message {
-			fmt.Printf("  %s  %s  %s  %s\n",
-				ui.StyleDimmed.Render("message"),
-				ui.StyleDimmed.Render(truncate(sess.Message, 30)),
-				ui.StyleDimmed.Render("→"),
-				ui.StyleHighlight.Render(newMsg),
-			)
+			change("message", truncate(sess.Message, 28), newMsg)
 			sess.Message = newMsg
 			sess.Tags = extractTagsFromMessage(newMsg)
 		}
 		if newProject != "" && newProject != sess.Project {
-			fmt.Printf("  %s  %s  %s  %s\n",
-				ui.StyleDimmed.Render("project"),
-				ui.StyleDimmed.Render(sess.Project),
-				ui.StyleDimmed.Render("→"),
-				ui.StyleTag.Render("@"+newProject),
-			)
+			change("project", sess.Project, "@"+newProject)
 			sess.Project = newProject
 		}
 		if newStart != "" {
@@ -103,12 +94,7 @@ Flags:
 			if err != nil {
 				return fmt.Errorf("--start: %w", err)
 			}
-			fmt.Printf("  %s  %s  %s  %s\n",
-				ui.StyleDimmed.Render("start  "),
-				ui.StyleDimmed.Render(sess.StartTime.Local().Format("15:04")),
-				ui.StyleDimmed.Render("→"),
-				ui.StyleHighlight.Render(t.Format("15:04")),
-			)
+			change("start", sess.StartTime.Local().Format("15:04"), t.Format("15:04"))
 			sess.StartTime = t
 		}
 		if newEnd != "" {
@@ -116,16 +102,11 @@ Flags:
 			if err != nil {
 				return fmt.Errorf("--end: %w", err)
 			}
-			endStr := "…"
+			endStr := "—"
 			if sess.EndTime != nil {
 				endStr = sess.EndTime.Local().Format("15:04")
 			}
-			fmt.Printf("  %s  %s  %s  %s\n",
-				ui.StyleDimmed.Render("end    "),
-				ui.StyleDimmed.Render(endStr),
-				ui.StyleDimmed.Render("→"),
-				ui.StyleHighlight.Render(t.Format("15:04")),
-			)
+			change("end", endStr, t.Format("15:04"))
 			sess.EndTime = &t
 		}
 
@@ -133,10 +114,9 @@ Flags:
 			return fmt.Errorf("update session: %w", err)
 		}
 
-		fmt.Printf("\n  %s  session %d updated\n\n",
-			ui.StyleSuccess.Render("✓"),
-			id,
-		)
+		ui.Rule()
+		ui.OK(fmt.Sprintf("session #%d updated", id))
+		ui.Blank()
 		return nil
 	},
 }

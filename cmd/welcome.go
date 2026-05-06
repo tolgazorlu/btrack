@@ -6,24 +6,38 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
-// welcomeSuppressed skips the banner when stdout must stay clean (prompt, completion)
-// or when the command immediately opens a fullscreen TUI (welcome would flash unseen).
+var welcomeCmd = &cobra.Command{
+	Use:   "welcome",
+	Short: "Show the welcome screen and quick-start guide",
+	Long: `Print the btrack welcome screen — the same banner you saw on first run.
+Useful when you want a one-page reminder of the most-used commands.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		printWelcome(false, "")
+		return nil
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(welcomeCmd)
+}
+
+// welcomeSuppressed skips the auto-banner when stdout must stay clean
+// (prompt, completion) or when the command immediately opens a fullscreen TUI.
 func welcomeSuppressed(cmd *cobra.Command) bool {
-	if cmd == nil {
-		return false
+	if cmd == nil || cmd == rootCmd {
+		return true
 	}
 	path := cmd.CommandPath()
 	if strings.Contains(path, " prompt") || strings.Contains(path, " completion") {
 		return true
 	}
-	if cmd == rootCmd {
-		return true
+	if cmd == welcomeCmd {
+		return true // explicit invocation handles its own output
 	}
 	switch cmd {
 	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd:
@@ -33,7 +47,7 @@ func welcomeSuppressed(cmd *cobra.Command) bool {
 	}
 }
 
-// checkWelcome prints a welcome or upgrade banner the first time a new version runs.
+// checkWelcome auto-prints the banner the first time a new version runs.
 func checkWelcome() {
 	versionFile := filepath.Join(config.ConfigDir(), ".version")
 	data, _ := os.ReadFile(filepath.Clean(versionFile))
@@ -48,61 +62,55 @@ func checkWelcome() {
 	_ = os.WriteFile(filepath.Clean(versionFile), []byte(Version), 0600)
 }
 
+// printWelcome renders the welcome / upgrade banner.
+// First-run = isUpgrade false. Upgrade = isUpgrade true with prevVersion set.
 func printWelcome(isUpgrade bool, prevVersion string) {
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ui.ColorBorder).
-		Padding(1, 3)
+	ui.Blank()
 
-	c := func(command, desc string) string {
-		return fmt.Sprintf("  %-40s%s",
-			ui.StyleHighlight.Render(command),
-			ui.StyleDimmed.Render(desc),
-		)
+	// Title bar — single line, no box.
+	titleLine := ui.Indent + ui.StyleTitle.Render("btrack")
+	switch {
+	case isUpgrade:
+		titleLine += "  " + ui.StyleSuccess.Render("updated → "+Version)
+		titleLine += "  " + ui.StyleDimmed.Render("(was "+prevVersion+")")
+	case Version == "dev":
+		titleLine += "  " + ui.StyleDimmed.Render("dev build")
+	default:
+		titleLine += "  " + ui.StyleSuccess.Render(Version+" installed")
 	}
-	sep := ui.StyleDimmed.Render(strings.Repeat("─", 52))
+	fmt.Println(titleLine)
+	fmt.Println(ui.Indent + ui.StyleDimmed.Render("time tracker for developers"))
+	ui.Rule()
+	ui.Blank()
 
-	var header string
-	if isUpgrade {
-		header = fmt.Sprintf("%s  %s  %s",
-			ui.StyleTitle.Render("btrack"),
-			ui.StyleSuccess.Render("updated to "+Version),
-			ui.StyleDimmed.Render("(was "+prevVersion+")"),
-		)
-	} else {
-		header = fmt.Sprintf("%s  %s",
-			ui.StyleTitle.Render("btrack"),
-			ui.StyleSuccess.Render(Version+" installed"),
-		)
-	}
+	ui.Section("daily")
+	ui.Cmd(`btrack s "fix login bug"`, "start a session")
+	ui.Cmd(`btrack n "found the issue"`, "add a note")
+	ui.Cmd(`btrack x -m "fixed it #bugfix"`, "stop with a message")
+	ui.Cmd(`btrack r`, "resume last session")
+	ui.Blank()
 
-	body := header + "\n" +
-		ui.StyleDimmed.Render("  time tracker for developers") + "\n\n" +
-		"  " + sep + "\n\n" +
-		"  " + ui.StyleHighlight.Render("QUICK START") + "\n\n" +
-		c(`btrack s "fix login bug"`, `start  (btrack start)`) + "\n" +
-		c(`btrack n "found the issue"`, `note   (btrack note)`) + "\n" +
-		c(`btrack x -m "fixed it #bugfix"`, `stop   (btrack stop)`) + "\n\n" +
-		"  " + sep + "\n\n" +
-		"  " + ui.StyleHighlight.Render("REVIEW") + "\n\n" +
-		c("btrack d", `day    — today as a tree`) + "\n" +
-		c("btrack d yesterday", "yesterday's sessions") + "\n" +
-		c("btrack h", `history — all past sessions`) + "\n" +
-		c("btrack w", `status  — live view`) + "\n\n" +
-		"  " + sep + "\n\n" +
-		"  " + ui.StyleHighlight.Render("AI  ") +
-		ui.StyleDimmed.Render("(optional — needs an API key)") + "\n\n" +
-		c("btrack ai setup", "configure OpenAI / Claude / Gemini") + "\n" +
-		c("btrack ai sum", "standup summary from today") + "\n" +
-		c("btrack ai ins", "weekly stats + AI analysis") + "\n\n" +
-		"  " + sep + "\n\n" +
-		"  " + ui.StyleHighlight.Render("CONFIG") + "\n\n" +
-		c("btrack config hours 8", "set daily work target (default: 8h)") + "\n" +
-		c("btrack config", "show all current settings") + "\n\n" +
-		"  " + sep + "\n\n" +
-		"  " + ui.StyleDimmed.Render("run  btrack --help  for the full command reference")
+	ui.Section("review")
+	ui.Cmd("btrack w", "live status (alias of `status`)")
+	ui.Cmd("btrack d", "today as a tree")
+	ui.Cmd("btrack h -w", "this week")
+	ui.Cmd("btrack stats", "quick snapshot")
+	ui.Cmd("btrack shipped", "what landed in git during your sessions")
+	ui.Blank()
 
-	fmt.Println()
-	fmt.Println(border.Render(body))
-	fmt.Println()
+	ui.Section("ai · optional, needs an API key")
+	ui.Cmd("btrack ai setup", "configure OpenAI / Claude / Gemini")
+	ui.Cmd("btrack ai sum", "standup summary from today")
+	ui.Cmd("btrack ai ins", "weekly stats + AI analysis")
+	ui.Blank()
+
+	ui.Section("setup")
+	ui.Cmd("btrack init", "create a .btrack project file here")
+	ui.Cmd("btrack config hours 8", "set daily target")
+	ui.Cmd("btrack config", "show all settings")
+	ui.Blank()
+
+	ui.Rule()
+	ui.Hint("run  btrack --help  for the full reference")
+	ui.Blank()
 }

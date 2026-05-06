@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
@@ -17,30 +15,29 @@ var repoCmd = &cobra.Command{
   btrack repo issue      open a new issue (bug / feedback)
   btrack repo releases   open the releases / changelog page`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sep := ui.StyleDimmed.Render("  ─────────────────────────────────")
-		fmt.Println()
-		fmt.Printf("  %s  %s\n", ui.StyleTitle.Render("btrack"), ui.StyleHighlight.Render("project links"))
-		fmt.Println(sep)
-		fmt.Printf("  %s  %s\n", ui.StyleDimmed.Render("repo      "), ui.StyleSubtle.Render(repoURL))
-		fmt.Printf("  %s  %s\n", ui.StyleDimmed.Render("issues    "), ui.StyleSubtle.Render(issueURL))
-		fmt.Printf("  %s  %s\n", ui.StyleDimmed.Render("releases  "), ui.StyleSubtle.Render(releaseURL))
-		fmt.Println(sep)
-		fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("btrack repo star | issue | releases  to open in browser"))
+		ui.Header("links", "")
+		ui.KV("repo", ui.StyleHighlight.Render(repoURL))
+		ui.KV("issues", ui.StyleHighlight.Render(issueURL))
+		ui.KV("releases", ui.StyleHighlight.Render(releaseURL))
+		ui.Footer("btrack repo star | issue | releases  to open in browser")
 		return nil
 	},
+}
+
+func openLink(url string) {
+	ui.Blank()
+	ui.Sign(ui.StyleSuccess.Render(ui.Sym.Arrow), ui.StyleHighlight.Render(url))
+	if err := openBrowser(url); err != nil {
+		ui.Hint("could not open browser — copy the URL above")
+	}
+	ui.Blank()
 }
 
 var repoStarCmd = &cobra.Command{
 	Use:   "star",
 	Short: "Open the btrack GitHub repository",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("\n  %s  %s\n\n",
-			ui.StyleSuccess.Render("→"),
-			ui.StyleHighlight.Render(repoURL),
-		)
-		if err := openBrowser(repoURL); err != nil {
-			fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("could not open browser — copy the URL above"))
-		}
+		openLink(repoURL)
 		return nil
 	},
 }
@@ -50,13 +47,7 @@ var repoIssueCmd = &cobra.Command{
 	Aliases: []string{"feedback", "bug"},
 	Short:   "Open a new issue (bug report or feedback)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("\n  %s  %s\n\n",
-			ui.StyleSuccess.Render("→"),
-			ui.StyleHighlight.Render(issueURL),
-		)
-		if err := openBrowser(issueURL); err != nil {
-			fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("could not open browser — copy the URL above"))
-		}
+		openLink(issueURL)
 		return nil
 	},
 }
@@ -65,13 +56,7 @@ var repoReleasesCmd = &cobra.Command{
 	Use:   "releases",
 	Short: "Open the releases / changelog page",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("\n  %s  %s\n\n",
-			ui.StyleSuccess.Render("→"),
-			ui.StyleHighlight.Render(releaseURL),
-		)
-		if err := openBrowser(releaseURL); err != nil {
-			fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("could not open browser — copy the URL above"))
-		}
+		openLink(releaseURL)
 		return nil
 	},
 }

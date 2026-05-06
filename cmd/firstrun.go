@@ -19,26 +19,23 @@ func maybeFirstRun() {
 		return
 	}
 
-	fmt.Println()
-	fmt.Println(ui.StyleTitle.Render("  Welcome to btrack!") + "  " + ui.StyleDimmed.Render("first-time setup"))
-	fmt.Println()
-	fmt.Println(ui.StyleSubtle.Render("  btrack uses AI to summarize your sessions and give insights."))
-	fmt.Println(ui.StyleSubtle.Render("  Let's configure an API key — it takes about 30 seconds."))
-	fmt.Println()
-	fmt.Print(ui.StyleDimmed.Render("  Set up AI now? [Y/n] "))
+	ui.Header("welcome", "first-time setup")
+	ui.Plain(ui.StyleDimmed.Render("btrack uses AI to summarize your sessions and give insights."))
+	ui.Plain(ui.StyleDimmed.Render("Configuring a key takes about 30 seconds."))
+	ui.Blank()
+	fmt.Printf("%s%s ", ui.Indent, ui.StyleDimmed.Render("set up AI now? [Y/n]"))
 
 	var input string
 	fmt.Scanln(&input)
 	if input == "n" || input == "N" {
-		fmt.Printf("\n  %s\n\n",
-			ui.StyleDimmed.Render("ok, run `btrack ai setup` any time to configure it later"),
-		)
+		ui.Hint("ok — run `btrack ai setup` any time")
+		ui.Blank()
 		return
 	}
 
-	fmt.Println()
+	ui.Blank()
 	if err := runSetupWizard(); err != nil {
-		fmt.Println(ui.StyleError.Render("  setup error: " + err.Error()))
+		ui.FailLine("setup error: " + err.Error())
 	}
 }
 

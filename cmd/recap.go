@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -70,36 +69,26 @@ func runRecap(cmd *cobra.Command, args []string) error {
 		dayLabel = "Yesterday"
 	}
 
-	sep := ui.StyleDimmed.Render(strings.Repeat("─", 58))
-
-	fmt.Println()
-	fmt.Printf("  %s  %s  %s\n",
-		ui.StyleTitle.Render("btrack"),
-		ui.StyleHighlight.Render("recap"),
-		ui.StyleDimmed.Render(dateLabel),
-	)
-	fmt.Println("  " + sep)
+	ui.Header("recap", dayLabel+" · "+dateLabel)
 
 	if len(sessions) == 0 {
-		fmt.Println(ui.StyleSubtle.Render("\n  no sessions recorded for this day\n"))
+		ui.Hint("no sessions recorded for this day")
+		ui.Blank()
 		return nil
 	}
-
-	fmt.Printf("\n  %s\n\n", ui.StyleHighlight.Render(dayLabel+":"))
 
 	var totalDur time.Duration
 	for _, sess := range sessions {
 		dur := sess.Duration()
 		totalDur += dur
 
-		line := fmt.Sprintf("  %s %s", ui.StyleDimmed.Render("·"), ui.StyleHighlight.Render(sess.TaskName))
+		line := ui.StyleDimmed.Render(ui.Sym.Bullet) + " " + ui.StyleHighlight.Render(sess.TaskName)
 		if sess.Project != "" {
 			line += "  " + ui.StyleTag.Render("@"+sess.Project)
 		}
 		line += "  " + ui.StyleElapsed.Render(formatDur(dur))
-		fmt.Println(line)
+		fmt.Println(ui.Indent + line)
 
-		// Show top-level notes indented under the task
 		logs, err := store.GetAllLogs(sess.ID)
 		if err == nil {
 			for _, log := range logs {
@@ -113,13 +102,13 @@ func runRecap(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("  " + sep)
-	fmt.Printf("  %s total  ·  %d sessions\n\n",
+	ui.Rule()
+	fmt.Printf("%s%s  %s\n",
+		ui.Indent,
 		ui.StyleElapsed.Render(formatDur(totalDur)),
-		len(sessions),
+		ui.StyleDimmed.Render(fmt.Sprintf("· %d sessions", len(sessions))),
 	)
-
+	ui.Blank()
 	return nil
 }
 

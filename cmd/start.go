@@ -71,19 +71,21 @@ Tips:
 		var sess daemon.SessionDTO
 		json.Unmarshal(resp.Data, &sess)
 
-		// Print brief confirmation before opening TUI
-		fmt.Printf("\n  %s  %s\n",
-			ui.StyleSuccess.Render("▶"),
-			ui.StyleTitle.Render(sess.TaskName),
-		)
+		// One-line confirmation before TUI takes over.
+		line := ui.StyleSuccess.Render(ui.Sym.Start) + "  " + ui.StyleHighlight.Render(sess.TaskName)
+		var meta []string
 		if sess.Project != "" {
-			fmt.Printf("  %s\n", ui.StyleTag.Render("@"+sess.Project))
+			meta = append(meta, ui.StyleTag.Render("@"+sess.Project))
 		}
 		if sess.GitBranch != "" {
-			fmt.Printf("  %s\n\n", ui.StyleSubtle.Render("⎇  "+sess.GitBranch))
-		} else {
-			fmt.Println()
+			meta = append(meta, ui.StyleDimmed.Render(ui.Sym.Branch+" "+sess.GitBranch))
 		}
+		if len(meta) > 0 {
+			line += "  " + strings.Join(meta, "  ")
+		}
+		ui.Blank()
+		fmt.Println(ui.Indent + line)
+		ui.Blank()
 
 		// Open status TUI automatically
 		cfg, _ := config.Load()

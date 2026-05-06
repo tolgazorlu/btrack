@@ -106,7 +106,9 @@ func runInvoice(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(filtered) == 0 {
-		fmt.Println(ui.StyleSubtle.Render("\n  no sessions found for this period\n"))
+		ui.Header("invoice", monthStr)
+		ui.Hint("no sessions found for this period")
+		ui.Blank()
 		return nil
 	}
 
@@ -155,10 +157,9 @@ func runInvoice(cmd *cobra.Command, args []string) error {
 		if err := os.WriteFile(outPath, []byte(output), 0644); err != nil {
 			return fmt.Errorf("write file: %w", err)
 		}
-		fmt.Printf("\n  %s  invoice written to %s\n\n",
-			ui.StyleSuccess.Render("✓"),
-			ui.StyleHighlight.Render(outPath),
-		)
+		ui.Blank()
+		ui.OK("invoice → " + ui.StyleHighlight.Render(outPath))
+		ui.Blank()
 		return nil
 	}
 

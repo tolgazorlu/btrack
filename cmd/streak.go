@@ -97,30 +97,20 @@ Tips:
 		}
 
 		// Last 30 days mini-calendar.
-		sep := ui.StyleDimmed.Render(strings.Repeat("─", 44))
+		ui.Header("streak", "")
 
-		fmt.Println()
-		fmt.Printf("  %s\n", ui.StyleTitle.Render("btrack streak"))
-		fmt.Println("  " + sep)
-		fmt.Println()
-
-		flame := "🔥"
+		flame := ui.StyleSuccess.Render("●")
 		if current == 0 {
-			flame = "  "
+			flame = ui.StyleDimmed.Render("○")
 		}
-		fmt.Printf("  %s  %s  %s\n",
+		fmt.Printf("%s%s  %s  %s\n", ui.Indent,
 			flame,
 			ui.StyleHighlight.Render(fmt.Sprintf("%d day streak", current)),
-			ui.StyleDimmed.Render(fmt.Sprintf("(longest: %d days)", longest)),
+			ui.StyleDimmed.Render(fmt.Sprintf("(longest: %d)", longest)),
 		)
-		fmt.Println()
-
-		// 30-day calendar: 5 weeks × 7 days.
-		fmt.Printf("  %s\n", ui.StyleDimmed.Render("last 30 days"))
-		fmt.Println()
-
-		// Print day-of-week header.
-		fmt.Printf("  %s\n", ui.StyleDimmed.Render("Mo Tu We Th Fr Sa Su"))
+		ui.Blank()
+		ui.Section("last 30 days")
+		fmt.Println(ui.Indent + ui.StyleDimmed.Render("Mo Tu We Th Fr Sa Su"))
 
 		// Find the Monday on or before 29 days ago.
 		startDay := now.AddDate(0, 0, -29)
@@ -164,14 +154,12 @@ Tips:
 			fmt.Printf("  %s\n", strings.TrimRight(week, " "))
 		}
 
-		fmt.Println()
-		fmt.Printf("  %s  active day  %s  today  %s  inactive\n",
-			ui.StyleSuccess.Render("█"),
-			ui.StyleSuccess.Render("◉"),
-			ui.StyleDimmed.Render("░"),
-		)
-		fmt.Println("  " + sep)
-		fmt.Println()
+		ui.Blank()
+		legend := ui.StyleSuccess.Render("█") + ui.StyleDimmed.Render(" active  ") +
+			ui.StyleSuccess.Render("◉") + ui.StyleDimmed.Render(" today  ") +
+			ui.StyleDimmed.Render("░ inactive")
+		fmt.Println(ui.Indent + legend)
+		ui.Footer("")
 
 		return nil
 	},

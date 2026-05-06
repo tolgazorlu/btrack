@@ -70,19 +70,13 @@ Tips:
 		}
 
 		if len(matched) == 0 {
-			fmt.Printf("\n  %s\n\n",
-				ui.StyleSubtle.Render("no sessions found with tag "+tag),
-			)
+			ui.Header("tag", tag)
+			ui.Hint("no sessions found")
+			ui.Blank()
 			return nil
 		}
 
-		sep := ui.StyleDimmed.Render(strings.Repeat("─", 70))
-		fmt.Println()
-		fmt.Printf("  %s  %s\n",
-			ui.StyleTitle.Render("btrack tag"),
-			ui.StyleTag.Render(tag),
-		)
-		fmt.Println("  " + sep)
+		ui.Header("tag", ui.StyleTag.Render(tag))
 
 		var total time.Duration
 		for _, s := range matched {
@@ -97,7 +91,8 @@ Tips:
 				taskStr = taskStr[:29] + "..."
 			}
 
-			fmt.Printf("  %s  %s  %s  %s\n",
+			fmt.Printf("%s%s  %s  %s  %s\n",
+				ui.Indent,
 				ui.StyleDimmed.Render(fmt.Sprintf("%-13s", date)),
 				ui.StyleDimmed.Render(startClock),
 				ui.StyleHighlight.Render(fmt.Sprintf("%-33s", taskStr)),
@@ -108,19 +103,20 @@ Tips:
 				if len(msg) > 55 {
 					msg = msg[:52] + "..."
 				}
-				fmt.Printf("  %s\n",
-					ui.StyleDimmed.Render("              "+msg),
+				fmt.Printf("%s              %s\n",
+					ui.Indent,
+					ui.StyleDimmed.Render(msg),
 				)
 			}
 		}
 
-		fmt.Println("  " + sep)
-		fmt.Printf("  %s  %s sessions  ·  %s total\n\n",
-			ui.StyleDimmed.Render("tag "+tag),
-			ui.StyleHighlight.Render(fmt.Sprintf("%d", len(matched))),
+		ui.Rule()
+		fmt.Printf("%s%s  %s\n",
+			ui.Indent,
 			ui.StyleElapsed.Render(formatDur(total)),
+			ui.StyleDimmed.Render(fmt.Sprintf("· %d sessions", len(matched))),
 		)
-
+		ui.Blank()
 		return nil
 	},
 }

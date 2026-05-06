@@ -12,12 +12,15 @@ description: Full reference for all btrack commands and flags.
 | `btrack start "description"` | `btrack s` | Start a new tracking session |
 | `btrack note "text"` | `btrack n` | Add a note to the active session |
 | `btrack note "text" --session N` | `btrack n --session N` | Add a note to a specific past session |
-| `btrack stop` | `btrack x` | Stop the active session |
-| `btrack stop -m "message"` | `btrack x -m` | Stop with a final commit message |
+| `btrack stop` | `btrack x` | Stop the active session (closing message optional) |
+| `btrack stop -m "message"` | `btrack x -m` | Stop with a final closing message |
+| `btrack stop --no-ai` | `btrack x --no-ai` | Stop without prompting AI for a message suggestion |
 | `btrack switch "description"` | `btrack sw` | Stop current session and start a new one |
 | `btrack resume` | `btrack r` | Resume the most recently stopped session |
 | `btrack break` | | Start a break (untracked pause) |
 | `btrack w` | | Live status display with elapsed time |
+| `btrack shipped` | `btrack sh` | Show git commits that landed during your sessions |
+| `btrack welcome` | | Show the welcome screen / quick-start cheat sheet |
 
 ## History (`btrack h`)
 
@@ -55,6 +58,26 @@ See [Projects](/docs/projects) for full documentation.
 ## Session Editing
 
 Sessions can be annotated with notes at any time. Use `btrack n --session N` to attach a note to any past session by its ID. Session IDs are shown in `btrack h -v`.
+
+## Shipped (Git Correlation)
+
+| Flag | Description |
+|------|-------------|
+| _(none)_ | Last completed session |
+| `-n N`, `--num N` | Last N completed sessions |
+| `--today` | All sessions from today |
+| `-i N`, `--session N` | A specific session by ID |
+
+### Examples
+
+```bash
+btrack shipped              # last session — what landed during it
+btrack sh -n 5              # last 5 sessions
+btrack shipped --today      # all of today's sessions
+btrack shipped -i 42        # session #42
+```
+
+Run from inside the git repository where the session was tracked. See [Shipped](/docs/shipped) for full documentation.
 
 ## Pomodoro
 

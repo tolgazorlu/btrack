@@ -1,0 +1,106 @@
+---
+title: Shipped
+description: Cross-reference btrack sessions with git history to see what actually landed during each session window.
+---
+
+# Shipped
+
+`btrack shipped` lines up each session's time window against your git history and shows the commits that were authored inside that window. The session's task name is what you said you'd do; the commits are the evidence.
+
+It's a low-pressure self-check — no scoring, no judgement — just *said vs shipped* side by side.
+
+## Quick Look
+
+```bash
+btrack shipped
+```
+
+```text
+  btrack shipped
+  ────────────────────────────────────────────────────────
+  Tue May 05 20:47 → 23:33  2h46m
+  said          rewrite welcome command
+  done          done
+  commits       3 commits  +287  -41
+    a1b2c3d  feat: rewrite welcome from scratch       +198   -32
+    e4f5g6h  refactor(ui): unified Print helpers      +84    -7
+    i7j8k9l  docs: shipped command reference          +5     -2
+```
+
+Run it from inside the repo where the session was tracked. If you're somewhere else, btrack will note the mismatch and skip the commit lookup.
+
+## Selecting Sessions
+
+| Flag | Description |
+|------|-------------|
+| _(none)_ | Last completed session |
+| `-n N`, `--num N` | Last N completed sessions |
+| `--today` | All sessions from today |
+| `-i N`, `--session N` | A specific session by ID |
+
+```bash
+btrack shipped              # last session
+btrack sh -n 5              # last 5 (alias)
+btrack shipped --today      # everything from today
+btrack shipped -i 42        # session #42
+```
+
+## Active Sessions
+
+If a session is still running (you haven't run `btrack stop`), the window is `start → now`. Useful as a mid-flight checkpoint:
+
+```bash
+btrack shipped              # "what have I shipped so far?"
+```
+
+## Multi-Session Output
+
+When you ask for more than one session, each gets its own block separated by a blank line, and a totals row appears at the bottom:
+
+```text
+  btrack shipped  3 sessions
+  ────────────────────────────────────────────────────────
+  Wed May 06 09:30 → 11:45  2h15m
+  said          fix login redirect bug
+  commits       2 commits  +36  -8
+    a1b2c3d  fix: clear stale JWT before redirect    +12    -8
+    e4f5g6h  test: add JWT clock-skew assertion      +24    -0
+
+  Wed May 06 13:00 → 14:30  1h30m
+  said          review PR #43
+  commits       none in window
+
+  Wed May 06 15:00 → 17:00  2h00m
+  said          add user filter
+  commits       1 commit  +10  -2
+    j8k9l0m  feat: add user filter to dashboard     +10    -2
+  ────────────────────────────────────────────────────────
+  3 commits  +46  -10
+```
+
+## What Counts as a Commit
+
+`btrack shipped` runs `git log --all` over the session window, so it picks up commits across **every branch**, not just the one you're on. The match is purely time-based: any commit authored between session start and end.
+
+This means:
+
+- Squash-merged PRs may not appear (the merge commit is dated to the merge, not the session)
+- Cherry-picked or rebased commits may appear in multiple sessions if their author dates were preserved
+- Commits authored by other people on the same repo are included if they fall in the window — useful for pair programming, less so otherwise
+
+## When the Repo Doesn't Match
+
+If you tracked a session in `~/code/myapp` but run `btrack shipped` from `~/code/other-app`, btrack will warn:
+
+```text
+  note          session ran in @myapp — you are now in @other-app
+```
+
+…and skip the commit lookup for that session. To see commits, `cd` to the right repo first.
+
+## Why It's Useful
+
+- **Honest standups.** "Yesterday I worked on X" is fuzzy; "Yesterday I shipped these 3 commits during my X session" is sharp.
+- **Spotting drift.** If your task name says "fix login bug" and the commits are all in `README.md`, that's a signal worth noticing.
+- **End-of-day shutdown.** Run `btrack shipped --today` before closing the laptop. If a session shows zero commits, ask yourself why — meeting? blocked? stuck? — and capture it as a note for tomorrow.
+- **Self-review.** Before a 1:1 or perf review, scrub through `btrack shipped --today` for the past two weeks and you have a concrete record of output, not vibes.

@@ -68,7 +68,7 @@ var daemonStopCmd = &cobra.Command{
 		if err := proc.Signal(os.Interrupt); err != nil {
 			return fmt.Errorf("send signal: %w", err)
 		}
-		fmt.Printf("  %s  daemon (pid %d) stopped\n", ui.StyleSuccess.Render("■"), pid)
+		ui.Sign(ui.StyleSuccess.Render(ui.Sym.Stop), fmt.Sprintf("daemon stopped (pid %d)", pid))
 		return nil
 	},
 }
@@ -79,9 +79,9 @@ var daemonStatusCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client := daemon.NewClient()
 		if client.Ping() {
-			fmt.Printf("  %s  daemon is running\n", ui.StyleSuccess.Render("●"))
+			ui.Sign(ui.StyleSuccess.Render("●"), "daemon is running")
 		} else {
-			fmt.Printf("  %s  daemon is not running\n", ui.StyleDimmed.Render("○"))
+			ui.Sign(ui.StyleDimmed.Render("○"), ui.StyleDimmed.Render("daemon is not running"))
 		}
 		return nil
 	},
@@ -93,7 +93,7 @@ var daemonKillCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		data, err := os.ReadFile(config.PidFile())
 		if err != nil {
-			fmt.Printf("  %s  daemon not running\n", ui.StyleDimmed.Render("○"))
+			ui.Sign(ui.StyleDimmed.Render("○"), ui.StyleDimmed.Render("daemon not running"))
 			return nil
 		}
 		pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
@@ -107,7 +107,7 @@ var daemonKillCmd = &cobra.Command{
 		_ = proc.Kill()
 		_ = os.Remove(config.PidFile())
 		_ = os.Remove(config.SocketPath())
-		fmt.Printf("  %s  daemon (pid %d) killed\n", ui.StyleSuccess.Render("■"), pid)
+		ui.Sign(ui.StyleSuccess.Render(ui.Sym.Stop), fmt.Sprintf("daemon killed (pid %d)", pid))
 		return nil
 	},
 }
@@ -116,11 +116,10 @@ var daemonRestartCmd = &cobra.Command{
 	Use:   "restart",
 	Short: "Kill the daemon so the next command starts a fresh one",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Reuse kill logic
 		if err := daemonKillCmd.RunE(cmd, args); err != nil {
 			return err
 		}
-		fmt.Printf("  %s\n", ui.StyleDimmed.Render("next btrack command will start a fresh daemon"))
+		ui.Hint("next btrack command will start a fresh daemon")
 		return nil
 	},
 }

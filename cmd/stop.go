@@ -18,49 +18,50 @@ import (
 var stopCmd = &cobra.Command{
 	Use:     "stop",
 	Aliases: []string{"x"},
-	Short:   "Stop the active session and save it",
-	Long: `Stop the active session and save it with a closing message.
+	Short:   "Stop the active session",
+	Long: `Stop the active session. The closing message is optional.
 
 Usage:
-  btrack stop -m "message"
-  btrack x -m "message"      (short alias)
+  btrack stop                stop without a message
+  btrack stop -m "message"   stop with a message
+  btrack x -m "message"      short alias
 
 Examples:
-  btrack x -m "fixed JWT expiry in auth middleware #bugfix"
-  btrack x -m "added 12 unit tests, all passing #test"
-  btrack x          (AI suggests a message based on your notes)
+  btrack x                                  (AI suggests a message; skip = save without one)
+  btrack x --no-ai                          (skip AI, save without a message)
+  btrack x -m "fixed JWT expiry #bugfix"
+  btrack x -m "added 12 unit tests #test"
 
 Flags:
-  -m, --message   Closing message describing what you did
+  -m, --message   Closing message (optional)
       --no-ai     Skip AI message suggestion
 
 Tips:
   · Add #tags at the end to categorize your work
   · Common tags: #bugfix #feature #test #docs #refactor #ci
-  · View past sessions with: btrack h`,
+  · btrack shipped to compare what you said vs what landed in git`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		message, _ := cmd.Flags().GetString("message")
 		noAI, _ := cmd.Flags().GetBool("no-ai")
 
-		// If no message provided, optionally ask AI.
+		// If no message provided, offer an AI suggestion. Declining is fine — empty
+		// messages are now valid and the session is saved without one.
 		if message == "" && !noAI {
 			message = suggestMessage()
 		}
 
-		if message == "" {
-			return fmt.Errorf("a commit message is required (-m / --message), e.g.:\n  btrack stop -m \"fixed the login redirect #bugfix\"")
-		}
-
 		// Auto-detect tags and append if not already present.
-		existingTags := map[string]bool{}
-		for _, w := range strings.Fields(message) {
-			if strings.HasPrefix(w, "#") {
-				existingTags[strings.ToLower(w)] = true
+		if message != "" {
+			existingTags := map[string]bool{}
+			for _, w := range strings.Fields(message) {
+				if strings.HasPrefix(w, "#") {
+					existingTags[strings.ToLower(w)] = true
+				}
 			}
-		}
-		for _, tag := range ai.CategorizeTask(message) {
-			if !existingTags[tag] {
-				message += " " + tag
+			for _, tag := range ai.CategorizeTask(message) {
+				if !existingTags[tag] {
+					message += " " + tag
+				}
 			}
 		}
 
@@ -81,40 +82,31 @@ Tips:
 		end := time.Now()
 		elapsed := end.Sub(start)
 
-		fmt.Printf("\n  %s  %s\n",
-			ui.StyleSuccess.Render("■"),
-			ui.StyleTitle.Render(sess.TaskName),
-		)
-		fmt.Printf("  %s  %s\n",
-			ui.StyleDimmed.Render("duration"),
-			ui.FormatDuration(elapsed),
-		)
-		fmt.Printf("  %s  %s\n\n",
-			ui.StyleDimmed.Render("message "),
-			ui.StyleHighlight.Render(message),
-		)
+		ui.Blank()
+		ui.Sign(ui.StyleSuccess.Render(ui.Sym.Stop), ui.StyleHighlight.Render(sess.TaskName))
+		ui.KV("duration", ui.FormatDuration(elapsed))
+		if message != "" {
+			ui.KV("message", ui.StyleHighlight.Render(message))
+		}
 
 		// Auto-push to Google Calendar if configured.
 		if cfg, err := config.Load(); err == nil && cfg.GCal.AutoSync && cfg.GCal.ClientID != "" {
-			fmt.Printf("  %s  syncing to Google Calendar...\r", ui.StyleDimmed.Render("↑"))
+			fmt.Printf("%s%s  syncing to Google Calendar…\r", ui.Indent, ui.StyleDimmed.Render(ui.Sym.Up))
 			svc, err := gcal.NewService(cfg.GCal.ClientID, cfg.GCal.ClientSecret, config.DataDir())
 			if err == nil {
-				link, err := gcal.PushSession(svc, cfg.GCal.CalendarID, sess.TaskName, sess.Project, start, end)
+				_, err := gcal.PushSession(svc, cfg.GCal.CalendarID, sess.TaskName, sess.Project, start, end)
 				if err == nil {
-					fmt.Printf("  %s  synced to Google Calendar  %s\n",
-						ui.StyleSuccess.Render("↑"),
-						ui.StyleDimmed.Render(link),
-					)
+					ui.Sign(ui.StyleSuccess.Render(ui.Sym.Up), ui.StyleDimmed.Render("synced to Google Calendar"))
 				}
 			}
 		}
-		fmt.Println()
+		ui.Blank()
 		return nil
 	},
 }
 
 func init() {
-	stopCmd.Flags().StringP("message", "m", "", "commit message for the session (required)")
+	stopCmd.Flags().StringP("message", "m", "", "closing message for the session (optional)")
 	stopCmd.Flags().Bool("no-ai", false, "skip AI message suggestion")
 	rootCmd.AddCommand(stopCmd)
 }
@@ -146,7 +138,7 @@ func suggestMessage() string {
 		notes = append(notes, l.Note)
 	}
 
-	fmt.Print(ui.StyleDimmed.Render("  ✦ asking AI for a commit message suggestion...\r"))
+	fmt.Print(ui.Indent + ui.StyleDimmed.Render("✦ asking AI for a commit message…\r"))
 	suggestion, err := ai.SuggestCommitMessage(context.Background(), provider,
 		status.Session.TaskName, notes)
 	fmt.Print("                                                     \r")
@@ -154,11 +146,9 @@ func suggestMessage() string {
 	if err != nil {
 		return ""
 	}
-	fmt.Printf("\n  %s %s\n  %s ",
-		ui.StyleDimmed.Render("AI suggests:"),
-		ui.StyleHighlight.Render(suggestion),
-		ui.StyleDimmed.Render("use this? [y/N] "),
-	)
+	ui.Blank()
+	ui.KV("ai suggests", ui.StyleHighlight.Render(suggestion))
+	fmt.Printf("%s%s ", ui.Indent, ui.StyleDimmed.Render("use this? [y/N] "))
 
 	var input string
 	fmt.Scanln(&input)

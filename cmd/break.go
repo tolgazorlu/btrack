@@ -56,17 +56,11 @@ Tips:
 		start, _ := time.Parse(time.RFC3339, sess.StartTime)
 		elapsed := time.Since(start)
 
-		fmt.Printf("\n  %s  %s\n",
-			ui.StyleWarning.Render("⏸"),
-			ui.StyleTitle.Render(sess.TaskName),
-		)
-		fmt.Printf("  %s  %s\n\n",
-			ui.StyleDimmed.Render("worked   "),
-			ui.FormatDuration(elapsed),
-		)
-		fmt.Printf("  %s\n\n",
-			ui.StyleDimmed.Render("on break — run `btrack r` when you're back"),
-		)
+		ui.Blank()
+		ui.Sign(ui.StyleWarning.Render(ui.Sym.Pause), ui.StyleHighlight.Render(sess.TaskName))
+		ui.KV("worked", ui.FormatDuration(elapsed))
+		ui.Hint("on break — run `btrack r` when you're back")
+		ui.Blank()
 		return nil
 	},
 }

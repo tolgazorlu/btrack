@@ -87,11 +87,12 @@ Use cases:
 		}
 
 		if outPath != "" {
-			fmt.Printf("\n  %s  exported %d sessions → %s\n\n",
-				ui.StyleSuccess.Render("✓"),
+			ui.Blank()
+			ui.OK(fmt.Sprintf("exported %d sessions → %s",
 				len(sessions),
 				ui.StyleHighlight.Render(outPath),
-			)
+			))
+			ui.Blank()
 		}
 		return nil
 	},

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -100,38 +99,22 @@ Tips:
 			}
 		}
 
-		sep := ui.StyleDimmed.Render(strings.Repeat("─", 44))
-		kv := func(label, val, sub string) {
-			l := ui.StyleDimmed.Render(fmt.Sprintf("  %-12s", label))
-			v := ui.StyleElapsed.Render(fmt.Sprintf("%-10s", val))
-			s := ui.StyleDimmed.Render(sub)
-			fmt.Printf("%s%s%s\n", l, v, s)
+		ui.Header("stats", "")
+		row := func(label string, p period) {
+			val := ui.StyleElapsed.Render(fmt.Sprintf("%-10s", formatDur(p.dur))) +
+				ui.StyleDimmed.Render(fmt.Sprintf("%d sessions", p.sessions))
+			ui.KV(label, val)
 		}
-
-		fmt.Println()
-		fmt.Printf("  %s\n", ui.StyleTitle.Render("btrack stats"))
-		fmt.Println("  " + sep)
-		fmt.Println()
-
-		kv("today", formatDur(today.dur), fmt.Sprintf("%d sessions", today.sessions))
-		kv("this week", formatDur(week.dur), fmt.Sprintf("%d sessions", week.sessions))
-		kv("this month", formatDur(month.dur), fmt.Sprintf("%d sessions", month.sessions))
+		row("today", today)
+		row("this week", week)
+		row("this month", month)
 
 		if topTag != "" {
-			fmt.Println()
-			fmt.Printf("  %s  %s  %s\n",
-				ui.StyleDimmed.Render("top tag"),
-				ui.StyleTag.Render(topTag),
-				ui.StyleDimmed.Render(fmt.Sprintf("(%d this week)", topCount)),
-			)
+			ui.KV("top tag", ui.StyleTag.Render(topTag)+
+				"  "+ui.StyleDimmed.Render(fmt.Sprintf("(%d this week)", topCount)))
 		}
 
-		fmt.Println()
-		fmt.Println("  " + sep)
-		fmt.Printf("  %s\n\n",
-			ui.StyleDimmed.Render("btrack ai ins  for full analytics"),
-		)
-
+		ui.Footer("btrack ai ins  for full analytics")
 		return nil
 	},
 }

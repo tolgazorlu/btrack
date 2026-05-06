@@ -63,10 +63,10 @@ After connecting, these commands are enriched:
   btrack h            shows GitHub activity below sessions
   btrack h -w         shows per-day commit/PR count`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println()
-		fmt.Printf("  %s\n", ui.StyleTitle.Render("GitHub Connect"))
-		fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("github.com/settings/tokens/new  →  scopes: read:user, repo"))
-		fmt.Printf("  %s ", ui.StyleHighlight.Render("Personal Access Token:"))
+		ui.Header("github connect", "")
+		ui.Hint("github.com/settings/tokens/new  →  scopes: read:user, repo")
+		ui.Blank()
+		fmt.Printf("%s%s ", ui.Indent, ui.StyleDimmed.Render("token:"))
 
 		reader := bufio.NewReader(os.Stdin)
 		pat, _ := reader.ReadString('\n')
@@ -75,7 +75,8 @@ After connecting, these commands are enriched:
 			return fmt.Errorf("no token provided")
 		}
 
-		fmt.Print(ui.StyleDimmed.Render("\n  verifying token...\n"))
+		ui.Blank()
+		ui.Dim("verifying token…")
 
 		client := gh.NewClient(pat, "")
 		user, err := client.GetUser()
@@ -92,11 +93,10 @@ After connecting, these commands are enriched:
 			displayName = user.Name + " (@" + user.Login + ")"
 		}
 
-		fmt.Printf("\n  %s  Connected as %s\n\n",
-			ui.StyleSuccess.Render("✓"),
-			ui.StyleHighlight.Render(displayName),
-		)
-		fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("run `btrack github status` to see your activity"))
+		ui.Blank()
+		ui.OK("connected as " + ui.StyleHighlight.Render(displayName))
+		ui.Hint("`btrack github status` to see your activity")
+		ui.Blank()
 		return nil
 	},
 }
@@ -112,7 +112,9 @@ var githubStatusCmd = &cobra.Command{
 			return err
 		}
 		if cfg.GitHub.PAT == "" {
-			fmt.Printf("\n  %s\n\n", ui.StyleWarning.Render("not connected — run `btrack github connect`"))
+			ui.Blank()
+			ui.Warn("not connected — run `btrack github connect`")
+			ui.Blank()
 			return nil
 		}
 
@@ -122,18 +124,16 @@ var githubStatusCmd = &cobra.Command{
 		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).UTC()
 		end := start.Add(24 * time.Hour)
 
-		fmt.Printf("\n  %s  @%s\n\n",
-			ui.StyleSuccess.Render("✓"),
-			ui.StyleHighlight.Render(cfg.GitHub.Username),
-		)
-		fmt.Print(ui.StyleDimmed.Render("  fetching today's activity...\n\n"))
+		ui.Header("github", "@"+cfg.GitHub.Username)
+		ui.Dim("fetching today's activity…")
+		ui.Blank()
 
 		activity, err := client.GetActivity(start, end)
 		if err != nil {
 			return fmt.Errorf("github: %w", err)
 		}
 
-		printGitHubActivity(activity, "Today's GitHub Activity")
+		printGitHubActivity(activity, "today's activity")
 		return nil
 	},
 }
@@ -181,7 +181,9 @@ Requires: btrack github connect`,
 		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).UTC()
 		end := start.Add(24 * time.Hour)
 
-		fmt.Print(ui.StyleDimmed.Render("\n  syncing GitHub activity...\n\n"))
+		ui.Header("github sync", "")
+		ui.Dim("syncing today's activity…")
+		ui.Blank()
 
 		activity, err := client.GetActivity(start, end)
 		if err != nil {
@@ -189,31 +191,31 @@ Requires: btrack github connect`,
 		}
 
 		if activity.IsEmpty() {
-			fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("no GitHub activity found for today"))
+			ui.Hint("no GitHub activity found for today")
+			ui.Blank()
 			return nil
 		}
 
-		printGitHubActivity(activity, "Imported activity")
+		printGitHubActivity(activity, "imported")
 
 		commits, prs := syncToSessions(store, activity)
 		total := commits + prs
 
 		if total == 0 {
-			fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("nothing new to import — no commits or PRs found for today"))
+			ui.Hint("nothing new to import — no commits or PRs for today")
+			ui.Blank()
 			return nil
 		}
 
 		var parts []string
 		if commits > 0 {
-			parts = append(parts, fmt.Sprintf("%d commit session(s)", commits))
+			parts = append(parts, fmt.Sprintf("%d commit", commits))
 		}
 		if prs > 0 {
-			parts = append(parts, fmt.Sprintf("%d PR session(s)", prs))
+			parts = append(parts, fmt.Sprintf("%d PR", prs))
 		}
-		fmt.Printf("  %s  Imported: %s\n\n",
-			ui.StyleSuccess.Render("✓"),
-			strings.Join(parts, "  ·  "),
-		)
+		ui.OK("imported " + ui.StyleHighlight.Render(strings.Join(parts, " · ")))
+		ui.Blank()
 		return nil
 	},
 }
@@ -351,69 +353,74 @@ func tagsFromMessages(msgs []string) []string {
 // printGitHubActivity renders a GitHub activity block to stdout.
 func printGitHubActivity(activity *gh.Activity, title string) {
 	if activity.IsEmpty() {
-		fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("no GitHub activity found"))
+		ui.Hint("no GitHub activity found")
+		ui.Blank()
 		return
 	}
 
-	sep := ui.StyleDimmed.Render(strings.Repeat("─", 54))
-	fmt.Printf("  %s\n", ui.StyleHighlight.Render(title))
-	fmt.Println("  " + sep)
+	if title != "" {
+		ui.Section(title)
+	}
 
 	if len(activity.Commits) > 0 {
-		fmt.Printf("\n  %s\n", ui.StyleDimmed.Render(fmt.Sprintf("commits  (%d)", len(activity.Commits))))
+		ui.Section(fmt.Sprintf("commits · %d", len(activity.Commits)))
 		for _, c := range activity.Commits {
 			msg := c.Message
-			if len(msg) > 54 {
-				msg = msg[:51] + "..."
+			if len(msg) > 50 {
+				msg = msg[:47] + "..."
 			}
 			repo := c.Repo
 			if idx := strings.Index(repo, "/"); idx != -1 {
 				repo = repo[idx+1:]
 			}
-			fmt.Printf("  %s  %s  %s\n",
-				ui.StyleSubtle.Render(c.SHA),
-				ui.StyleDimmed.Render(msg),
-				ui.StyleSubtle.Render(repo),
+			fmt.Printf("%s%s  %s  %s\n",
+				ui.Indent,
+				ui.StyleDimmed.Render(c.SHA),
+				ui.StyleHighlight.Render(msg),
+				ui.StyleDimmed.Render(repo),
 			)
 		}
+		ui.Blank()
 	}
 
 	if len(activity.PullRequests) > 0 {
-		fmt.Printf("\n  %s\n", ui.StyleDimmed.Render(fmt.Sprintf("pull requests  (%d)", len(activity.PullRequests))))
+		ui.Section(fmt.Sprintf("pull requests · %d", len(activity.PullRequests)))
 		for _, pr := range activity.PullRequests {
-			title := pr.Title
-			if len(title) > 50 {
-				title = title[:47] + "..."
+			t := pr.Title
+			if len(t) > 50 {
+				t = t[:47] + "..."
 			}
-			var actionStr string
+			var label string
 			switch pr.Action {
 			case "merged":
-				actionStr = ui.StyleSuccess.Render("[merged]")
+				label = ui.StyleSuccess.Render("merged  ")
 			case "opened":
-				actionStr = ui.StyleHighlight.Render("[opened]")
+				label = ui.StyleHighlight.Render("opened  ")
 			case "reviewed":
-				actionStr = ui.StyleWarning.Render("[reviewed]")
+				label = ui.StyleWarning.Render("reviewed")
 			default:
-				actionStr = ui.StyleDimmed.Render("[" + pr.Action + "]")
+				label = ui.StyleDimmed.Render(pr.Action)
 			}
-			fmt.Printf("  %s  %s\n", actionStr, ui.StyleDimmed.Render(title))
+			fmt.Printf("%s%s  %s\n", ui.Indent, label, ui.StyleHighlight.Render(t))
 		}
+		ui.Blank()
 	}
 
 	if len(activity.Issues) > 0 {
-		fmt.Printf("\n  %s\n", ui.StyleDimmed.Render(fmt.Sprintf("issues  (%d)", len(activity.Issues))))
+		ui.Section(fmt.Sprintf("issues · %d", len(activity.Issues)))
 		for _, iss := range activity.Issues {
-			title := iss.Title
-			if len(title) > 54 {
-				title = title[:51] + "..."
+			t := iss.Title
+			if len(t) > 54 {
+				t = t[:51] + "..."
 			}
-			fmt.Printf("  %s  %s\n",
-				ui.StyleDimmed.Render(fmt.Sprintf("[%s]", iss.Action)),
-				ui.StyleDimmed.Render(title),
+			fmt.Printf("%s%-8s  %s\n",
+				ui.Indent,
+				ui.StyleDimmed.Render(iss.Action),
+				ui.StyleHighlight.Render(t),
 			)
 		}
+		ui.Blank()
 	}
-	fmt.Println()
 }
 
 // ghClientFromConfig returns a GitHub client if connected, or nil.

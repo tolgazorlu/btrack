@@ -54,11 +54,10 @@ var gcalConnectCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("\n  %s  connected to Google Calendar\n", ui.StyleSuccess.Render("✓"))
-		fmt.Printf("  %s  run %s to push sessions automatically after stop\n\n",
-			ui.StyleDimmed.Render("tip"),
-			ui.StyleHighlight.Render("btrack gcal auto-sync on"),
-		)
+		ui.Blank()
+		ui.OK("connected to Google Calendar")
+		ui.Tip("run `btrack gcal auto-sync on` to push after every stop")
+		ui.Blank()
 		return nil
 	},
 }
@@ -75,27 +74,28 @@ var gcalStatusCmd = &cobra.Command{
 		connected := gcal.IsConnected(config.DataDir())
 		credOK := cfg.GCal.ClientID != ""
 
-		fmt.Println()
-		if connected && credOK {
-			fmt.Printf("  %s  Google Calendar connected\n", ui.StyleSuccess.Render("●"))
+		ui.Header("gcal", "")
+		switch {
+		case connected && credOK:
+			ui.OK("Google Calendar connected")
 			calID := cfg.GCal.CalendarID
 			if calID == "" {
 				calID = "primary"
 			}
-			fmt.Printf("  %s  calendar: %s\n", ui.StyleDimmed.Render(""), ui.StyleHighlight.Render(calID))
+			ui.KV("calendar", ui.StyleHighlight.Render(calID))
 			if cfg.GCal.AutoSync {
-				fmt.Printf("  %s  auto-sync: on (events created after every stop)\n", ui.StyleDimmed.Render(""))
+				ui.KV("auto-sync", ui.StyleSuccess.Render("on"))
 			} else {
-				fmt.Printf("  %s  auto-sync: off  (run: btrack gcal auto-sync on)\n", ui.StyleDimmed.Render(""))
+				ui.KV("auto-sync", ui.StyleDimmed.Render("off  (`btrack gcal auto-sync on`)"))
 			}
-		} else if credOK {
-			fmt.Printf("  %s  credentials saved but not authorized yet\n", ui.StyleWarning.Render("○"))
-			fmt.Printf("  %s  run: btrack gcal connect\n", ui.StyleDimmed.Render(""))
-		} else {
-			fmt.Printf("  %s  not connected\n", ui.StyleDimmed.Render("○"))
-			fmt.Printf("  %s  run: btrack gcal connect --client-id <id> --client-secret <secret>\n", ui.StyleDimmed.Render(""))
+		case credOK:
+			ui.Warn("credentials saved but not authorized yet")
+			ui.Hint("run: btrack gcal connect")
+		default:
+			ui.Sign(ui.StyleDimmed.Render("○"), ui.StyleDimmed.Render("not connected"))
+			ui.Hint("btrack gcal connect --client-id <id> --client-secret <secret>")
 		}
-		fmt.Println()
+		ui.Blank()
 		return nil
 	},
 }
@@ -133,32 +133,37 @@ var gcalSyncCmd = &cobra.Command{
 		cutoff := time.Now().AddDate(0, 0, -days)
 		pushed, skipped, failed := 0, 0, 0
 
-		fmt.Println()
+		ui.Header("gcal sync", fmt.Sprintf("last %d days", days))
 		for _, s := range sessions {
 			if s.EndTime == nil {
 				skipped++
-				continue // skip active sessions
+				continue
 			}
 			if s.StartTime.Before(cutoff) {
 				break
 			}
-			link, err := gcal.PushSession(svc, cfg.GCal.CalendarID, s.TaskName, s.Project, s.StartTime, *s.EndTime)
+			_, err := gcal.PushSession(svc, cfg.GCal.CalendarID, s.TaskName, s.Project, s.StartTime, *s.EndTime)
 			if err != nil {
-				fmt.Printf("  %s  session %d: %v\n", ui.StyleDimmed.Render("✗"), s.ID, err)
+				ui.Sign(ui.StyleError.Render(ui.Sym.Fail),
+					fmt.Sprintf("#%d  %v", s.ID, err))
 				failed++
 				continue
 			}
-			_ = link
-			fmt.Printf("  %s  %s  %s\n",
-				ui.StyleSuccess.Render("✓"),
-				ui.StyleDimmed.Render(s.StartTime.Local().Format("Mon Jan 02 15:04")),
-				ui.StyleHighlight.Render(truncate(s.TaskName, 40)),
+			ui.Sign(ui.StyleSuccess.Render(ui.Sym.OK),
+				ui.StyleDimmed.Render(s.StartTime.Local().Format("Mon Jan 02 15:04"))+
+					"  "+ui.StyleHighlight.Render(truncate(s.TaskName, 40)),
 			)
 			pushed++
 		}
 
-		fmt.Printf("\n  pushed %d  ·  skipped %d active  ·  %d errors\n\n",
-			pushed, skipped, failed)
+		ui.Rule()
+		fmt.Printf("%s%s pushed  %s skipped  %s errors\n",
+			ui.Indent,
+			ui.StyleSuccess.Render(fmt.Sprintf("%d", pushed)),
+			ui.StyleDimmed.Render(fmt.Sprintf("· %d", skipped)),
+			ui.StyleDimmed.Render(fmt.Sprintf("· %d", failed)),
+		)
+		ui.Blank()
 		return nil
 	},
 }
@@ -192,7 +197,9 @@ var gcalAutoSyncCmd = &cobra.Command{
 		if on {
 			state = "on"
 		}
-		fmt.Printf("\n  %s  auto-sync %s\n\n", ui.StyleSuccess.Render("✓"), ui.StyleHighlight.Render(state))
+		ui.Blank()
+		ui.OK("auto-sync → " + ui.StyleHighlight.Render(state))
+		ui.Blank()
 		return nil
 	},
 }
@@ -239,8 +246,10 @@ var gcalPushCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("\n  %s  pushed to Google Calendar\n", ui.StyleSuccess.Render("✓"))
-		fmt.Printf("  %s  %s\n\n", ui.StyleDimmed.Render("event"), ui.StyleHighlight.Render(link))
+		ui.Blank()
+		ui.OK("pushed to Google Calendar")
+		ui.KV("event", ui.StyleHighlight.Render(link))
+		ui.Blank()
 		return nil
 	},
 }

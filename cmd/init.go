@@ -42,23 +42,20 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Warn if file already exists.
 	if _, err := os.Stat(target); err == nil {
-		fmt.Printf("\n  %s  .btrack already exists in this directory\n", ui.StyleWarning.Render("!"))
-		fmt.Printf("  %s  overwrite? [y/N] ", ui.StyleDimmed.Render(""))
+		ui.Blank()
+		ui.Warn(".btrack already exists in this directory")
+		fmt.Printf("%s%s ", ui.Indent, ui.StyleDimmed.Render("overwrite? [y/N]"))
 		var yn string
 		fmt.Scanln(&yn)
 		if strings.ToLower(strings.TrimSpace(yn)) != "y" {
-			fmt.Println()
+			ui.Blank()
 			return nil
 		}
 	}
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println()
-	fmt.Printf("  %s  setting up .btrack for %s\n\n",
-		ui.StyleTitle.Render("btrack init"),
-		ui.StyleHighlight.Render(filepath.Base(cwd)),
-	)
+	ui.Header("init", filepath.Base(cwd))
 
 	// Suggest project name from git repo or directory name.
 	suggestedProject := filepath.Base(cwd)
@@ -87,36 +84,25 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("write .btrack: %w", err)
 	}
 
-	fmt.Printf("\n  %s  created %s\n",
-		ui.StyleSuccess.Render("✓"),
-		ui.StyleHighlight.Render(".btrack"),
-	)
+	ui.Blank()
+	ui.OK("created " + ui.StyleHighlight.Render(".btrack"))
 	if project != "" {
-		fmt.Printf("  %s  sessions started here → project %s\n",
-			ui.StyleDimmed.Render(""),
-			ui.StyleTag.Render("@"+project),
-		)
+		ui.KV("project", ui.StyleTag.Render("@"+project))
 	}
 	if taskPrefix != "" {
-		fmt.Printf("  %s  task names will be prefixed with %s\n",
-			ui.StyleDimmed.Render(""),
-			ui.StyleHighlight.Render(taskPrefix),
-		)
+		ui.KV("prefix", ui.StyleHighlight.Render(taskPrefix))
 	}
-	fmt.Println()
-	fmt.Printf("  %s  add .btrack to .gitignore or commit it to share with your team\n\n",
-		ui.StyleDimmed.Render("tip"),
-	)
-
+	ui.Tip("add .btrack to .gitignore or commit it to share with your team")
+	ui.Blank()
 	return nil
 }
 
 // prompt prints a question with a default value hint and reads a line from stdin.
 func prompt(r *bufio.Reader, question, defaultVal string) string {
 	if defaultVal != "" {
-		fmt.Printf("  %s [%s]: ", ui.StyleDimmed.Render(question), ui.StyleHighlight.Render(defaultVal))
+		fmt.Printf("%s%s %s ", ui.Indent, ui.StyleDimmed.Render(question), ui.StyleDimmed.Render("["+defaultVal+"]:"))
 	} else {
-		fmt.Printf("  %s: ", ui.StyleDimmed.Render(question))
+		fmt.Printf("%s%s: ", ui.Indent, ui.StyleDimmed.Render(question))
 	}
 	line, _ := r.ReadString('\n')
 	line = strings.TrimSpace(line)

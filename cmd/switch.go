@@ -50,10 +50,8 @@ Tips:
 		var stopped daemon.SessionDTO
 		json.Unmarshal(stopResp.Data, &stopped)
 
-		fmt.Printf("\n  %s  %s\n",
-			ui.StyleDimmed.Render("■"),
-			ui.StyleDimmed.Render(stopped.TaskName),
-		)
+		ui.Blank()
+		ui.Sign(ui.StyleDimmed.Render(ui.Sym.Stop), ui.StyleDimmed.Render(stopped.TaskName))
 
 		// Start new session.
 		startPayload := daemon.StartPayload{
@@ -71,16 +69,13 @@ Tips:
 		var started daemon.SessionDTO
 		json.Unmarshal(startResp.Data, &started)
 
-		fmt.Printf("  %s  %s\n",
-			ui.StyleSuccess.Render("▶"),
-			ui.StyleTitle.Render(started.TaskName),
-		)
+		line := ui.StyleSuccess.Render(ui.Sym.Start) + "  " + ui.StyleHighlight.Render(started.TaskName)
 		if started.GitBranch != "" {
-			fmt.Printf("  %s\n", ui.StyleSubtle.Render("⎇  "+started.GitBranch))
+			line += "  " + ui.StyleDimmed.Render(ui.Sym.Branch+" "+started.GitBranch)
 		}
-		fmt.Printf("\n  %s\n\n",
-			ui.StyleDimmed.Render("switched · run `btrack w` to watch · `btrack x -m \"msg\"` to stop"),
-		)
+		fmt.Println(ui.Indent + line)
+		ui.Hint("`btrack w` to watch · `btrack x -m \"msg\"` to stop")
+		ui.Blank()
 		return nil
 	},
 }

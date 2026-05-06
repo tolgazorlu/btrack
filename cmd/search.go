@@ -49,18 +49,11 @@ Tips:
 			return fmt.Errorf("search: %w", err)
 		}
 
-		sep := ui.StyleDimmed.Render(strings.Repeat("─", 72))
-
-		fmt.Println()
-		fmt.Printf("  %s  %s  %s\n",
-			ui.StyleTitle.Render("btrack search"),
-			ui.StyleHighlight.Render(`"`+query+`"`),
-			ui.StyleDimmed.Render(fmt.Sprintf("(%d results)", len(sessions))),
-		)
-		fmt.Println("  " + sep)
+		ui.Header("search", `"`+query+`"  · `+fmt.Sprintf("%d results", len(sessions)))
 
 		if len(sessions) == 0 {
-			fmt.Printf("\n  %s\n\n", ui.StyleSubtle.Render("no sessions found"))
+			ui.Hint("no sessions match")
+			ui.Blank()
 			return nil
 		}
 
@@ -72,15 +65,16 @@ Tips:
 			date := s.StartTime.Local().Format("Mon Jan 02")
 			startClock := s.StartTime.Local().Format("15:04")
 
-			taskStr := highlight(s.TaskName, query)
-			if len(s.TaskName) > 34 {
-				taskStr = highlight(s.TaskName[:31]+"...", query)
+			task := s.TaskName
+			if len(task) > 34 {
+				task = task[:31] + "..."
 			}
 
-			fmt.Printf("  %s  %s  %-34s  %s\n",
+			fmt.Printf("%s%s  %s  %s  %s\n",
+				ui.Indent,
 				ui.StyleDimmed.Render(fmt.Sprintf("%-13s", date)),
 				ui.StyleDimmed.Render(startClock),
-				taskStr,
+				padVisible(highlight(task, query), 34),
 				ui.StyleElapsed.Render(formatDur(d)),
 			)
 			if s.Message != "" {
@@ -88,20 +82,45 @@ Tips:
 				if len(msg) > 58 {
 					msg = msg[:55] + "..."
 				}
-				fmt.Printf("  %s\n",
-					ui.StyleDimmed.Render("               "+highlight(msg, query)),
+				fmt.Printf("%s              %s\n",
+					ui.Indent,
+					ui.StyleDimmed.Render(highlight(msg, query)),
 				)
 			}
 		}
 
-		fmt.Println("  " + sep)
-		fmt.Printf("  %s  %s sessions  ·  %s total\n\n",
-			ui.StyleDimmed.Render("found"),
-			ui.StyleHighlight.Render(fmt.Sprintf("%d", len(sessions))),
+		ui.Rule()
+		fmt.Printf("%s%s  %s\n",
+			ui.Indent,
 			ui.StyleElapsed.Render(formatDur(total)),
+			ui.StyleDimmed.Render(fmt.Sprintf("· %d sessions", len(sessions))),
 		)
+		ui.Blank()
 		return nil
 	},
+}
+
+// padVisible right-pads a string (containing ANSI escapes) to a target visible width.
+func padVisible(s string, width int) string {
+	visible := 0
+	in := false
+	for _, r := range s {
+		if r == 0x1b {
+			in = true
+			continue
+		}
+		if in {
+			if r == 'm' {
+				in = false
+			}
+			continue
+		}
+		visible++
+	}
+	if visible >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-visible)
 }
 
 // highlight wraps the matched portion in a different style.

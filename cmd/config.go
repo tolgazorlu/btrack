@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
@@ -32,63 +31,55 @@ Config file: ~/.config/btrack/config.yaml`,
 			return err
 		}
 
-		sep := ui.StyleDimmed.Render(strings.Repeat("─", 42))
-		kv := func(key, val string) string {
-			k := ui.StyleDimmed.Render(fmt.Sprintf("    %-16s", key))
-			v := ui.StyleHighlight.Render(val)
-			return k + v
-		}
-		dim := func(s string) string { return ui.StyleDimmed.Render(s) }
+		ui.Header("config", "")
 
-		fmt.Println()
-		fmt.Printf("  %s\n", ui.StyleTitle.Render("btrack config"))
-		fmt.Println("  " + sep)
-
-		fmt.Println("  " + dim("work"))
-		fmt.Println("  " + kv("hours", fmt.Sprintf("%dh / day", cfg.Work.DailyHours)))
+		ui.Section("work")
+		ui.KV("hours", ui.StyleHighlight.Render(fmt.Sprintf("%dh / day", cfg.Work.DailyHours)))
 		idleVal := "off"
 		if cfg.Work.IdleMinutes > 0 {
 			idleVal = fmt.Sprintf("%d min", cfg.Work.IdleMinutes)
 		}
-		fmt.Println("  " + kv("idle auto-stop", idleVal))
-		fmt.Println()
+		ui.KV("idle stop", ui.StyleHighlight.Render(idleVal))
+		ui.Blank()
 
-		fmt.Println("  " + dim("ai"))
+		ui.Section("ai")
 		provider := cfg.AI.Provider
 		if provider == "" {
-			provider = "(not set — run: btrack ai setup)"
+			provider = ui.StyleDimmed.Render("(not set — `btrack ai setup`)")
+		} else {
+			provider = ui.StyleHighlight.Render(provider)
 		}
-		fmt.Println("  " + kv("provider", provider))
+		ui.KV("provider", provider)
 		model := cfg.AI.Model
 		if model == "" {
-			model = "(default)"
-		}
-		fmt.Println("  " + kv("model", model))
-		fmt.Println()
-
-		fmt.Println("  " + dim("github"))
-		if cfg.GitHub.Username != "" {
-			fmt.Println("  " + kv("connected", "@"+cfg.GitHub.Username))
+			model = ui.StyleDimmed.Render("(default)")
 		} else {
-			fmt.Println("  " + kv("connected", "(not set — run: btrack github connect)"))
+			model = ui.StyleHighlight.Render(model)
 		}
-		fmt.Println()
+		ui.KV("model", model)
+		ui.Blank()
+
+		ui.Section("github")
+		if cfg.GitHub.Username != "" {
+			ui.KV("user", ui.StyleHighlight.Render("@"+cfg.GitHub.Username))
+		} else {
+			ui.KV("user", ui.StyleDimmed.Render("(not set — `btrack github connect`)"))
+		}
+		ui.Blank()
 
 		if len(cfg.Projects) > 0 {
-			fmt.Println("  " + dim("projects"))
+			ui.Section("projects")
 			for name, pc := range cfg.Projects {
 				if pc.Rate > 0 {
-					fmt.Println("  " + kv("@"+name, fmt.Sprintf("$%.2f/h", pc.Rate)))
+					ui.KV("@"+name, ui.StyleHighlight.Render(fmt.Sprintf("$%.2f/h", pc.Rate)))
 				}
 			}
-			fmt.Println()
+			ui.Blank()
 		}
 
-		fmt.Println("  " + dim("database"))
-		fmt.Println("  " + kv("type", cfg.Database.Type))
-		fmt.Println("  " + sep)
-		fmt.Printf("  %s\n\n", ui.StyleDimmed.Render("config file: "+config.ConfigPath()))
-
+		ui.Section("database")
+		ui.KV("type", ui.StyleHighlight.Render(cfg.Database.Type))
+		ui.Footer("file: " + config.ConfigPath())
 		return nil
 	},
 }
@@ -105,10 +96,9 @@ var configHoursCmd = &cobra.Command{
 		if err := config.SaveDailyHours(hours); err != nil {
 			return err
 		}
-		fmt.Printf("\n  %s  daily target set to %s\n\n",
-			ui.StyleSuccess.Render("✓"),
-			ui.StyleHighlight.Render(fmt.Sprintf("%dh", hours)),
-		)
+		ui.Blank()
+		ui.OK("daily target → " + ui.StyleHighlight.Render(fmt.Sprintf("%dh", hours)))
+		ui.Blank()
 		return nil
 	},
 }
@@ -134,14 +124,13 @@ Examples:
 		if err := config.SaveIdleMinutes(minutes); err != nil {
 			return err
 		}
+		ui.Blank()
 		if minutes == 0 {
-			fmt.Printf("\n  %s  idle auto-stop disabled\n\n", ui.StyleSuccess.Render("✓"))
+			ui.OK("idle auto-stop disabled")
 		} else {
-			fmt.Printf("\n  %s  idle auto-stop set to %s\n\n",
-				ui.StyleSuccess.Render("✓"),
-				ui.StyleHighlight.Render(fmt.Sprintf("%d min", minutes)),
-			)
+			ui.OK("idle auto-stop → " + ui.StyleHighlight.Render(fmt.Sprintf("%d min", minutes)))
 		}
+		ui.Blank()
 		return nil
 	},
 }
@@ -167,11 +156,9 @@ Examples:
 		if err := config.SaveProjectRate(projName, rate); err != nil {
 			return err
 		}
-		fmt.Printf("\n  %s  @%s rate set to %s\n\n",
-			ui.StyleSuccess.Render("✓"),
-			projName,
-			ui.StyleHighlight.Render(fmt.Sprintf("$%.2f/h", rate)),
-		)
+		ui.Blank()
+		ui.OK("@" + projName + " rate → " + ui.StyleHighlight.Render(fmt.Sprintf("$%.2f/h", rate)))
+		ui.Blank()
 		return nil
 	},
 }

@@ -132,13 +132,10 @@ func runSetupWizard() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\n  %s  Active provider: %s\n\n",
-		ui.StyleSuccess.Render("✓"),
-		ui.StyleHighlight.Render(cfg.AI.Provider),
-	)
-	fmt.Printf("  %s\n\n",
-		ui.StyleDimmed.Render("run `btrack ai insights` to see your productivity stats"),
-	)
+	ui.Blank()
+	ui.OK("active provider → " + ui.StyleHighlight.Render(cfg.AI.Provider))
+	ui.Hint("`btrack ai ins` to see your productivity stats")
+	ui.Blank()
 	return nil
 }
 
@@ -189,7 +186,9 @@ Tips:
 			return fmt.Errorf("load sessions: %w", err)
 		}
 		if len(sessions) == 0 {
-			fmt.Println(ui.StyleSubtle.Render("\n  no sessions found\n"))
+			ui.Blank()
+			ui.Hint("no sessions found")
+			ui.Blank()
 			return nil
 		}
 
@@ -216,7 +215,9 @@ Tips:
 			}
 		}
 
-		fmt.Print(ui.StyleDimmed.Render("\n  ✦ generating standup...\n\n"))
+		ui.Blank()
+		ui.Dim("✦ generating standup…")
+		ui.Blank()
 
 		var summary string
 		var sumErr error
@@ -305,20 +306,24 @@ Setup:
 
 		if noAI || cfg.AI.ActiveKey() == "" {
 			if cfg.AI.ActiveKey() == "" {
-				fmt.Printf("\n  %s\n\n",
-					ui.StyleDimmed.Render("tip: run `btrack ai setup` to unlock AI insights"),
-				)
+				ui.Blank()
+				ui.Tip("`btrack ai setup` to unlock AI insights")
+				ui.Blank()
 			}
 			return nil
 		}
 
 		provider, err := ai.NewProvider(cfg)
 		if err != nil {
-			fmt.Printf("\n  %s\n\n", ui.StyleDimmed.Render("AI unavailable: "+err.Error()))
+			ui.Blank()
+			ui.Hint("AI unavailable: " + err.Error())
+			ui.Blank()
 			return nil
 		}
 
-		fmt.Print(ui.StyleDimmed.Render("\n  ✦ analysing with " + provider.Name() + "...\n\n"))
+		ui.Blank()
+		ui.Dim("✦ analysing with " + provider.Name() + "…")
+		ui.Blank()
 
 		var analysis string
 		var anaErr error
@@ -328,7 +333,8 @@ Setup:
 			analysis, anaErr = ai.AnalyzeStats(context.Background(), provider, stats.ToJSON())
 		}
 		if anaErr != nil {
-			fmt.Printf("  %s\n\n", ui.StyleWarning.Render("AI error: "+anaErr.Error()))
+			ui.Warn("AI error: " + anaErr.Error())
+			ui.Blank()
 			return nil
 		}
 
@@ -466,10 +472,10 @@ func loadConfigWithAICheck() (*config.Config, error) {
 		return nil, err
 	}
 	if cfg.AI.ActiveKey() == "" {
-		fmt.Println(ui.StyleWarning.Render("\n  No AI key configured."))
-		fmt.Printf("  %s\n\n",
-			ui.StyleDimmed.Render("run `btrack ai setup` to add one — takes 30 seconds"),
-		)
+		ui.Blank()
+		ui.Warn("no AI key configured")
+		ui.Hint("`btrack ai setup` to add one — takes 30 seconds")
+		ui.Blank()
 		return nil, fmt.Errorf("AI not configured")
 	}
 	return cfg, nil

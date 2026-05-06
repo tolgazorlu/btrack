@@ -45,13 +45,10 @@ Tips:
 		var sess daemon.SessionDTO
 		json.Unmarshal(resp.Data, &sess)
 
-		fmt.Printf("\n  %s  %s\n",
-			ui.StyleSuccess.Render("▶"),
-			ui.StyleTitle.Render(sess.TaskName),
-		)
-		fmt.Printf("\n  %s\n\n",
-			ui.StyleDimmed.Render("session resumed"),
-		)
+		ui.Blank()
+		ui.Sign(ui.StyleSuccess.Render(ui.Sym.Resume), ui.StyleHighlight.Render(sess.TaskName))
+		ui.Hint("session resumed")
+		ui.Blank()
 		return nil
 	},
 }

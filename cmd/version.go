@@ -14,10 +14,9 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the btrack version",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s %s\n",
-			ui.StyleTitle.Render("btrack"),
-			ui.StyleSubtle.Render(Version),
-		)
+		fmt.Println(ui.Indent +
+			ui.StyleTitle.Render("btrack") + " " +
+			ui.StyleHighlight.Render(Version))
 	},
 }
 
