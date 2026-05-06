@@ -44,7 +44,11 @@
       "Bash(xargs -I{} basename {} .go)",
       "Bash(go mod *)",
       "Bash(git stash *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(mkdir -p /tmp/btrack-test)",
+      "Bash(cp /tmp/console_test.go /tmp/btrack-test/main.go)",
+      "Read(//tmp/**)",
+      "Bash(go run *)"
     ]
   }
 }

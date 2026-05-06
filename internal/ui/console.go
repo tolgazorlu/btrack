@@ -222,9 +222,10 @@ func (m ConsoleModel) View() string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorBorder).
 		Padding(0, 1).
+		MarginLeft(len(Indent)).
 		Width(m.input.Width + 5).
 		Render(m.input.View())
-	sb.WriteString(Indent + box + "\n")
+	sb.WriteString(box + "\n")
 
 	// @-autocomplete dropdown.
 	if matches := m.filteredSuggestions(); len(matches) > 0 {
@@ -311,8 +312,9 @@ func (m ConsoleModel) renderSuggestions(matches []Suggestion) string {
 		Border(lipgloss.NormalBorder(), false, false, false, true).
 		BorderForeground(colorBorder).
 		PaddingLeft(1).
+		MarginLeft(len(Indent)).
 		Render(body)
 
-	return Indent + box
+	return box
 }
 
