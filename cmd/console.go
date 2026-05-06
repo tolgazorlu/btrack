@@ -169,6 +169,9 @@ func handleSlash(input string) (bool, string) {
 	case "tools":
 		printToolCatalog()
 		return false, ""
+	case "mcp":
+		handleMCPSlash(input)
+		return false, ""
 	default:
 		return false, "unknown slash command: /" + cmd
 	}

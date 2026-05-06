@@ -274,6 +274,18 @@ In `~/.gemini/settings.json`:
 }
 ```
 
+### HTTP transport
+
+If the stdio launch isn't working (PATH issues, sandboxing, etc.), run the HTTP server yourself and register the URL instead:
+
+```bash
+btrack mcp --http              # 127.0.0.1:8765, path /mcp
+```
+
+```bash
+claude mcp add --transport http btrack http://127.0.0.1:8765/mcp
+```
+
 Once registered, ask the assistant things like *"What am I tracking right now?"*, *"What did I work on this week?"*, or *"Start a session called 'fix flaky CI'"* — it will call the right tool itself. The MCP server shares state with the daemon, so anything an AI starts shows up immediately in `btrack w` and vice versa.
 
 ---
