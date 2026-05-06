@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
@@ -79,6 +80,13 @@ Stats:
 
 GitHub Activity:
 %s`, statsJSON, githubActivity)
+	return p.Complete(ctx, prompt)
+}
+
+// GenerateStandup produces a standup in Yesterday/Today/Blockers format.
+func GenerateStandup(ctx context.Context, p Provider, sessions []*db.Session, logs map[int64][]*db.LogEntry, targetDate time.Time) (string, error) {
+	gitDiff, _ := getGitContext()
+	prompt := buildDailyStandupPrompt(sessions, logs, gitDiff, targetDate)
 	return p.Complete(ctx, prompt)
 }
 
@@ -183,6 +191,42 @@ func buildCommitPrompt(taskName string, notes []string, gitDiff string) string {
 		sb.WriteString(gitDiff)
 	}
 	sb.WriteString("\nRespond with ONLY the message (max 72 chars, imperative mood).")
+	return sb.String()
+}
+
+func buildDailyStandupPrompt(sessions []*db.Session, logs map[int64][]*db.LogEntry, gitDiff string, targetDate time.Time) string {
+	var sb strings.Builder
+	dateStr := targetDate.Format("Monday, January 2")
+	sb.WriteString(fmt.Sprintf("Write a concise daily standup for %s based on these time tracking entries:\n\n", dateStr))
+	for _, s := range sessions {
+		sb.WriteString(fmt.Sprintf("- %s (%.0f min)", s.TaskName, s.Duration().Minutes()))
+		if s.Message != "" {
+			sb.WriteString(fmt.Sprintf(" — %s", s.Message))
+		}
+		sb.WriteString("\n")
+		if entries, ok := logs[s.ID]; ok {
+			for _, e := range entries {
+				sb.WriteString(fmt.Sprintf("  note: %s\n", e.Note))
+			}
+		}
+	}
+	if gitDiff != "" {
+		sb.WriteString("\nGit changes:\n")
+		sb.WriteString(gitDiff)
+	}
+	sb.WriteString(`
+Respond in EXACTLY this format (fill in the blanks, keep it short):
+
+Yesterday:
+  • <what was done>
+
+Today:
+  • <planned work — infer from context or write "Continue previous work">
+
+Blockers:
+  • <blockers, or "None">
+
+Keep bullets concise, max 10 words each. No intro text.`)
 	return sb.String()
 }
 
