@@ -72,6 +72,12 @@ func runConsole() error {
 		// @-actions: expand to the equivalent btrack command path.
 		isAt := strings.HasPrefix(args[0], "@")
 		if isAt {
+			action := strings.ToLower(strings.TrimPrefix(args[0], "@"))
+			if action == "clear" || action == "cls" {
+				fmt.Fprint(ui.Out, "\033[H\033[2J")
+				hint = ""
+				continue
+			}
 			expanded, ok := expandAtAction(args)
 			if !ok {
 				hint = "unknown @-action: " + args[0] + "  ·  /help to list"

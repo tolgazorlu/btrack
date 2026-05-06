@@ -57,6 +57,9 @@ var atAlias = map[string][]string{
 	"config": {"config"},
 	"export": {"export"},
 	"init":   {"init"},
+
+	"clear": {"clear"},
+	"cls":   {"clear"},
 }
 
 // expandAtAction converts ["@create-session", "fix bug", "-p", "myapp"]

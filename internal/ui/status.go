@@ -222,14 +222,13 @@ func (m StatusModel) View() string {
 			todayTotal += s.EndTime.Sub(s.StartTime)
 		}
 
-		sep := StyleDimmed.Render(strings.Repeat("─", 52))
-		b.WriteString(fmt.Sprintf("  %s  %s\n",
+		sep := StyleDimmed.Render(strings.Repeat("─", 48))
+		b.WriteString(fmt.Sprintf("  %-8s%s\n",
 			StyleHighlight.Render("today"),
 			StyleDimmed.Render(compactDur(todayTotal)+" tracked"),
 		))
 		b.WriteString("  " + sep + "\n")
 
-		// Show last 5 completed sessions (oldest first in today's batch)
 		shown := completed
 		if len(shown) > 5 {
 			shown = shown[len(shown)-5:]
@@ -240,10 +239,10 @@ func (m StatusModel) View() string {
 			d := s.EndTime.Sub(s.StartTime)
 			timeRange := fmt.Sprintf("%s–%s", startStr, endStr)
 			taskStr := s.TaskName
-			if len(taskStr) > 30 {
-				taskStr = taskStr[:27] + "..."
+			if len(taskStr) > 28 {
+				taskStr = taskStr[:25] + "..."
 			}
-			b.WriteString(fmt.Sprintf("  %s  %-30s  %s\n",
+			b.WriteString(fmt.Sprintf("  %s  %-28s  %s\n",
 				StyleDimmed.Render(fmt.Sprintf("%-11s", timeRange)),
 				StyleSubtle.Render(taskStr),
 				StyleElapsed.Render(compactDur(d)),
@@ -260,13 +259,15 @@ func (m StatusModel) View() string {
 
 	// ── Active session ────────────────────────────────────────────────────────
 	if !m.status.Active || m.status.Session == nil {
-		b.WriteString(StyleSubtle.Render("  no active session\n\n"))
+		b.WriteString(StyleSubtle.Render("  no active session\n"))
 		if completedToday > 0 {
-			b.WriteString(renderProgressBarDual(completedToday, 0, m.dailyHours) + "\n")
-			b.WriteString(fmt.Sprintf("  %s\n\n", StyleDimmed.Render(
-				fmt.Sprintf("%s today  ·  %dh target", compactDur(completedToday), m.dailyHours),
-			)))
+			totalStr := fmt.Sprintf("%s today  ·  %dh target", compactDur(completedToday), m.dailyHours)
+			b.WriteString(fmt.Sprintf("%s  %s\n",
+				renderProgressBarDual(completedToday, 0, m.dailyHours),
+				StyleDimmed.Render(totalStr),
+			))
 		}
+		b.WriteString("\n")
 		b.WriteString(StyleDimmed.Render("  start one with: ") + StyleHighlight.Render("btrack s \"task\"\n"))
 		b.WriteString(StyleDimmed.Render("\n  q quit\n"))
 		return b.String()
@@ -276,11 +277,14 @@ func (m StatusModel) View() string {
 	pulse := StyleWarning.Render(PulseFrames[m.frame])
 	elapsed := time.Since(m.startTime)
 
-	b.WriteString(fmt.Sprintf("  %s  %s\n", pulse, StyleTitle.Render(sess.TaskName)))
-	b.WriteString(fmt.Sprintf("     %s\n\n", FormatDuration(elapsed)))
+	b.WriteString(fmt.Sprintf("  %s  %s  %s\n",
+		pulse,
+		StyleTitle.Render(sess.TaskName),
+		StyleDimmed.Render(FormatDuration(elapsed)),
+	))
 
 	if sess.Project != "" {
-		b.WriteString(fmt.Sprintf("  %s\n\n", StyleHighlight.Render("@"+sess.Project)))
+		b.WriteString(fmt.Sprintf("  %s\n", StyleHighlight.Render("@"+sess.Project)))
 	}
 
 	if len(sess.Tags) > 0 {
@@ -288,7 +292,7 @@ func (m StatusModel) View() string {
 		for _, tag := range sess.Tags {
 			b.WriteString(StyleTag.Render(tag) + "  ")
 		}
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 	}
 
 	if sess.GitBranch != "" {
@@ -296,15 +300,18 @@ func (m StatusModel) View() string {
 		if sess.GitRepo != "" {
 			b.WriteString(StyleDimmed.Render(fmt.Sprintf("  (%s)", sess.GitRepo)))
 		}
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 	}
 
-	// Progress bar: fd-primary = completed today, fd-accent-foreground = active segment
-	b.WriteString(renderProgressBarDual(completedToday, elapsed, m.dailyHours) + "\n")
+	b.WriteString("\n")
+
+	// Progress bar with time summary on the same line
 	totalToday := completedToday + elapsed
-	b.WriteString(fmt.Sprintf("  %s\n\n", StyleDimmed.Render(
-		fmt.Sprintf("%s / %dh today", compactDur(totalToday), m.dailyHours),
-	)))
+	totalStr := fmt.Sprintf("%s / %dh today", compactDur(totalToday), m.dailyHours)
+	b.WriteString(fmt.Sprintf("%s  %s\n",
+		renderProgressBarDual(completedToday, elapsed, m.dailyHours),
+		StyleDimmed.Render(totalStr),
+	))
 
 	// Idle warning when within last 20% of threshold
 	if m.idleMinutes > 0 {
@@ -316,15 +323,16 @@ func (m StatusModel) View() string {
 				remaining = 0
 			}
 			mins := int(remaining.Minutes()) + 1
-			b.WriteString(StyleWarning.Render(fmt.Sprintf("  ⚠  idle — auto-stop in ~%dm\n\n", mins)))
+			b.WriteString(StyleWarning.Render(fmt.Sprintf("  ⚠  idle — auto-stop in ~%dm\n", mins)))
 		}
 	}
+
+	b.WriteString("\n")
 
 	// Recent notes — tree view (top-level + indented sub-notes)
 	if len(m.status.RecentLog) > 0 {
 		b.WriteString(StyleHighlight.Render("  recent notes") + "\n")
 
-		// Separate top-level from sub-notes
 		subNoteMap := map[int64][]daemon.LogDTO{}
 		var topLevel []daemon.LogDTO
 		for _, entry := range m.status.RecentLog {
@@ -335,7 +343,6 @@ func (m StatusModel) View() string {
 			}
 		}
 
-		// Render top-level notes (most recent first), sub-notes indented below each
 		for i := len(topLevel) - 1; i >= 0; i-- {
 			note := topLevel[i]
 			ts, _ := time.Parse(time.RFC3339, note.Timestamp)
@@ -358,10 +365,11 @@ func (m StatusModel) View() string {
 	// Action result feedback (note added / session stopped)
 	if m.actionResult != "" {
 		if m.actionIsErr {
-			b.WriteString(StyleError.Render("  ✗  "+m.actionResult) + "\n\n")
+			b.WriteString(StyleError.Render("  ✗  "+m.actionResult) + "\n")
 		} else {
-			b.WriteString(StyleSuccess.Render("  ✓  "+m.actionResult) + "\n\n")
+			b.WriteString(StyleSuccess.Render("  ✓  "+m.actionResult) + "\n")
 		}
+		b.WriteString("\n")
 	}
 
 	// ── Input overlay / key hints ─────────────────────────────────────────────
