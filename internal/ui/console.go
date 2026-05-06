@@ -108,7 +108,7 @@ func (m ConsoleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		w := msg.Width - 8
+		w := msg.Width - 9
 		if w > 80 {
 			w = 80
 		}
@@ -219,11 +219,13 @@ func (m ConsoleModel) View() string {
 	}
 
 	// Input box — rounded border, full-width relative to terminal.
+	// textinput.View() in text mode renders prompt(2) + Width + cursor(1)
+	// chars wide, so reserve `Width + 3` for content (+ 2 for padding).
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorBorder).
 		Padding(0, 1).
-		Width(m.input.Width + 4).
+		Width(m.input.Width + 5).
 		Render(m.input.View())
 	sb.WriteString(Indent + box + "\n")
 
