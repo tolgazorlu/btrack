@@ -64,12 +64,14 @@ func runConsole() error {
 			continue
 		}
 
-		// @-actions are dispatched in console.go's @-handler (added in a
-		// follow-up commit). For now, anything starting with @ falls
-		// through to a friendly hint.
+		// @-actions: expand to the equivalent btrack command path.
 		if strings.HasPrefix(args[0], "@") {
-			hint = "@-actions arrive in v2 — try `s \"task\"` for now"
-			continue
+			expanded, ok := expandAtAction(args)
+			if !ok {
+				hint = "unknown @-action: " + args[0] + "  ·  /help to list"
+				continue
+			}
+			args = expanded
 		}
 
 		// Dispatch via cobra. Reset args, run, surface any error to the user.
@@ -120,6 +122,7 @@ func handleSlash(input string) (bool, string) {
 		return true, ""
 	case "help", "?":
 		_ = rootCmd.Help()
+		printAtActions()
 		return false, ""
 	case "clear", "cls":
 		// Bubble Tea handles its own draw; the next iteration paints fresh.
