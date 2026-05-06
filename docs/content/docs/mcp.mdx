@@ -103,13 +103,18 @@ claude mcp add --transport http btrack http://127.0.0.1:8765/mcp
 
 ### Quick sanity check
 
-The standard MCP `initialize` handshake over `curl`:
+The standard MCP `initialize` handshake over `curl` — single line so copy-paste works in any shell:
+
+**Bash / Git Bash / zsh**
 
 ```bash
-curl -X POST http://127.0.0.1:8765/mcp \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
+curl -X POST http://127.0.0.1:8765/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
+```
+
+**PowerShell** (use `curl.exe`, not the `Invoke-WebRequest` alias):
+
+```powershell
+curl.exe -X POST http://127.0.0.1:8765/mcp -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"curl\",\"version\":\"0\"}}}'
 ```
 
 You should see an SSE `event: message` reply with the server's capabilities.
