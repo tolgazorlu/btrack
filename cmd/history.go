@@ -578,3 +578,317 @@ func init() {
 	historyCmd.Flags().StringP("project", "p", "", "filter by project")
 	rootCmd.AddCommand(historyCmd)
 }
+
+// ─── day view ─────────────────────────────────────────────────────────────────
+
+func runDay(cmd *cobra.Command, args []string) error {
+	target := time.Now()
+
+	if len(args) == 1 {
+		switch args[0] {
+		case "today", "":
+			// default
+		case "yesterday":
+			target = time.Now().AddDate(0, 0, -1)
+		default:
+			t, err := time.ParseInLocation("2006-01-02", args[0], time.Local)
+			if err != nil {
+				return fmt.Errorf("invalid date %q — use YYYY-MM-DD, today, or yesterday", args[0])
+			}
+			target = t
+		}
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	dailyHours := 8
+	if cfg.Work.DailyHours > 0 {
+		dailyHours = cfg.Work.DailyHours
+	}
+
+	store, err := db.Open(cfg)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	sessions, err := store.GetSessionsForDate(target)
+	if err != nil {
+		return fmt.Errorf("load sessions: %w", err)
+	}
+
+	recentSessions, _ := store.GetRecentSessions(500)
+	streak := computeStreak(recentSessions)
+
+	y, m, d := target.Local().Date()
+	dateLabel := time.Date(y, m, d, 0, 0, 0, 0, time.Local).Format("Monday, January 02 2006")
+
+	isToday := sameDay(target, time.Now())
+	isYesterday := sameDay(target, time.Now().AddDate(0, 0, -1))
+	suffix := ""
+	if isToday {
+		suffix = ui.StyleDimmed.Render("  today")
+	} else if isYesterday {
+		suffix = ui.StyleDimmed.Render("  yesterday")
+	}
+
+	streakStr := ""
+	if streak > 0 {
+		streakStr = "  " + ui.StyleWarning.Render(fmt.Sprintf("🔥 %dd streak", streak))
+	}
+
+	sep := ui.StyleDimmed.Render(strings.Repeat("─", 58))
+
+	fmt.Println()
+	fmt.Printf("  %s  %s%s%s\n", ui.StyleTitle.Render("btrack"), ui.StyleHighlight.Render(dateLabel), suffix, streakStr)
+	fmt.Println("  " + sep)
+
+	if len(sessions) == 0 {
+		fmt.Println(ui.StyleSubtle.Render("\n  no sessions recorded for this day\n"))
+		return nil
+	}
+
+	var totalDur time.Duration
+	for i, sess := range sessions {
+		d := sess.Duration()
+		totalDur += d
+
+		isLast := i == len(sessions)-1
+		branch := "  ├─"
+		childPfx := "  │  "
+		if isLast {
+			branch = "  └─"
+			childPfx = "     "
+		}
+
+		startStr := sess.StartTime.Local().Format("15:04")
+		endStr := "…"
+		if sess.EndTime != nil {
+			endStr = sess.EndTime.Local().Format("15:04")
+		}
+		timeRange := ui.StyleDimmed.Render(fmt.Sprintf("%s–%s", startStr, endStr))
+
+		taskStr := sess.TaskName
+		if len(taskStr) > 32 {
+			taskStr = taskStr[:29] + "..."
+		}
+
+		fmt.Printf("%s %s  %s  %s\n",
+			ui.StyleDimmed.Render(branch),
+			ui.StyleHighlight.Render(fmt.Sprintf("%-33s", taskStr)),
+			timeRange,
+			ui.StyleElapsed.Render(formatDur(d)),
+		)
+
+		if len(sess.Tags) > 0 {
+			var tags string
+			for _, t := range sess.Tags {
+				tags += ui.StyleTag.Render(t) + " "
+			}
+			fmt.Printf("%s %s\n", ui.StyleDimmed.Render(childPfx), strings.TrimSpace(tags))
+		}
+
+		logs, err := store.GetAllLogs(sess.ID)
+		if err == nil && len(logs) > 0 {
+			for j, log := range logs {
+				isLastLog := j == len(logs)-1
+				logBranch := childPfx + "├─"
+				if isLastLog {
+					logBranch = childPfx + "└─"
+				}
+				ts := log.Timestamp.Local().Format("15:04")
+				fmt.Printf("%s %s  %s\n",
+					ui.StyleDimmed.Render(logBranch),
+					ui.StyleDimmed.Render(ts),
+					ui.StyleLogEntry.Render(log.Note),
+				)
+			}
+		}
+
+		if !isLast {
+			fmt.Printf("%s\n", ui.StyleDimmed.Render("  │"))
+		}
+	}
+
+	fmt.Println()
+	fmt.Println("  " + ui.RenderProgressBar(totalDur, dailyHours))
+
+	pct := int(totalDur.Hours() / float64(dailyHours) * 100)
+	if pct > 100 {
+		pct = 100
+	}
+	fmt.Println("  " + sep)
+	fmt.Printf("  %s  %s total  ·  %d sessions  ·  %s target  ·  %d%%\n\n",
+		ui.StyleDimmed.Render("summary"),
+		ui.StyleElapsed.Render(formatDur(totalDur)),
+		len(sessions),
+		ui.StyleDimmed.Render(fmt.Sprintf("%dh", dailyHours)),
+		pct,
+	)
+	return nil
+}
+
+// ─── week view ────────────────────────────────────────────────────────────────
+
+func runWeek(cmd *cobra.Command, args []string) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	dailyHours := 8
+	if cfg.Work.DailyHours > 0 {
+		dailyHours = cfg.Work.DailyHours
+	}
+
+	store, err := db.Open(cfg)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	now := time.Now()
+	weekday := int(now.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	monday := now.AddDate(0, 0, -(weekday - 1))
+	y, m, d := monday.Local().Date()
+	weekStart := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+
+	sep := ui.StyleDimmed.Render(strings.Repeat("─", 60))
+	fmt.Println()
+	fmt.Printf("  %s  %s\n", ui.StyleTitle.Render("btrack"), ui.StyleHighlight.Render("week of "+weekStart.Format("January 02")))
+	fmt.Println("  " + sep)
+
+	var weekTotal time.Duration
+	var weekSessions, activeDays int
+
+	for i := 0; i < 7; i++ {
+		day := weekStart.AddDate(0, 0, i)
+		if day.After(now) {
+			break
+		}
+
+		sessions, _ := store.GetSessionsForDate(day)
+
+		isToday := sameDay(day, now)
+		label := day.Format("Mon Jan 02")
+		todayMark := ""
+		if isToday {
+			todayMark = ui.StyleDimmed.Render("  ← today")
+		}
+
+		if len(sessions) == 0 {
+			fmt.Printf("\n  %s%s\n", ui.StyleDimmed.Render(label), todayMark)
+			fmt.Printf("  %s\n", ui.StyleDimmed.Render("  (no sessions)"))
+			continue
+		}
+
+		activeDays++
+		var dayTotal time.Duration
+		for _, sess := range sessions {
+			dayTotal += sess.Duration()
+		}
+		weekTotal += dayTotal
+		weekSessions += len(sessions)
+
+		fmt.Printf("\n  %s  %s%s\n",
+			ui.StyleHighlight.Render(label),
+			ui.StyleElapsed.Render(formatDur(dayTotal)),
+			todayMark,
+		)
+
+		for j, sess := range sessions {
+			isLast := j == len(sessions)-1
+			branch, childPfx := "  ├─", "  │  "
+			if isLast {
+				branch, childPfx = "  └─", "     "
+			}
+			startStr := sess.StartTime.Local().Format("15:04")
+			endStr := "…"
+			if sess.EndTime != nil {
+				endStr = sess.EndTime.Local().Format("15:04")
+			}
+			taskStr := sess.TaskName
+			if len(taskStr) > 30 {
+				taskStr = taskStr[:27] + "..."
+			}
+			fmt.Printf("%s %s  %s  %s\n",
+				ui.StyleDimmed.Render(branch),
+				ui.StyleHighlight.Render(fmt.Sprintf("%-31s", taskStr)),
+				ui.StyleDimmed.Render(fmt.Sprintf("%s–%s", startStr, endStr)),
+				ui.StyleElapsed.Render(formatDur(sess.Duration())),
+			)
+			logs, _ := store.GetAllLogs(sess.ID)
+			for k, log := range logs {
+				logBranch := childPfx + "├─"
+				if k == len(logs)-1 {
+					logBranch = childPfx + "└─"
+				}
+				fmt.Printf("%s %s  %s\n",
+					ui.StyleDimmed.Render(logBranch),
+					ui.StyleDimmed.Render(log.Timestamp.Local().Format("15:04")),
+					ui.StyleLogEntry.Render(log.Note),
+				)
+			}
+		}
+		fmt.Println()
+		fmt.Println("  " + ui.RenderProgressBar(dayTotal, dailyHours))
+	}
+
+	fmt.Println()
+	fmt.Println("  " + sep)
+
+	pct := 0
+	if target := time.Duration(activeDays) * time.Duration(dailyHours) * time.Hour; target > 0 {
+		pct = int(weekTotal * 100 / target)
+		if pct > 100 {
+			pct = 100
+		}
+	}
+	fmt.Printf("  %s  %s total  ·  %d sessions  ·  %d active days  ·  %d%% of target\n\n",
+		ui.StyleDimmed.Render("week"),
+		ui.StyleElapsed.Render(formatDur(weekTotal)),
+		weekSessions, activeDays, pct,
+	)
+	return nil
+}
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+func sameDay(a, b time.Time) bool {
+	ay, am, ad := a.Local().Date()
+	by, bm, bd := b.Local().Date()
+	return ay == by && am == bm && ad == bd
+}
+
+func computeStreak(sessions []*db.Session) int {
+	daySet := map[string]bool{}
+	for _, s := range sessions {
+		if s.EndTime != nil {
+			daySet[s.StartTime.Local().Format("2006-01-02")] = true
+		}
+	}
+
+	today := time.Now()
+	cursor := today
+	if !daySet[today.Format("2006-01-02")] {
+		cursor = today.AddDate(0, 0, -1)
+		if !daySet[cursor.Format("2006-01-02")] {
+			return 0
+		}
+	}
+
+	streak := 0
+	for {
+		if daySet[cursor.Format("2006-01-02")] {
+			streak++
+			cursor = cursor.AddDate(0, 0, -1)
+		} else {
+			break
+		}
+	}
+	return streak
+}
