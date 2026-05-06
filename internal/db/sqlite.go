@@ -45,6 +45,7 @@ func (s *SQLiteStore) migrate() error {
 			session_id INTEGER NOT NULL,
 			note       TEXT    NOT NULL,
 			timestamp  DATETIME NOT NULL,
+			parent_id  INTEGER REFERENCES log_entries(id) ON DELETE SET NULL,
 			FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 		);
 		CREATE INDEX IF NOT EXISTS idx_sessions_end_time ON sessions(end_time);
@@ -77,7 +78,7 @@ func (s *SQLiteStore) migrate() error {
 		}
 	}
 
-	// Add parent_id column to log_entries (idempotent).
+	// Add parent_id to log_entries on existing databases that predate the initial schema fix (idempotent).
 	logRows, _ := s.db.Query(`PRAGMA table_info(log_entries)`)
 	hasParentID := false
 	if logRows != nil {
