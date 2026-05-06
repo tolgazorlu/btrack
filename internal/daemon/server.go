@@ -126,6 +126,8 @@ func (s *Server) dispatch(req Request) Response {
 		return s.handleStart(req)
 	case ActionStop:
 		return s.handleStop(req)
+	case ActionSwitch:
+		return s.handleSwitch(req)
 	case ActionLog:
 		return s.handleLog(req)
 	case ActionStatus:
@@ -189,6 +191,49 @@ func (s *Server) handleStop(req Request) Response {
 	dto := sessionToDTO(s.state.session)
 	raw, _ := json.Marshal(dto)
 	s.state.session = nil
+	return Response{Success: true, Data: raw}
+}
+
+// handleSwitch atomically stops the active session (if any) and starts a new
+// one in the same locked critical section. This avoids the race window the
+// CLI used to create when calling stop+start as two separate IPC round-trips.
+func (s *Server) handleSwitch(req Request) Response {
+	var p SwitchPayload
+	if err := json.Unmarshal(req.Payload, &p); err != nil {
+		return Response{Success: false, Error: err.Error()}
+	}
+	if strings.TrimSpace(p.TaskName) == "" {
+		return Response{Success: false, Error: "task_name is required"}
+	}
+
+	out := SwitchData{}
+
+	if s.state.session != nil {
+		now := time.Now()
+		s.state.session.EndTime = &now
+		s.state.session.Message = p.Message
+		s.state.session.Tags = extractTags(p.Message)
+		if err := s.store.UpdateSession(s.state.session); err != nil {
+			return Response{Success: false, Error: err.Error()}
+		}
+		out.Stopped = sessionToDTO(s.state.session)
+		s.state.session = nil
+	}
+
+	sess := &db.Session{
+		TaskName:  p.TaskName,
+		StartTime: time.Now(),
+		GitBranch: p.GitBranch,
+		GitRepo:   p.GitRepo,
+		Project:   p.Project,
+	}
+	if err := s.store.CreateSession(sess); err != nil {
+		return Response{Success: false, Error: err.Error()}
+	}
+	s.state.session = sess
+	out.Started = sessionToDTO(sess)
+
+	raw, _ := json.Marshal(out)
 	return Response{Success: true, Data: raw}
 }
 

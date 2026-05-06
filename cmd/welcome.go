@@ -40,7 +40,7 @@ func welcomeSuppressed(cmd *cobra.Command) bool {
 		return true // explicit invocation handles its own output
 	}
 	switch cmd {
-	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd:
+	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd, mcpCmd:
 		return true
 	default:
 		return false

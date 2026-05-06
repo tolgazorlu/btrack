@@ -6,6 +6,7 @@ import "encoding/json"
 const (
 	ActionStart  = "start"
 	ActionStop   = "stop"
+	ActionSwitch = "switch"
 	ActionLog    = "log"
 	ActionStatus = "status"
 	ActionResume = "resume"
@@ -32,6 +33,22 @@ type StartPayload struct {
 
 type StopPayload struct {
 	Message string `json:"message"`
+}
+
+// SwitchPayload combines the closing message for the active session with
+// the parameters for the new session that should start atomically.
+type SwitchPayload struct {
+	TaskName  string `json:"task_name"`
+	Message   string `json:"message,omitempty"`
+	GitBranch string `json:"git_branch,omitempty"`
+	GitRepo   string `json:"git_repo,omitempty"`
+	Project   string `json:"project,omitempty"`
+}
+
+// SwitchData is returned by ActionSwitch: both the stopped and started sessions.
+type SwitchData struct {
+	Stopped *SessionDTO `json:"stopped,omitempty"`
+	Started *SessionDTO `json:"started"`
 }
 
 type LogPayload struct {
