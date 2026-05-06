@@ -65,21 +65,21 @@ func checkWelcome() {
 // printWelcome renders the welcome / upgrade banner.
 // First-run = isUpgrade false. Upgrade = isUpgrade true with prevVersion set.
 func printWelcome(isUpgrade bool, prevVersion string) {
-	ui.Blank()
+	// Big pixel-block banner — Gemini CLI style.
+	ui.PrintBanner("", "time tracker for developers")
 
-	// Title bar — single line, no box.
-	titleLine := ui.Indent + ui.StyleTitle.Render("btrack")
+	// Status line under the banner.
+	var status string
 	switch {
 	case isUpgrade:
-		titleLine += "  " + ui.StyleSuccess.Render("updated → "+Version)
-		titleLine += "  " + ui.StyleDimmed.Render("(was "+prevVersion+")")
+		status = ui.StyleSuccess.Render("updated → "+Version) +
+			"  " + ui.StyleDimmed.Render("(was "+prevVersion+")")
 	case Version == "dev":
-		titleLine += "  " + ui.StyleDimmed.Render("dev build")
+		status = ui.StyleDimmed.Render("dev build")
 	default:
-		titleLine += "  " + ui.StyleSuccess.Render(Version+" installed")
+		status = ui.StyleSuccess.Render(Version + " installed")
 	}
-	fmt.Println(titleLine)
-	fmt.Println(ui.Indent + ui.StyleDimmed.Render("time tracker for developers"))
+	fmt.Println(ui.Indent + status)
 	ui.Rule()
 	ui.Blank()
 

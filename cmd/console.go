@@ -1,0 +1,146 @@
+package cmd
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/google/shlex"
+	"github.com/spf13/cobra"
+	"github.com/tolgazorlu/btrack/internal/ui"
+)
+
+// runConsole is the interactive REPL invoked when the user runs `btrack`
+// with no args. It renders the Gemini-style banner, captures one line of
+// input at a time via Bubble Tea, dispatches it through cobra, and loops.
+//
+// Input syntax:
+//   - bare command:   s "fix bug" -p myapp
+//   - @-quick action: @create-session "fix bug" -p myapp
+//   - slash command:  /help, /exit, /clear
+//   - free text:      treated as AI chat (when configured)
+func runConsole() error {
+	tagline := "time tracker for developers"
+
+	// Banner shows only on the very first iteration; subsequent prompts
+	// just render the input box so the screen doesn't reflow on every Enter.
+	hint := ""
+	first := true
+	suggestions := atSuggestions()
+	for {
+		model := ui.NewConsoleModel(tagline, Version, hint, first).
+			WithSuggestions(suggestions)
+		first = false
+		p := tea.NewProgram(model)
+		final, err := p.Run()
+		if err != nil {
+			return err
+		}
+		c, _ := final.(ui.ConsoleModel)
+		if c.Aborted() && c.Value() == "" {
+			ui.Blank()
+			ui.Hint("bye — see you next session")
+			ui.Blank()
+			return nil
+		}
+
+		input := strings.TrimSpace(c.Value())
+		if input == "" {
+			continue
+		}
+
+		// Slash commands: /help, /exit, /clear.
+		if strings.HasPrefix(input, "/") {
+			done, h := handleSlash(input)
+			hint = h
+			if done {
+				return nil
+			}
+			continue
+		}
+
+		args, err := shlex.Split(input)
+		if err != nil {
+			hint = "parse error: " + err.Error()
+			continue
+		}
+		if len(args) == 0 {
+			continue
+		}
+
+		// @-actions: expand to the equivalent btrack command path.
+		isAt := strings.HasPrefix(args[0], "@")
+		if isAt {
+			expanded, ok := expandAtAction(args)
+			if !ok {
+				hint = "unknown @-action: " + args[0] + "  ·  /help to list"
+				continue
+			}
+			args = expanded
+		}
+
+		// Dispatch: known command → cobra, unknown → AI chat.
+		var execErr error
+		if isAt {
+			execErr = dispatch(args)
+		} else {
+			execErr = dispatchOrChat(args, input)
+		}
+		if execErr != nil {
+			hint = ui.StyleError.Render(" error ") + " " + execErr.Error()
+			continue
+		}
+		hint = ""
+	}
+}
+
+// dispatch invokes the rootCmd with the given args, isolated from os.Args.
+func dispatch(args []string) error {
+	// Always keep the rootCmd usable across iterations: clone-by-state.
+	rootCmd.SetArgs(args)
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
+
+	defer func() {
+		// Recover from any panic inside a subcommand so the REPL keeps running.
+		if r := recover(); r != nil {
+			fmt.Fprintln(ui.Out, ui.StyleError.Render(" panic ")+" "+fmt.Sprint(r))
+		}
+	}()
+
+	if err := rootCmd.Execute(); err != nil {
+		var ce *cobra.Command
+		_ = ce
+		if errors.Is(err, ErrSilent) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// ErrSilent — sentinel for subcommands that handled their own messaging.
+var ErrSilent = errors.New("silent")
+
+// handleSlash processes /-prefixed meta commands. Returns (quit, hint).
+func handleSlash(input string) (bool, string) {
+	cmd := strings.ToLower(strings.TrimPrefix(input, "/"))
+	switch strings.SplitN(cmd, " ", 2)[0] {
+	case "exit", "quit", "q":
+		ui.Blank()
+		ui.Hint("bye — see you next session")
+		ui.Blank()
+		return true, ""
+	case "help", "?":
+		_ = rootCmd.Help()
+		printAtActions()
+		return false, ""
+	case "clear", "cls":
+		// Bubble Tea handles its own draw; the next iteration paints fresh.
+		fmt.Fprint(ui.Out, "\033[H\033[2J")
+		return false, ""
+	default:
+		return false, "unknown slash command: /" + cmd
+	}
+}
