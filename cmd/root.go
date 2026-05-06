@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
-	"github.com/tolgazorlu/btrack/internal/daemon"
-	"github.com/tolgazorlu/btrack/internal/db"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -82,32 +79,7 @@ var rootCmd = &cobra.Command{
 
   Use ` + ui.StyleDimmed.Render("btrack <command> --help") + ` for details on any command.`,
 	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// btrack with no args shows live status instead of help.
-		cfg, _ := config.Load()
-		dailyHours := 8
-		idleMinutes := 0
-		if cfg != nil {
-			if cfg.Work.DailyHours > 0 {
-				dailyHours = cfg.Work.DailyHours
-			}
-			idleMinutes = cfg.Work.IdleMinutes
-		}
-
-		var store db.Store
-		if cfg != nil {
-			if s, err := db.Open(cfg); err == nil {
-				store = s
-				defer store.Close()
-			}
-		}
-
-		client := daemon.NewClient()
-		model := ui.NewStatusModel(client, dailyHours, idleMinutes, store, Version)
-		p := tea.NewProgram(model, tea.WithAltScreen())
-		_, err := p.Run()
-		return err
-	},
+	// RunE is wired in init() to break the rootCmd ↔ runConsole reference cycle.
 }
 
 func Execute() {
@@ -118,6 +90,10 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		// btrack with no args opens the interactive console (Claude Code / Gemini style).
+		return runConsole()
+	}
 	cobra.OnInitialize(func() {
 		if _, err := config.Load(); err != nil {
 			fmt.Fprintln(os.Stderr, ui.StyleError.Render("config error: ")+err.Error())
