@@ -15,6 +15,7 @@
     "---Integrations---",
     "google-calendar",
     "ai",
+    "mcp",
     "shell-prompt",
     "---Reference---",
     "configuration",

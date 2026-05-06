@@ -1,0 +1,125 @@
+---
+title: MCP Server
+description: Use btrack from Claude Code, Cursor, Claude Desktop, Gemini CLI, or any MCP-aware AI assistant.
+---
+
+# Model Context Protocol Server
+
+`btrack mcp` runs btrack as a [Model Context Protocol](https://modelcontextprotocol.io) stdio server. Once registered with an MCP-aware client, the assistant can read your tracked sessions and start, stop, switch, or annotate work for you — without leaving the chat.
+
+The server is local and stdio-only. It's launched as a subprocess by the AI client, talks JSON-RPC over stdin/stdout, and shares state with the running btrack daemon, so anything an AI does shows up immediately in `btrack w` and vice versa.
+
+## Tools exposed
+
+| Tool | Purpose |
+|------|---------|
+| `btrack_status` | Active session, tags, and the most recent log notes |
+| `btrack_start` | Start a new tracking session (auto-captures git branch and repo) |
+| `btrack_stop` | Stop the active session, optionally with a closing message |
+| `btrack_switch` | Atomic stop + start in one operation |
+| `btrack_resume` | Resume the most recently stopped task |
+| `btrack_log_note` | Attach a checkpoint note to the active session |
+| `btrack_history` | Sessions in a window — `today`, `yesterday`, `week`, `month`, `date:YYYY-MM-DD`, or `last_n:N` |
+| `btrack_search` | Full-text search across task names and closing messages |
+| `btrack_list_projects` | All known projects with cumulative tracked time |
+| `btrack_get_session` | One session by ID, including every log note |
+
+State-changing tools (`start`, `stop`, `switch`, `resume`, `log_note`) go through the daemon under the same mutex the CLI uses. Read-only history queries hit SQLite directly.
+
+## Register with Claude Code
+
+```bash
+claude mcp add btrack -- btrack mcp
+```
+
+That's it — the next time you launch Claude Code, the tools are available.
+
+## Register with Cursor / Claude Desktop / Continue
+
+Add the server to your MCP config (`~/.cursor/mcp.json`, `claude_desktop_config.json`, etc.):
+
+```json
+{
+  "mcpServers": {
+    "btrack": {
+      "command": "btrack",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+If `btrack` isn't on the client's `PATH`, use the absolute path to the binary instead.
+
+## Register with Gemini CLI
+
+In `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "btrack": {
+      "command": "btrack",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+## What it feels like
+
+Once registered, ask the assistant questions in plain English. It picks the right tool itself.
+
+```text
+You: What am I tracking right now?
+AI:  [calls btrack_status]
+     You're 47 minutes into "wire MCP server" on the
+     feat/mcp-server branch.
+
+You: Start a session called "fix flaky CI"
+AI:  [calls btrack_switch with task_name="fix flaky CI"]
+     Stopped "wire MCP server" and started "fix flaky CI".
+
+You: What did I work on this week?
+AI:  [calls btrack_history with window="week"]
+     This week you logged 14 sessions across 3 projects:
+     - btrack: 8h 12m (10 sessions)
+     - apps:   3h 04m (3 sessions)
+     - infra:  41m    (1 session)
+```
+
+## Listing tools from the btrack console
+
+The interactive console (`btrack` with no args) registers the same tool set internally. Type `/tools` to list them:
+
+```text
+> /tools
+
+  mcp tools
+    btrack_status         Get the active session, its tags, and ...
+    btrack_start          Start a new tracking session for a task...
+    btrack_stop           Stop the currently active session, ...
+    ...
+```
+
+For ad-hoc verification of a tool's response shape — the same JSON the AI client receives — set `BTRACK_DEBUG=1` and call it with `@tool`:
+
+```text
+> @tool btrack_status {}
+{
+  "active": true,
+  "session": {
+    "id": 42,
+    "task_name": "wire MCP server",
+    "duration_minutes": 47,
+    "git_branch": "feat/mcp-server"
+  }
+}
+```
+
+## Notes
+
+- The server is launched per-client by the MCP client itself; you don't run `btrack mcp` directly.
+- Logs go to stderr only — stdout is reserved for the JSON-RPC stream.
+- The first state-changing tool call auto-spawns the btrack daemon if it isn't already running.
+- All data stays on your machine. The MCP server has no network code; it only opens the local SQLite DB and the daemon's Unix socket.
