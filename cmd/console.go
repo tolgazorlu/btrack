@@ -65,7 +65,8 @@ func runConsole() error {
 		}
 
 		// @-actions: expand to the equivalent btrack command path.
-		if strings.HasPrefix(args[0], "@") {
+		isAt := strings.HasPrefix(args[0], "@")
+		if isAt {
 			expanded, ok := expandAtAction(args)
 			if !ok {
 				hint = "unknown @-action: " + args[0] + "  ·  /help to list"
@@ -74,9 +75,15 @@ func runConsole() error {
 			args = expanded
 		}
 
-		// Dispatch via cobra. Reset args, run, surface any error to the user.
-		if err := dispatch(args); err != nil {
-			hint = ui.StyleError.Render(" error ") + " " + err.Error()
+		// Dispatch: known command → cobra, unknown → AI chat.
+		var execErr error
+		if isAt {
+			execErr = dispatch(args)
+		} else {
+			execErr = dispatchOrChat(args, input)
+		}
+		if execErr != nil {
+			hint = ui.StyleError.Render(" error ") + " " + execErr.Error()
 			continue
 		}
 		hint = ""
