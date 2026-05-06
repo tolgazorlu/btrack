@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ func NewSQLiteStore(path string) (*SQLiteStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
+	_ = os.Chmod(path, 0600)
 	s := &SQLiteStore{db: db}
 	if err := s.migrate(); err != nil {
 		return nil, err
