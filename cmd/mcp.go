@@ -15,24 +15,39 @@ import (
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
-	Short: "Run btrack as a Model Context Protocol stdio server",
-	Long: `Expose btrack as an MCP server over stdio so AI assistants
-(Claude Code, Cursor, Gemini CLI, Claude Desktop) can read your tracked
-sessions and start/stop/switch tasks during a chat.
+	Short: "Run btrack as a Model Context Protocol server (stdio or HTTP)",
+	Long: `Expose btrack as an MCP server so AI assistants (Claude Code, Cursor,
+Gemini CLI, Claude Desktop) can read your tracked sessions and start, stop,
+or switch tasks during a chat.
 
-This command speaks JSON-RPC over stdin/stdout and is meant to be launched
-by an MCP client, not run interactively. Logs go to stderr only.
+Two transports are supported:
 
-Register with Claude Code:
-  claude mcp add btrack <path-to-btrack-binary> -- mcp
+  stdio (default)
+      Launched per-client by the MCP client itself. Speaks JSON-RPC over
+      stdin/stdout. Logs go to stderr only.
 
-Register with Cursor or Gemini CLI: add an entry like
+  http
+      Long-lived Streamable HTTP server bound to localhost. Useful when
+      the stdio launch isn't working (PATH issues, sandboxing, etc.) or
+      when you want a single shared server that multiple AI clients
+      connect to. Path is /mcp.
+
+Usage:
+  btrack mcp                     stdio
+  btrack mcp --http              HTTP on 127.0.0.1:8765
+  btrack mcp --http :9000        HTTP on 127.0.0.1:9000
+  btrack mcp --http 0.0.0.0:9000 HTTP on all interfaces (use with care)
+
+Register stdio with Claude Code:
+  claude mcp add btrack -- btrack mcp
+
+Register HTTP with Claude Code:
+  claude mcp add --transport http btrack http://127.0.0.1:8765/mcp
+
+Or in any MCP config file:
   {
     "mcpServers": {
-      "btrack": {
-        "command": "<path-to-btrack-binary>",
-        "args": ["mcp"]
-      }
+      "btrack": { "command": "btrack", "args": ["mcp"] }
     }
   }
 
@@ -43,6 +58,8 @@ Tools exposed:
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		httpFlag := cmd.Flags().Lookup("http")
+
 		cfg, err := config.Load()
 		if err != nil {
 			return err
@@ -58,9 +75,6 @@ Tools exposed:
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Forward Ctrl-C / SIGTERM to the server's context so it can shut down
-		// cleanly. MCP clients normally close stdio to end the session, which
-		// the SDK already handles, so this is just belt-and-suspenders.
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 		go func() {
@@ -68,13 +82,24 @@ Tools exposed:
 			cancel()
 		}()
 
-		return mcpserver.Run(ctx, mcpserver.Deps{
+		deps := mcpserver.Deps{
 			Client: daemon.NewClient(),
 			Store:  store,
-		})
+		}
+
+		if httpFlag != nil && httpFlag.Changed {
+			addr, _ := cmd.Flags().GetString("http")
+			return mcpserver.RunHTTP(ctx, addr, deps)
+		}
+		return mcpserver.Run(ctx, deps)
 	},
 }
 
 func init() {
+	// NoOptDefVal lets `--http` (no value) act as a shortcut for the default
+	// localhost address; pass `--http :9000` or `--http 127.0.0.1:9000` to
+	// pick your own.
+	mcpCmd.Flags().String("http", "", "run as Streamable HTTP server on this address (default 127.0.0.1:8765 if no value)")
+	mcpCmd.Flags().Lookup("http").NoOptDefVal = "127.0.0.1:8765"
 	rootCmd.AddCommand(mcpCmd)
 }

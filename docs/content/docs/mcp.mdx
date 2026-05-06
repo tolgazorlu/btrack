@@ -7,7 +7,12 @@ description: Use btrack from Claude Code, Cursor, Claude Desktop, Gemini CLI, or
 
 `btrack mcp` runs btrack as a [Model Context Protocol](https://modelcontextprotocol.io) stdio server. Once registered with an MCP-aware client, the assistant can read your tracked sessions and start, stop, switch, or annotate work for you — without leaving the chat.
 
-The server is local and stdio-only. It's launched as a subprocess by the AI client, talks JSON-RPC over stdin/stdout, and shares state with the running btrack daemon, so anything an AI does shows up immediately in `btrack w` and vice versa.
+The server is local and supports two transports:
+
+- **stdio (default)** — launched as a subprocess by the AI client, JSON-RPC over stdin/stdout. Best for IDE integrations.
+- **HTTP** — `btrack mcp --http` runs a long-lived Streamable HTTP server on `127.0.0.1:8765`. Useful when the stdio launch hits sandboxing or PATH issues, or when several clients need to share one server.
+
+Both transports share state with the running btrack daemon, so anything an AI does shows up immediately in `btrack w` and vice versa.
 
 ## Tools exposed
 
@@ -65,6 +70,49 @@ In `~/.gemini/settings.json`:
   }
 }
 ```
+
+## HTTP transport
+
+If the stdio launch isn't working for you — `btrack` not on the AI client's PATH, sandboxing blocks the spawn, or you just want a server you can curl — start the HTTP transport yourself and point the client at the URL.
+
+```bash
+btrack mcp --http              # 127.0.0.1:8765, path /mcp
+btrack mcp --http :9000        # custom port, still localhost
+btrack mcp --http 0.0.0.0:9000 # bind to all interfaces (use with care)
+```
+
+The server logs `btrack mcp http listening on 127.0.0.1:8765 (path: /mcp)` to stderr and stays up until you stop it (`Ctrl-C`).
+
+### Register HTTP with Claude Code
+
+```bash
+claude mcp add --transport http btrack http://127.0.0.1:8765/mcp
+```
+
+### Register HTTP with Cursor / Continue
+
+```json
+{
+  "mcpServers": {
+    "btrack": {
+      "url": "http://127.0.0.1:8765/mcp"
+    }
+  }
+}
+```
+
+### Quick sanity check
+
+The standard MCP `initialize` handshake over `curl`:
+
+```bash
+curl -X POST http://127.0.0.1:8765/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
+```
+
+You should see an SSE `event: message` reply with the server's capabilities.
 
 ## What it feels like
 
