@@ -55,6 +55,10 @@ func (s *Server) Start() error {
 	if err != nil {
 		return fmt.Errorf("listen on socket: %w", err)
 	}
+	if err := os.Chmod(socketPath, 0600); err != nil {
+		ln.Close()
+		return fmt.Errorf("chmod socket: %w", err)
+	}
 	s.listener = ln
 
 	if err := writePid(); err != nil {
