@@ -6,6 +6,10 @@ Every time tracker I tried wanted me to open a browser, log in, pick a workspace
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go)](go.mod)
 
+<p align="center">
+  <img src="btrack-cli.png" alt="btrack interactive console" width="820" />
+</p>
+
 ---
 
 ## Install
