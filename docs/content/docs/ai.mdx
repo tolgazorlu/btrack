@@ -5,7 +5,7 @@ description: Use AI to summarize your work, generate standups, and get productiv
 
 # AI Integration
 
-btrack integrates with leading AI providers to turn your session history into useful summaries, standup notes, and productivity dashboards.
+btrack integrates with leading AI providers to turn your session history into standups, summaries, and productivity dashboards.
 
 ## Setup
 
@@ -21,46 +21,77 @@ Interactive setup that configures your AI provider and API key. Supported provid
 | Anthropic | Claude Sonnet, Claude Haiku |
 | Google | Gemini Pro, Gemini Flash |
 
-Your API key is stored locally in `~/.config/btrack/config.yaml` and is never sent to btrack servers.
+Your API key is stored locally in `~/.config/btrack/config.yaml` and never sent to btrack servers.
 
-## Commands
+## Standup
 
-### Interactive Chat
+```bash
+btrack standup
+```
+
+Generates a standup in **Yesterday / Today / Blockers** format from your tracked sessions. Defaults to yesterday — run it in the morning before your standup meeting.
+
+```
+Yesterday:
+  • Fixed JWT auth bug (2h)
+  • Wrote unit tests for auth module (1h)
+
+Today:
+  • PR review, deploy to staging
+
+Blockers:
+  • None
+```
+
+| Flag | Description |
+|------|-------------|
+| _(none)_ | Yesterday's sessions (default) |
+| `--today` | Today's sessions so far |
+| `-d N`, `--days N` | Last N days |
+
+If GitHub is connected, commits and PRs are included automatically.
+
+## AI Chat
 
 ```bash
 btrack ai
 ```
 
-Opens an interactive chat session with context from your recent btrack sessions. Ask questions like "what did I work on yesterday?" or "how much time did I spend on auth this week?".
+Opens an interactive chat session with context from your recent btrack sessions. Ask questions like:
 
-### Standup Summary
+- _"What did I work on yesterday?"_
+- _"How much time did I spend on auth this week?"_
+- _"Write a PR description for my last session"_
+
+## AI Summarize
 
 ```bash
-btrack ai sum
+btrack ai sum         # today's sessions
+btrack ai sum --days 3
 ```
 
-Generates a concise standup update from yesterday's and today's sessions:
+An alternative to `btrack standup` — generates a free-form summary instead of the structured Yesterday/Today/Blockers format.
 
-```
-Yesterday:
-- Fixed JWT authentication issue (2h 15m)
-- Reviewed PR for OAuth flow (45m)
-
-Today:
-- Implementing refresh token rotation
-- Team sync at 2pm
-
-Blockers: None
-```
-
-### Productivity Insights
+## Productivity Insights
 
 ```bash
 btrack ai ins
+btrack ai ins --days 14
+btrack ai ins --no-ai   # stats only, no AI key needed
 ```
 
-Generates a productivity dashboard analyzing your sessions over the past week:
+Displays a dashboard analyzing your sessions:
 - Peak productivity hours
-- Most worked-on projects
+- Most worked-on projects and tags
 - Focus vs. context-switching patterns
-- Suggestions for improvement
+- AI analysis with actionable suggestions
+
+## GitHub Enrichment
+
+Connect GitHub to include real commits and PRs in standups and summaries:
+
+```bash
+btrack github connect
+```
+
+Once connected, `btrack standup` and `btrack ai sum` automatically pull in your GitHub activity for the period.

@@ -5,56 +5,63 @@ description: Show your active btrack session in your terminal prompt.
 
 # Shell Prompt Integration
 
-Display your active btrack session directly in your shell prompt so you always know what you're tracking.
+Display your active btrack session directly in your shell prompt so you always know what you're tracking. Outputs nothing when no session is active — zero noise when you're idle.
 
-## Basic Usage
+## Quick Setup
+
+Run the setup command for your shell to get a ready-to-paste snippet:
 
 ```bash
-btrack prompt
+btrack shell zsh    # Zsh (RPROMPT)
+btrack shell bash   # Bash (PS1)
+btrack shell fish   # Fish (right prompt)
 ```
 
-Outputs the current session description if one is running. Outputs nothing if no session is active.
+## Manual Setup
 
-## Formats
+### Zsh
 
-| Flag | Description |
-|------|-------------|
-| `--format starship` | Output in Starship custom module JSON format |
-| `--format json` | Output as raw JSON |
+Add to `~/.zshrc`:
 
-## Bash / Zsh PS1
-
-Add active session info to your PS1:
-
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-export PS1='$(btrack prompt) \$ '
+```zsh
+btrack_prompt() { btrack prompt 2>/dev/null; }
+RPROMPT='$(btrack_prompt)'
 ```
 
-Or with more context:
+The session appears on the right side of your prompt. Replace `RPROMPT` with `PROMPT` to put it on the left.
+
+### Bash
+
+Add to `~/.bashrc`:
 
 ```bash
-btrack_session() {
-  local session
-  session=$(btrack prompt 2>/dev/null)
-  if [ -n "$session" ]; then
-    echo " [⏱ $session]"
-  fi
+btrack_prompt() {
+  local s=$(btrack prompt 2>/dev/null)
+  [ -n "$s" ] && echo " $s"
 }
-
-export PS1='\u@\h:\w$(btrack_session)\$ '
+PS1='\u@\h \w$(btrack_prompt) \$ '
 ```
 
-## Starship
+### Fish
 
-Add to your `~/.config/starship.toml`:
+Create `~/.config/fish/functions/fish_right_prompt.fish`:
+
+```fish
+function fish_right_prompt
+  btrack prompt 2>/dev/null
+end
+```
+
+### Starship
+
+Add to `~/.config/starship.toml`:
 
 ```toml
 [custom.btrack]
 command = "btrack prompt --format starship"
-when = "btrack prompt"
-format = "[$output]($style) "
-style = "yellow bold"
+when    = "btrack prompt"
+format  = "[$output]($style) "
+style   = "blue"
 ```
 
 Then add `custom.btrack` to your `format` string:
@@ -65,16 +72,11 @@ $username$directory$git_branch$custom.btrack$character
 """
 ```
 
-## Fish
+## Output Formats
 
-Add to `~/.config/fish/config.fish`:
-
-```fish
-function fish_prompt
-    set -l btrack_session (btrack prompt 2>/dev/null)
-    if test -n "$btrack_session"
-        echo -n (set_color yellow)"[$btrack_session] "(set_color normal)
-    end
-    echo -n (set_color green)$USER(set_color normal)':'(set_color blue)(pwd)(set_color normal)'$ '
-end
-```
+| Flag | Output |
+|------|--------|
+| _(none)_ | `fix login bug · 23m` |
+| `--format starship` | JSON for Starship custom module |
+| `--format json` | Machine-readable JSON |
+| `--max-len N` | Truncate task name to N chars (default 30) |

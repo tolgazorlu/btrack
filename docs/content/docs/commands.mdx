@@ -22,31 +22,47 @@ Run `btrack` with no arguments to open the [interactive console](/docs/console) 
 | `btrack break` | | Start a break (untracked pause) |
 | `btrack w` | | Live status display with elapsed time |
 | `btrack shipped` | `btrack sh` | Show git commits that landed during your sessions |
-| `btrack welcome` | | Show the welcome screen / quick-start cheat sheet |
 | `btrack` | | Open the [interactive console](/docs/console) (no args) |
 
 ## History (`btrack h`)
 
 | Flag | Description |
 |------|-------------|
-| _(none)_ | Show today's sessions |
+| _(none)_ | Show today's sessions as a tree |
+| `yesterday` | Show yesterday's sessions |
+| `YYYY-MM-DD` | Show sessions for a specific date |
 | `-w` | Show this week's sessions |
 | `-m` | Show this month's sessions |
 | `-y` | Show this year's sessions |
-| `-n N` | Show last N sessions |
-| `-l` | Long format (include notes) |
-| `-v` | Verbose (include metadata) |
+| `-n N` | Show last N sessions as a table |
+| `-n N -v` | Table view with checkpoint notes |
+| `-l N` | Show last N hours |
 | `-p <name>` | Filter by project name |
 
 ### Examples
 
 ```bash
-btrack h          # today
-btrack h -w       # this week
-btrack h -m -l    # this month, long format
-btrack h -p myapp # sessions for project "myapp"
-btrack h -n 10    # last 10 sessions
+btrack h              # today
+btrack h yesterday
+btrack h 2026-05-01
+btrack h -w           # this week
+btrack h -m           # this month
+btrack h -p myapp     # sessions for project "myapp"
+btrack h -n 10        # last 10 sessions as a table
+btrack h -n 10 -v     # with notes
 ```
+
+## Standup
+
+Generate a standup from your tracked sessions. Defaults to yesterday — run it before your morning standup.
+
+```bash
+btrack standup              # yesterday (default)
+btrack standup --today      # today's sessions so far
+btrack standup --days 3     # last 3 days
+```
+
+See [AI](/docs/ai) for setup and usage.
 
 ## Projects
 
@@ -60,7 +76,12 @@ See [Projects](/docs/projects) for full documentation.
 
 ## Session Editing
 
-Sessions can be annotated with notes at any time. Use `btrack n --session N` to attach a note to any past session by its ID. Session IDs are shown in `btrack h -v`.
+```bash
+btrack h -n 20                         # find session IDs
+btrack edit 42 -t "new task name"
+btrack edit 42 --start 09:00 --end 17:30
+btrack edit 42 -p myapp -m "done #bugfix"
+```
 
 ## Shipped (Git Correlation)
 
@@ -86,6 +107,7 @@ Run from inside the git repository where the session was tracked. See [Shipped](
 
 ```bash
 btrack pomo "task description"
+btrack pomo "deep work" --work 45 --break 10
 ```
 
 See [Pomodoro](/docs/pomodoro) for flags and details.
@@ -93,12 +115,26 @@ See [Pomodoro](/docs/pomodoro) for flags and details.
 ## AI
 
 ```bash
-btrack ai        # interactive chat
-btrack ai sum    # standup summary
-btrack ai ins    # productivity insights
+btrack standup       # yesterday's standup (recommended)
+btrack ai            # interactive chat
+btrack ai sum        # standup from today's sessions
+btrack ai ins        # productivity insights
+btrack ai setup      # configure API key
 ```
 
 See [AI](/docs/ai) for setup and usage.
+
+## Shell Prompt
+
+```bash
+btrack prompt                      # outputs "fix login bug · 23m" or nothing
+btrack prompt --format starship    # JSON for Starship
+btrack shell zsh                   # print zsh integration snippet
+btrack shell bash                  # print bash integration snippet
+btrack shell fish                  # print fish integration snippet
+```
+
+See [Shell Prompt](/docs/shell-prompt) for setup.
 
 ## Google Calendar
 
@@ -118,12 +154,3 @@ btrack invoice
 ```
 
 See [Export](/docs/export) and [Invoicing](/docs/invoicing).
-
-## Shell Prompt
-
-```bash
-btrack prompt
-btrack prompt --format starship
-```
-
-See [Shell Prompt](/docs/shell-prompt).

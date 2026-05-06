@@ -5,40 +5,35 @@ description: btrack is a fast, terminal-native time tracker built for developers
 
 # btrack
 
-**btrack** is a CLI time tracker designed for developers who live in the terminal. It's fast, keyboard-driven, and integrates directly into your dev workflow — no browser tab required.
+Every time tracker I tried wanted me to open a browser, log in, pick a workspace, and click through a dashboard. I just wanted to type one line and get back to work.
+
+**btrack** is a CLI time tracker for developers who live in the terminal. Fast, keyboard-driven, and integrates directly into your workflow — no browser tab required.
 
 ## Key Features
 
-- **Interactive console** — Run `btrack` on its own to land in a Gemini-style REPL with `@`-quick actions and inline AI chat
 - **Session tracking** — Start, note, and stop sessions with a single command
+- **Daily standup** — `btrack standup` generates a Yesterday/Today/Blockers summary from your sessions every morning
 - **Said vs shipped** — `btrack shipped` lines up sessions against `git log` so you can see what actually landed
+- **Shell prompt** — Display active session in your terminal prompt (Zsh, Bash, Fish, Starship)
+- **Interactive console** — Run `btrack` on its own to land in a REPL with `@`-quick actions and inline AI chat
 - **Projects** — Organize work by project with per-project configuration via `.btrack` files
 - **Notes** — Attach notes to running or past sessions without interrupting flow
 - **Pomodoro** — Built-in Pomodoro timer that auto-tags sessions
-- **AI summaries** — Generate standups and productivity insights from your sessions
+- **AI insights** — Chat with your session history, get productivity dashboards
 - **Invoicing** — Generate invoice reports from tracked time with per-project rates
-- **Google Calendar sync** — Push sessions to Google Calendar or pull events as sessions
-- **Shell prompt** — Display active session info in your terminal prompt via Starship or PS1
-- **Export** — Export sessions to CSV or JSON for use in other tools
-- **GitHub integration** — Sync activity with GitHub commits and PRs
+- **Google Calendar sync** — Push sessions to Google Calendar after stopping
+- **Export** — Export sessions to CSV or JSON
 
 ## Getting Started
 
-Install btrack, then start your first session:
-
 ```bash
-btrack s "fix login bug"
-```
-
-Or just run `btrack` to drop into the interactive console:
-
-```bash
-btrack
-> @create-session "fix login bug" -p myapp
-> @stop -m "shipped"
+btrack s "fix login bug"              # start tracking
+btrack n "found the issue"            # add a note
+btrack x -m "fixed JWT clock skew"   # stop and save
+btrack h                              # see today's work
+btrack standup                        # tomorrow morning: generate standup
 ```
 
 - [Installation](/docs/installation)
 - [Quick Start](/docs/quick-start)
 - [Command Reference](/docs/commands)
-- [Interactive Console](/docs/console)
