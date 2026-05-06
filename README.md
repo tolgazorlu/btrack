@@ -219,6 +219,65 @@ btrack ai ins         # productivity dashboard
 
 ---
 
+## Use btrack from your AI assistant (MCP)
+
+`btrack mcp` runs btrack as a [Model Context Protocol](https://modelcontextprotocol.io) stdio server. Any MCP-aware client can call its tools to read your sessions or start/stop tracking inside a chat — Claude Code, Claude Desktop, Cursor, Gemini CLI, and Continue all work.
+
+Tools exposed:
+
+```
+btrack_status         active session + recent log notes
+btrack_start          start a new session
+btrack_stop           stop the active session
+btrack_switch         atomic stop+start
+btrack_resume         resume the last task
+btrack_log_note       attach a checkpoint note
+btrack_history        sessions in a window (today/yesterday/week/month/date:.../last_n:N)
+btrack_search         full-text search across tasks and messages
+btrack_list_projects  projects with cumulative time
+btrack_get_session    one session with all its notes
+```
+
+### Claude Code
+
+```bash
+claude mcp add btrack -- btrack mcp
+```
+
+### Cursor / Claude Desktop / Continue
+
+Add to the MCP config (`~/.cursor/mcp.json`, `claude_desktop_config.json`, etc.):
+
+```json
+{
+  "mcpServers": {
+    "btrack": {
+      "command": "btrack",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+### Gemini CLI
+
+In `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "btrack": {
+      "command": "btrack",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Once registered, ask the assistant things like *"What am I tracking right now?"*, *"What did I work on this week?"*, or *"Start a session called 'fix flaky CI'"* — it will call the right tool itself. The MCP server shares state with the daemon, so anything an AI starts shows up immediately in `btrack w` and vice versa.
+
+---
+
 ## Google Calendar
 
 Push sessions to Google Calendar after stopping.

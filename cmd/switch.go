@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -31,44 +30,32 @@ Flags:
 
 Tips:
   · If no -m is given, the session is stopped without a closing message
-  · Git branch is captured for the new session automatically`,
+  · Git branch is captured for the new session automatically
+  · The stop+start happens atomically inside the daemon`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		message, _ := cmd.Flags().GetString("message")
 		newTask := strings.Join(args, " ")
+		project, _ := cmd.Flags().GetString("project")
+
 		client := daemon.NewClient()
-
-		// Stop current session if active.
-		stopPayload := daemon.StopPayload{Message: message}
-		stopResp, err := client.Send(daemon.ActionStop, stopPayload)
-		if err != nil {
-			return err
-		}
-		if !stopResp.Success {
-			return fmt.Errorf("%s", stopResp.Error)
-		}
-		var stopped daemon.SessionDTO
-		json.Unmarshal(stopResp.Data, &stopped)
-
-		ui.Blank()
-		ui.Sign(ui.StyleDimmed.Render(ui.Sym.Stop), ui.StyleDimmed.Render(stopped.TaskName))
-
-		// Start new session.
-		startPayload := daemon.StartPayload{
+		data, err := client.Switch(daemon.SwitchPayload{
 			TaskName:  newTask,
+			Message:   message,
 			GitBranch: gitBranch(),
 			GitRepo:   gitRepo(),
-		}
-		startResp, err := client.Send(daemon.ActionStart, startPayload)
+			Project:   project,
+		})
 		if err != nil {
 			return err
 		}
-		if !startResp.Success {
-			return fmt.Errorf("%s", startResp.Error)
-		}
-		var started daemon.SessionDTO
-		json.Unmarshal(startResp.Data, &started)
 
+		ui.Blank()
+		if data.Stopped != nil {
+			ui.Sign(ui.StyleDimmed.Render(ui.Sym.Stop), ui.StyleDimmed.Render(data.Stopped.TaskName))
+		}
+
+		started := data.Started
 		line := ui.StyleSuccess.Render(ui.Sym.Start) + "  " + ui.StyleHighlight.Render(started.TaskName)
 		if started.GitBranch != "" {
 			line += "  " + ui.StyleDimmed.Render(ui.Sym.Branch+" "+started.GitBranch)
@@ -82,5 +69,6 @@ Tips:
 
 func init() {
 	switchCmd.Flags().StringP("message", "m", "", "closing message for the stopped session")
+	switchCmd.Flags().StringP("project", "p", "", "assign new session to a project")
 	rootCmd.AddCommand(switchCmd)
 }

@@ -76,6 +76,23 @@ func (c *Client) send(action string, payload any) (*Response, error) {
 	return &resp, nil
 }
 
+// Switch atomically stops the active session (if any) and starts a new one.
+// Returns the previously stopped session (may be nil) and the newly started one.
+func (c *Client) Switch(payload SwitchPayload) (*SwitchData, error) {
+	resp, err := c.Send(ActionSwitch, payload)
+	if err != nil {
+		return nil, err
+	}
+	if !resp.Success {
+		return nil, fmt.Errorf("%s", resp.Error)
+	}
+	var data SwitchData
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		return nil, fmt.Errorf("parse switch response: %w", err)
+	}
+	return &data, nil
+}
+
 func (c *Client) Ping() bool {
 	resp, err := c.send(ActionPing, nil)
 	return err == nil && resp.Success
