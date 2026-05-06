@@ -27,8 +27,10 @@ func runConsole() error {
 	// just render the input box so the screen doesn't reflow on every Enter.
 	hint := ""
 	first := true
+	suggestions := atSuggestions()
 	for {
-		model := ui.NewConsoleModel(tagline, Version, hint, first)
+		model := ui.NewConsoleModel(tagline, Version, hint, first).
+			WithSuggestions(suggestions)
 		first = false
 		p := tea.NewProgram(model)
 		final, err := p.Run()

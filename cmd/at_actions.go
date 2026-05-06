@@ -78,6 +78,19 @@ func expandAtAction(args []string) ([]string, bool) {
 	return out, true
 }
 
+// atSuggestions returns the @-aliases as ui.Suggestion rows for the
+// console autocomplete dropdown.
+func atSuggestions() []ui.Suggestion {
+	out := make([]ui.Suggestion, 0, len(atAlias))
+	for k, target := range atAlias {
+		out = append(out, ui.Suggestion{
+			Trigger: "@" + k,
+			Hint:    "→ btrack " + strings.Join(target, " "),
+		})
+	}
+	return out
+}
+
 // printAtActions renders a help table of all known @-quick-actions.
 // Used by `/help` inside the console and by `btrack at` (future).
 func printAtActions() {
