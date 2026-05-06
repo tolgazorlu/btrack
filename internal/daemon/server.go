@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tolgazorlu/btrack/internal/config"
@@ -16,6 +17,7 @@ import (
 )
 
 type Server struct {
+	mu           sync.Mutex
 	store        db.Store
 	listener     net.Listener
 	state        *activeState
@@ -110,6 +112,8 @@ func (s *Server) handleConn(conn net.Conn) {
 }
 
 func (s *Server) dispatch(req Request) Response {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.lastActivity = time.Now()
 	switch req.Action {
 	case ActionPing:
@@ -296,15 +300,15 @@ func (s *Server) idleWatcher() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		if s.state.session == nil {
-			continue
-		}
-		if time.Since(s.lastActivity) > time.Duration(s.idleMinutes)*time.Minute {
+		s.mu.Lock()
+		if s.state.session != nil && time.Since(s.lastActivity) > time.Duration(s.idleMinutes)*time.Minute {
 			s.autoStopIdle()
 		}
+		s.mu.Unlock()
 	}
 }
 
+// autoStopIdle must be called with s.mu held.
 func (s *Server) autoStopIdle() {
 	if s.state.session == nil {
 		return
