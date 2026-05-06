@@ -81,6 +81,53 @@ func (c *Client) Ping() bool {
 	return err == nil && resp.Success
 }
 
+// QuietStatus returns the current session status without starting the daemon.
+// Returns nil if the daemon is not running or unreachable.
+func (c *Client) QuietStatus() *StatusData {
+	req := Request{Action: ActionStatus}
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return nil
+	}
+
+	conn, err := net.DialTimeout("unix", config.SocketPath(), 200*time.Millisecond)
+	if err != nil {
+		return nil
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
+
+	if _, err := conn.Write(reqBytes); err != nil {
+		return nil
+	}
+	if tc, ok := conn.(*net.UnixConn); ok {
+		tc.CloseWrite()
+	}
+
+	buf := new(bytes.Buffer)
+	tmp := make([]byte, 4096)
+	for {
+		n, err := conn.Read(tmp)
+		if n > 0 {
+			buf.Write(tmp[:n])
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	var resp Response
+	if err := json.Unmarshal(buf.Bytes(), &resp); err != nil || !resp.Success {
+		return nil
+	}
+
+	var status StatusData
+	if err := json.Unmarshal(resp.Data, &status); err != nil {
+		return nil
+	}
+	return &status
+}
+
 func (c *Client) ensureDaemon() error {
 	if c.isDaemonRunning() {
 		return nil

@@ -3,12 +3,9 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/daemon"
 )
 
@@ -48,37 +45,11 @@ Shell integration:
 		format, _ := cmd.Flags().GetString("format")
 		maxLen, _ := cmd.Flags().GetInt("max-len")
 
-		// Dial directly — do NOT auto-start the daemon (too slow for every prompt).
-		socketPath := config.SocketPath()
-		conn, err := net.DialTimeout("unix", socketPath, 300*time.Millisecond)
-		if err != nil {
-			return nil // silent — daemon not running
-		}
-		defer conn.Close()
-		_ = conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
-
-		// Send status request manually (bypass client.ensureDaemon).
-		req := daemon.Request{Action: daemon.ActionStatus}
-		data, _ := json.Marshal(req)
-		conn.Write(data)
-		conn.(*net.UnixConn).CloseWrite()
-
-		respData, err := io.ReadAll(conn)
-		if err != nil {
+		status := daemon.NewClient().QuietStatus()
+		if status == nil || !status.Active || status.Session == nil {
 			return nil
 		}
 
-		var resp daemon.Response
-		if err := json.Unmarshal(respData, &resp); err != nil || !resp.Success {
-			return nil
-		}
-
-		var status daemon.StatusData
-		if err := json.Unmarshal(resp.Data, &status); err != nil || !status.Active {
-			return nil
-		}
-
-		// Parse start time and compute elapsed.
 		startTime, err := time.Parse(time.RFC3339, status.Session.StartTime)
 		if err != nil {
 			return nil
