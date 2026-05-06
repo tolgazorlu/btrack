@@ -40,7 +40,8 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('exports',{}\\).keys\\(\\)\\)\\)\")",
       "Bash(npm run *)",
       "Bash(node -e ' *)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(xargs -I{} basename {} .go)"
     ]
   }
 }

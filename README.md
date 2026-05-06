@@ -1,6 +1,6 @@
 # btrack
 
-A time tracker for developers. Runs in the terminal, stays out of your way.
+Every time tracker I tried wanted me to open a browser, log in, pick a workspace, and click through a dashboard. I just wanted to type one line and get back to work.
 
 [![Release](https://img.shields.io/github/v/release/tolgazorlu/btrack)](https://github.com/tolgazorlu/btrack/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -78,10 +78,37 @@ btrack h -n 50 -p myapp   # filter by project
 btrack w                  # live status TUI
 btrack stats              # today / week / month snapshot
 btrack streak             # working-day streak + 30-day calendar
-btrack recap              # standup-ready summary (default: yesterday)
 btrack search "JWT"       # full-text search
 btrack tag #bugfix        # filter by tag
+btrack shipped            # git commits that landed during your sessions
 ```
+
+---
+
+## Standup
+
+Generate a standup from your tracked sessions with AI. Defaults to yesterday — run it in the morning before your standup meeting.
+
+```bash
+btrack standup              # yesterday (default)
+btrack standup --today      # today's sessions so far
+btrack standup --days 3     # last 3 days
+```
+
+Output format:
+```
+Yesterday:
+  • Fixed JWT auth bug (2h)
+  • Wrote unit tests for auth module (1h)
+
+Today:
+  • PR review, deploy to staging
+
+Blockers:
+  • None
+```
+
+Requires an AI key: `btrack ai setup`
 
 ---
 
@@ -135,6 +162,63 @@ btrack edit 42 -p myapp -m "done #bugfix"
 
 ---
 
+## Shell prompt
+
+Show the active session in your terminal prompt. Outputs nothing when idle.
+
+```bash
+btrack shell zsh    # print ready-to-paste zsh snippet
+btrack shell bash   # print ready-to-paste bash snippet
+btrack shell fish   # print ready-to-paste fish snippet
+```
+
+**Zsh** — add to `~/.zshrc`:
+```zsh
+btrack_prompt() { btrack prompt 2>/dev/null; }
+RPROMPT='$(btrack_prompt)'
+```
+
+**Bash** — add to `~/.bashrc`:
+```bash
+btrack_prompt() {
+  local s=$(btrack prompt 2>/dev/null)
+  [ -n "$s" ] && echo " $s"
+}
+PS1='\u@\h \w$(btrack_prompt) \$ '
+```
+
+**Fish** — add to `~/.config/fish/functions/fish_right_prompt.fish`:
+```fish
+function fish_right_prompt
+  btrack prompt 2>/dev/null
+end
+```
+
+**Starship** — add to `~/.config/starship.toml`:
+```toml
+[custom.btrack]
+command = "btrack prompt --format starship"
+when    = "btrack prompt"
+format  = "[$output]($style) "
+style   = "blue"
+```
+
+Result: `fix login bug · 23m` on the right side of your prompt.
+
+---
+
+## AI
+
+```bash
+btrack ai setup       # configure OpenAI, Claude, or Gemini
+btrack ai             # interactive chat with session context
+btrack ai sum         # standup from today's sessions
+btrack ai sum --days 3
+btrack ai ins         # productivity dashboard
+```
+
+---
+
 ## Google Calendar
 
 Push sessions to Google Calendar after stopping.
@@ -170,43 +254,6 @@ Each interval creates a regular session tagged `#pomo`. Press `q` to stop early.
 
 ---
 
-## Shell prompt
-
-Show the current session in your prompt. Outputs nothing when idle.
-
-```bash
-btrack prompt                   # "fix login bug · 23m"
-btrack prompt --format starship # JSON for Starship
-```
-
-**Bash / Zsh** (`~/.bashrc` or `~/.zshrc`):
-```bash
-PS1='$(btrack prompt) $ '
-```
-
-**Starship** (`~/.config/starship.toml`):
-```toml
-[custom.btrack]
-command = "btrack prompt --format starship"
-when    = "btrack prompt"
-format  = "[$output]($style) "
-style   = "blue"
-```
-
----
-
-## AI
-
-```bash
-btrack ai setup       # configure OpenAI, Claude, or Gemini
-btrack ai             # interactive chat with session context
-btrack ai sum         # standup from today's sessions
-btrack ai sum --days 3
-btrack ai ins         # productivity dashboard
-```
-
----
-
 ## GitHub
 
 ```bash
@@ -214,7 +261,7 @@ btrack github connect   # connect your account
 btrack github sync      # import today's commits as sessions
 ```
 
-Once connected, `btrack ai sum` includes real commits and PRs in standups.
+Once connected, `btrack standup` and `btrack ai sum` include real commits and PRs.
 
 ---
 
