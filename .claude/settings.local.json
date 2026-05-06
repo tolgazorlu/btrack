@@ -41,7 +41,10 @@
       "Bash(npm run *)",
       "Bash(node -e ' *)",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(xargs -I{} basename {} .go)"
+      "Bash(xargs -I{} basename {} .go)",
+      "Bash(go mod *)",
+      "Bash(git stash *)",
+      "Bash(git pull *)"
     ]
   }
 }

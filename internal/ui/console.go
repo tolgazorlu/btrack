@@ -218,9 +218,6 @@ func (m ConsoleModel) View() string {
 		sb.WriteString(Indent + StyleWarning.Render(m.hint) + "\n\n")
 	}
 
-	// Input box — rounded border, full-width relative to terminal.
-	// textinput.View() in text mode renders prompt(2) + Width + cursor(1)
-	// chars wide, so reserve `Width + 3` for content (+ 2 for padding).
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorBorder).
