@@ -71,6 +71,36 @@ In `~/.gemini/settings.json`:
 }
 ```
 
+## Shortest path: `/mcp` from the interactive console
+
+Run `btrack` with no arguments to open the interactive console, then type:
+
+```text
+/mcp
+```
+
+This single command:
+
+1. Spawns a detached `btrack mcp --http` process bound to `127.0.0.1:8765`.
+2. Saves its PID so a second `/mcp` call won't double-start it.
+3. Prints the URL plus follow-up commands for every supported AI client.
+
+```text
+●  btrack mcp http  http://127.0.0.1:8765/mcp  (pid 18432)
+
+  register your AI client
+    /mcp claude        run `claude mcp add` automatically
+    /mcp cursor        print snippet for ~/.cursor/mcp.json
+    /mcp gemini        print snippet for ~/.gemini/settings.json
+    /mcp chatgpt       show ChatGPT Desktop connector instructions
+
+  /mcp stop  to stop the server  ·  /mcp status  to recall the url
+```
+
+`/mcp claude` shells out to the `claude` CLI for you; the others print a JSON snippet you paste into the relevant config file. The server keeps running after you exit the console — stop it with `/mcp stop` when you're done.
+
+To use a different port, pass it: `/mcp :9000` or `/mcp 127.0.0.1:9000`.
+
 ## HTTP transport
 
 If the stdio launch isn't working for you — `btrack` not on the AI client's PATH, sandboxing blocks the spawn, or you just want a server you can curl — start the HTTP transport yourself and point the client at the URL.
