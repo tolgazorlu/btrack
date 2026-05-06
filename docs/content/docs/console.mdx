@@ -1,0 +1,104 @@
+---
+title: Interactive Console
+description: The Gemini-style REPL you get when you run `btrack` with no arguments.
+---
+
+# Interactive Console
+
+Run `btrack` on its own and you land in an interactive prompt — the same shape as Claude Code or the Gemini CLI splash. The console renders the welcome banner once, then loops a single rounded input box. Each Enter dispatches one command and immediately repaints the prompt for the next.
+
+```bash
+btrack          # opens the console
+```
+
+```text
+  ██████╗ ████████╗██████╗  █████╗  ██████╗██╗  ██╗
+  ██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝
+  ██████╔╝   ██║   ██████╔╝███████║██║     █████╔╝
+  ██╔══██╗   ██║   ██╔══██╗██╔══██║██║     ██╔═██╗
+  ██████╔╝   ██║   ██║  ██║██║  ██║╚██████╗██║  ██╗
+  ╚═════╝    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+
+  time tracker for developers · v0.4.x
+
+  Tips for getting started:
+  1. Run any command — e.g. s "fix bug" -p myapp
+  2. Use @ for quick actions, e.g. @create-session
+  3. Ask anything — free text goes to btrack ai chat
+  4. /help for the full reference, /exit to quit
+
+  ╭────────────────────────────────────╮
+  │ > _                                │
+  ╰────────────────────────────────────╯
+```
+
+## What you can type
+
+The console understands four kinds of input:
+
+| Pattern | Meaning |
+|---------|---------|
+| `s "fix bug"` | Bare `btrack` subcommand — dispatches through cobra |
+| `@create-session "fix bug" -p myapp` | `@`-quick action — alias for a common workflow |
+| `/help`, `/exit`, `/clear` | Slash commands — meta controls for the console itself |
+| _anything else_ | Free text — sent to your configured AI provider with recent-sessions context |
+
+## @-Quick Actions
+
+Quick actions are curated muscle-memory shortcuts. Each one expands to a real cobra command path under the hood, so flags like `-p`, `-m`, and `--days` work exactly the same.
+
+| Action | Expands to |
+|--------|-----------|
+| `@create-session` / `@new` / `@s` | `btrack start` |
+| `@stop` / `@x` | `btrack stop` |
+| `@resume` / `@r` | `btrack resume` |
+| `@switch` / `@sw` | `btrack switch` |
+| `@note` / `@n` | `btrack note` |
+| `@break` | `btrack break` |
+| `@status` / `@w` | `btrack status` |
+| `@history` / `@h` | `btrack history` |
+| `@day`, `@week`, `@stats`, `@streak` | corresponding view command |
+| `@projects`, `@shipped`, `@recap`, `@search`, `@tag` | corresponding command |
+| `@ai` / `@chat` | `btrack ai` (full chat TUI) |
+| `@sum` / `@summary` | `btrack ai sum` |
+| `@ins` / `@insights` | `btrack ai ins` |
+| `@setup` | `btrack ai setup` |
+| `@config`, `@export`, `@init` | corresponding command |
+
+### Examples
+
+```text
+> @create-session "fix login bug" -p myapp
+> @stop -m "shipped #bugfix"
+> @sum --days 3
+> @setup
+```
+
+## Slash Commands
+
+Slash commands control the console itself, not your tracker state.
+
+| Command | Effect |
+|---------|--------|
+| `/help` | Print the full command reference + all `@`-actions |
+| `/exit`, `/quit`, `/q` | Leave the console |
+| `/clear`, `/cls` | Clear the screen and repaint |
+
+`Ctrl+C` and `Esc` are equivalent to `/exit`.
+
+## Free-Text AI Chat
+
+Anything that isn't a known cobra subcommand and doesn't start with `@` or `/` is treated as an AI prompt. The console builds a compact context from your last 20 sessions and sends it to whichever provider you configured with `btrack ai setup`.
+
+```text
+> what did I work on yesterday?
+> draft a standup from this week's sessions
+> which project ate most of Tuesday?
+```
+
+If no AI key is configured, the console prints a one-line `@setup` hint instead of an error and stays running.
+
+## When _not_ to use the Console
+
+- **CI / scripts** — call `btrack` subcommands directly. The console requires a TTY and is interactive-only.
+- **Live status display** — the old default of `btrack` opening the live-status TUI moved to `btrack w` (or `@status` from inside the console).
