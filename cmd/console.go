@@ -23,10 +23,13 @@ import (
 func runConsole() error {
 	tagline := "time tracker for developers"
 
-	// Print the banner once, then loop one input at a time.
+	// Banner shows only on the very first iteration; subsequent prompts
+	// just render the input box so the screen doesn't reflow on every Enter.
 	hint := ""
+	first := true
 	for {
-		model := ui.NewConsoleModel(tagline, Version, hint)
+		model := ui.NewConsoleModel(tagline, Version, hint, first)
+		first = false
 		p := tea.NewProgram(model)
 		final, err := p.Run()
 		if err != nil {

@@ -10,26 +10,28 @@ import (
 
 // ─── console (interactive REPL prompt) ───────────────────────────────────────
 
-// ConsoleModel renders the welcome banner once and shows a rounded
+// ConsoleModel renders the welcome banner (optionally) and a rounded
 // input box, mirroring the Claude Code / Gemini CLI splash. Each
 // `bubbletea` run captures one line of input then exits — the caller
 // loops to keep the REPL going.
 type ConsoleModel struct {
-	input    textinput.Model
-	tagline  string
-	version  string
-	hint     string
-	width    int
-	value    string
-	quit     bool
-	showHelp bool
+	input      textinput.Model
+	tagline    string
+	version    string
+	hint       string
+	width      int
+	value      string
+	quit       bool
+	showHelp   bool
+	showBanner bool
 }
 
 // NewConsoleModel returns a fresh console capturing one input.
-//   - tagline: shown under the banner (e.g. "time tracker for developers")
-//   - version: optional, shown next to tagline
-//   - hint:    optional one-line hint above the input
-func NewConsoleModel(tagline, version, hint string) ConsoleModel {
+//   - tagline:    shown under the banner (e.g. "time tracker for developers")
+//   - version:    optional, shown next to tagline
+//   - hint:       optional one-line hint above the input
+//   - showBanner: render the big banner + tips block on top
+func NewConsoleModel(tagline, version, hint string, showBanner bool) ConsoleModel {
 	ti := textinput.New()
 	ti.Placeholder = "type a command, @action, or ask anything…"
 	ti.Prompt = "> "
@@ -43,11 +45,12 @@ func NewConsoleModel(tagline, version, hint string) ConsoleModel {
 	}
 
 	return ConsoleModel{
-		input:   ti,
-		tagline: tagline,
-		version: version,
-		hint:    hint,
-		width:   80,
+		input:      ti,
+		tagline:    tagline,
+		version:    version,
+		hint:       hint,
+		width:      80,
+		showBanner: showBanner,
 	}
 }
 
@@ -99,30 +102,34 @@ func (m ConsoleModel) View() string {
 
 	var sb strings.Builder
 
-	// Banner
-	sb.WriteString("\n")
-	sb.WriteString(Banner())
-	sb.WriteString("\n")
+	if m.showBanner {
+		// Banner
+		sb.WriteString("\n")
+		sb.WriteString(Banner())
+		sb.WriteString("\n")
 
-	// Tagline + version
-	taglineLine := Indent + StyleDimmed.Render(m.tagline)
-	if m.version != "" {
-		taglineLine += "  " + StyleDimmed.Render("·") + "  " + StyleHighlight.Render(m.version)
+		// Tagline + version
+		taglineLine := Indent + StyleDimmed.Render(m.tagline)
+		if m.version != "" {
+			taglineLine += "  " + StyleDimmed.Render("·") + "  " + StyleHighlight.Render(m.version)
+		}
+		sb.WriteString(taglineLine + "\n\n")
+
+		// Tips block
+		sb.WriteString(Indent + StyleHighlight.Render("Tips for getting started:") + "\n")
+		sb.WriteString(Indent + StyleDimmed.Render("1. ") +
+			"Run any command — e.g. " + StyleHighlight.Render(`s "fix bug" -p myapp`) + "\n")
+		sb.WriteString(Indent + StyleDimmed.Render("2. ") +
+			"Use " + StyleHighlight.Render("@") + " for quick actions, e.g. " +
+			StyleHighlight.Render("@create-session") + "\n")
+		sb.WriteString(Indent + StyleDimmed.Render("3. ") +
+			"Ask anything — free text goes to " + StyleHighlight.Render("btrack ai") + " chat\n")
+		sb.WriteString(Indent + StyleDimmed.Render("4. ") +
+			StyleHighlight.Render("/help") + " for the full reference, " +
+			StyleHighlight.Render("/exit") + " to quit\n\n")
+	} else {
+		sb.WriteString("\n")
 	}
-	sb.WriteString(taglineLine + "\n\n")
-
-	// Tips block
-	sb.WriteString(Indent + StyleHighlight.Render("Tips for getting started:") + "\n")
-	sb.WriteString(Indent + StyleDimmed.Render("1. ") +
-		"Run any command — e.g. " + StyleHighlight.Render(`s "fix bug" -p myapp`) + "\n")
-	sb.WriteString(Indent + StyleDimmed.Render("2. ") +
-		"Use " + StyleHighlight.Render("@") + " for quick actions, e.g. " +
-		StyleHighlight.Render("@create-session") + "\n")
-	sb.WriteString(Indent + StyleDimmed.Render("3. ") +
-		"Ask anything — free text goes to " + StyleHighlight.Render("btrack ai") + " chat\n")
-	sb.WriteString(Indent + StyleDimmed.Render("4. ") +
-		StyleHighlight.Render("/help") + " for the full reference, " +
-		StyleHighlight.Render("/exit") + " to quit\n\n")
 
 	if m.hint != "" {
 		sb.WriteString(Indent + StyleWarning.Render(m.hint) + "\n\n")
