@@ -16,7 +16,7 @@ Every time tracker I tried wanted me to open a browser, log in, pick a workspace
 
 **macOS / Linux**
 ```bash
-brew install btrack
+brew install tolgazorlu/btrack/btrack
 ```
 
 **Windows**
