@@ -185,21 +185,6 @@ The interactive console (`btrack` with no args) registers the same tool set inte
     ...
 ```
 
-For ad-hoc verification of a tool's response shape — the same JSON the AI client receives — set `BTRACK_DEBUG=1` and call it with `@tool`:
-
-```text
-> @tool btrack_status {}
-{
-  "active": true,
-  "session": {
-    "id": 42,
-    "task_name": "wire MCP server",
-    "duration_minutes": 47,
-    "git_branch": "feat/mcp-server"
-  }
-}
-```
-
 ## Notes
 
 - The server is launched per-client by the MCP client itself; you don't run `btrack mcp` directly.
