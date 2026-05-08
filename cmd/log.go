@@ -39,6 +39,7 @@ Tips:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		note := strings.Join(args, " ")
 		sessionID, _ := cmd.Flags().GetInt64("session")
+		force, _ := cmd.Flags().GetBool("force")
 
 		// --session flag: add note to a past session directly via DB.
 		if sessionID > 0 {
@@ -55,6 +56,9 @@ Tips:
 			sess, err := store.GetSessionByID(sessionID)
 			if err != nil || sess == nil {
 				return fmt.Errorf("session %d not found", sessionID)
+			}
+			if sess.EndTime != nil && !force {
+				return fmt.Errorf("session #%d is already closed — use --force to add a note anyway", sessionID)
 			}
 
 			entry := &db.LogEntry{
@@ -91,5 +95,6 @@ Tips:
 
 func init() {
 	logCmd.Flags().Int64P("session", "i", 0, "add note to a past session by ID")
+	logCmd.Flags().Bool("force", false, "allow adding a note to a closed session")
 	rootCmd.AddCommand(logCmd)
 }
