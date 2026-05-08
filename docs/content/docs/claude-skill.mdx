@@ -1,75 +1,232 @@
 ---
 title: Claude Skill
-description: Drop-in Claude Code skill that auto-tracks your coding sessions and ties them to git commits.
+description: Drop-in Claude Code skill that auto-tracks coding sessions and ties them to git commits.
 ---
 
 # Claude Skill
 
-btrack ships with a [Claude Skill](https://docs.anthropic.com/en/docs/claude-code/skills) at `.claude/skills/btrack-tracker/`. When you open the repo in Claude Code, Claude picks it up automatically and starts tracking sessions for any non-trivial coding task — implementing a feature, fixing a bug, refactoring — and stops them right before `git commit` so [`btrack shipped`](/docs/shipped) lines up sessions with commits.
+btrack ships with a [Claude Skill](https://docs.anthropic.com/en/docs/claude-code/skills) at `.claude/skills/btrack-tracker/`. When you open the repo in Claude Code, Claude picks it up automatically — starts a btrack session at the beginning of meaningful coding work, drops checkpoint notes for non-obvious findings, and stops the session right before `git commit` so [`btrack shipped`](/docs/shipped) lines up sessions with commits.
 
 The skill works alongside the [btrack MCP server](/docs/mcp). The MCP gives Claude the *tools*; the skill gives Claude the *workflow*.
 
-## What the skill does
-
-- **Checks the MCP is registered** the first time you use it. If `claude mcp list` doesn't show btrack, the skill runs `claude mcp add btrack -- btrack mcp` and asks you to restart so the tools load.
-- **Starts a session** before meaningful work. Task names describe intent (`"fix JWT clock skew"`), not mechanism (`"edit auth.go"`).
-- **Drops checkpoint notes** when something's worth remembering tomorrow — root cause found, blocker hit, key decision made. The bar is signal-not-telemetry; 0–3 notes per session is normal.
-- **Stops the session before the commit** with a closing message that mirrors the commit summary. Order matters: `btrack stop` → `git commit`.
-- **Writes the commit message** using the session task + closing message + notes as raw material.
-
-It also knows when **not** to start a session: one-off questions, single-typo edits, pure exploration. Better to skip than to litter your history with 30-second sessions.
-
-## Using it
-
-If the repo lives at `~/Projects/btrack` (or you've cloned it elsewhere), just open it in Claude Code:
-
-```bash
-cd ~/Projects/btrack
-claude
-```
-
-The skill is detected automatically. Ask Claude to do anything code-shaped:
+## Quick look
 
 ```text
 > fix the JWT clock skew in auth middleware
+
+  Claude (using btrack-tracker skill):
+  → btrack: tracking "fix JWT clock skew in auth middleware"
+
+  ... investigates code ...
+  → btrack note: "root cause: server clock 45s ahead of token issuer"
+
+  ... applies fix and runs tests ...
+  → btrack stop: "fixed by adding ±60s tolerance"
+
+  Now committing:
+  fix(auth): tolerate ±60s clock skew in JWT verifier
+
+  Server clock was 45s ahead of the token issuer; verifier rejected
+  freshly-issued tokens. Added a 60s leeway window.
 ```
 
-Claude will check for an active session, start a new one named `"fix JWT clock skew in auth middleware"`, work on the task, drop a note when it finds the root cause, stop with a closing message, then write the commit.
+The session, the note, the commit message — all line up. Run `btrack shipped` later and the commit shows up under that exact session window.
 
-## Using it in your own projects
+## How the skill decides when to act
 
-The skill isn't btrack-specific in its workflow — it works anywhere you have btrack installed. To use it outside this repo, copy it once to your global skills directory:
+### Triggers
+
+Claude activates the skill whenever you give it a non-trivial coding task — even if you don't mention btrack:
+
+- *"implement the /mcp doctor command"*
+- *"fix the bug where stop doesn't close active sessions"*
+- *"refactor the session repository to use sqlc"*
+- *"add tests for the standup generator"*
+
+Or any direct mention of btrack, time tracking, sessions, standups, or `btrack shipped`.
+
+### Skips
+
+The skill explicitly avoids starting sessions for things that don't benefit from tracking:
+
+- One-off questions (*"what does this function do?"*)
+- A single typo or comment fix
+- Pure code review or read-only investigation
+- Quick lookups that don't end in changes
+
+If it's borderline, Claude asks: *"Want me to track this as a btrack session?"* — better than littering your history with 30-second entries.
+
+## The five-step workflow
+
+### Step 0 — Verify the MCP is registered
+
+The first time the skill runs on a new machine, it checks whether the `mcp__btrack__*` tools are available. If not, it runs:
+
+```bash
+claude mcp add btrack -- btrack mcp
+```
+
+…and asks you to restart Claude Code so the tools load. Until restart, the skill falls back to driving btrack via the CLI — same effect, slightly more verbose.
+
+If `btrack` itself isn't installed, the skill points you at `brew install tolgazorlu/btrack/btrack` (or the equivalent for your platform).
+
+### Step 1 — Start a session
+
+`btrack_start` (or `btrack s "task" -p project`) with an **intent-shaped** task name — what would land in the commit summary, roughly.
+
+| Good task names                                    | Less good                  |
+| -------------------------------------------------- | -------------------------- |
+| `"fix JWT clock skew in auth middleware"`          | `"work on auth"`           |
+| `"add /mcp doctor command"`                        | `"edit auth.go"`           |
+| `"refactor session repository to use sqlc"`        | `"some refactoring"`       |
+
+btrack auto-captures the git branch and repo, so the task name doesn't repeat them. If the directory has a `.btrack` project file, the project flag is picked up automatically.
+
+### Step 2 — Log notes for things worth remembering tomorrow
+
+`btrack_log_note` (or `btrack n "..."`). The bar: *would this help me write tomorrow's standup or debug a regression next week?*
+
+**Worth a note**
+
+- Root cause of a bug
+- Non-obvious decision or workaround
+- Surprising codebase discovery
+- Finished a meaningful sub-task in a longer session
+
+**Not worth a note**
+
+- Every file read
+- Every test that passed
+- Routine progress
+
+A session with **0–3 notes is normal**. A session with 15 notes is noise — you're logging telemetry, not signal.
+
+### Step 3 — Stop the session *before* the commit
+
+This is the load-bearing step. `btrack shipped` lines up commits against session windows by timestamp, so the session has to still be active when the commit lands inside its window.
+
+The order matters:
+
+```bash
+btrack_stop  message="fixed by adding ±60s tolerance"   # 1. close session
+git commit -m "fix(auth): tolerate ±60s clock skew..."  # 2. commit
+```
+
+If you forget and commit first, the commit falls outside the session window and `btrack shipped` can't find it. Reorder next time — the world doesn't end.
+
+### Step 4 — Compose the commit message from the session
+
+When Claude writes the commit, it pulls from the session's raw material:
+
+- **Subject** ← task name + closing message
+- **Body** ← the notes you dropped along the way
+
+**Example.** Session task `"fix JWT clock skew in auth middleware"`, notes `"root cause: server clock 45s ahead of token issuer"` and `"added 60s leeway to verifier"`, closing message `"fixed by adding ±60s tolerance"` →
+
+```
+fix(auth): tolerate ±60s clock skew in JWT verifier
+
+Server clock was 45s ahead of the token issuer; verifier rejected
+freshly-issued tokens. Added a 60s leeway window.
+```
+
+You barely had to think about the commit message — you'd already written it as you worked.
+
+## Tool reference
+
+The skill prefers MCP tools when available and falls back to CLI commands when not. Both paths share the same SQLite database, so history is consistent either way.
+
+| MCP tool                          | CLI equivalent                  | When to use                                                  |
+| --------------------------------- | ------------------------------- | ------------------------------------------------------------ |
+| `mcp__btrack__btrack_status`      | `btrack w`                      | Check if a session is already active before starting one     |
+| `mcp__btrack__btrack_start`       | `btrack s "task" -p project`    | Start a new session                                          |
+| `mcp__btrack__btrack_stop`        | `btrack x -m "message"`         | Stop the active session, optionally with a closing message   |
+| `mcp__btrack__btrack_switch`      | `btrack sw "new task"`          | Atomic stop + start when pivoting to a different task        |
+| `mcp__btrack__btrack_resume`      | `btrack r`                      | Continue the most recently stopped session                   |
+| `mcp__btrack__btrack_log_note`    | `btrack n "note"`               | Add a checkpoint note to the active session                  |
+| `mcp__btrack__btrack_history`     | `btrack h` / `btrack h -w` / `btrack h -n 20` | Look at recent sessions                            |
+| `mcp__btrack__btrack_search`      | `btrack search "query"`         | Full-text search across past sessions                        |
+| `mcp__btrack__btrack_list_projects` | `btrack projects`             | List known projects with cumulative tracked time             |
+| `mcp__btrack__btrack_get_session` | `btrack h -i 42`                | Pull one session by ID with all its notes                    |
+
+The skill also instructs Claude to call `btrack_status` before `btrack_start` — `start` refuses if a session is already running, and `switch` is the right tool for an active pivot anyway.
+
+## Common patterns
+
+### "Let's fix the login bug"
+
+1. `btrack_status` — if a session is active, ask whether to switch.
+2. `btrack_start` task=`"fix login bug"`.
+3. Investigate. Drop a note when the root cause is found.
+4. Apply the fix. Maybe one note for the key decision.
+5. Run tests. If they pass, `btrack_stop` with a closing message.
+6. `git commit` using the closing message and notes as raw material.
+
+### "What did I work on yesterday?"
+
+`btrack_history` window=`yesterday` → render as a short list. No new session needed.
+
+### "Draft my standup"
+
+The CLI already has `btrack standup` which does the AI summarization itself — the skill prefers that over asking Claude to reimplement it.
+
+```bash
+btrack standup           # yesterday (default)
+btrack standup --today   # today's sessions so far
+btrack standup --days 3  # last 3 days
+```
+
+### "Compare what I said I'd do vs what shipped"
+
+Run `btrack shipped` from inside the repo. It cross-references session windows with `git log` and shows the commits that landed during each session.
+
+```bash
+btrack shipped         # last completed session
+btrack shipped -n 5    # last 5 sessions
+btrack shipped --today # everything from today
+```
+
+## Don'ts
+
+The skill calls these out explicitly so Claude doesn't drift into them:
+
+- **Don't leave sessions open.** Every task that started a session should end with `btrack_stop` (or `btrack_switch` if pivoting). Open sessions accumulate fake hours.
+- **Don't log a note for every tool call.** Notes are signal, not telemetry. Three crisp notes beat fifteen mechanical ones.
+- **Don't rename the task mid-session.** If the work has changed, `btrack_switch` to a new task — preserves the honesty of your history.
+- **Don't track meta-work.** Reading docs, setting up the MCP, configuring btrack itself — skip these unless you're specifically reporting on them.
+
+## Using the skill outside the btrack repo
+
+The workflow isn't btrack-specific in its design — it works anywhere you have btrack installed. Copy it into your global skills directory once:
 
 ```bash
 mkdir -p ~/.claude/skills
 cp -r ~/Projects/btrack/.claude/skills/btrack-tracker ~/.claude/skills/
 ```
 
-It now triggers in every Claude Code session, no matter which project you're in.
-
-## What's in the skill
-
-```
-.claude/skills/btrack-tracker/
-└── SKILL.md
-```
-
-The `SKILL.md` covers:
-
-- When to start a session vs skip
-- The full MCP tool reference (10 tools)
-- A CLI fallback table for when the MCP isn't loaded yet
-- Common patterns: standup generation, history queries, `btrack shipped`
-- Don'ts: leaving sessions open, logging every read, renaming mid-session
-
-It's a single Markdown file — no scripts, no assets — so it's easy to read, fork, and adapt.
+It now triggers in every Claude Code session, regardless of which repo you're in. Cloning the btrack repo isn't a requirement — the skill is the only file you need.
 
 ## Customizing
 
-Edit `.claude/skills/btrack-tracker/SKILL.md` to match how *you* work. A few things people commonly change:
+The skill is a single Markdown file with no scripts or assets, so editing it is straightforward. Common tweaks:
 
-- **Per-commit vs per-chunk sessions** — the default suggests one session per logical chunk (across several commits). Flip it to per-commit if you want finer granularity.
-- **Note threshold** — the skill says "0–3 notes per session is normal." Bump it up if you log more aggressively.
-- **Project flag** — if your repo doesn't have a `.btrack` file, hardcode `-p <project>` into the start instruction.
+- **Per-commit vs per-chunk sessions.** The default suggests one session per logical chunk (covering several commits). Flip it to per-commit if you want finer-grained tracking — useful when billing by commit.
+- **Note threshold.** The skill says "0–3 notes per session is normal." Bump that up if you log more aggressively, or down if you find Claude over-noting.
+- **Project flag handling.** If your repo doesn't have a `.btrack` file and you don't want to add one, hardcode `-p <project-name>` into the start instructions in the skill body.
+- **Trigger language.** If you want Claude to track *every* edit (not just non-trivial ones), broaden the description in the YAML frontmatter.
 
-If your edits are useful for everyone, send a PR.
+If your edits would help everyone, [send a PR](https://github.com/tolgazorlu/btrack).
+
+## How it relates to the MCP server
+
+The [MCP server](/docs/mcp) is the transport layer — it exposes 10 btrack tools to any MCP-aware client (Claude Code, Cursor, Claude Desktop, Gemini CLI, ChatGPT). Without the skill, the MCP gives Claude the ability to *read and write* btrack state, but Claude has no opinion on *when* to do so.
+
+The skill is the policy layer. It tells Claude:
+
+- *which tasks deserve a session* (non-trivial coding work)
+- *what to name them* (intent, not mechanism)
+- *when to log notes* (signal-not-telemetry)
+- *when to stop* (before the commit, not after)
+- *how to compose the commit* (from session task + notes + closing message)
+
+You can use either layer alone. The MCP-only path is fine for "ask the assistant about my history" use cases. The skill turns the MCP into a workflow that runs without prompting on every coding task.
