@@ -110,6 +110,11 @@ Flags:
 			sess.EndTime = &t
 		}
 
+		if sess.EndTime != nil && !sess.EndTime.After(sess.StartTime) {
+			return fmt.Errorf("end time %s must be after start time %s",
+				sess.EndTime.Local().Format("15:04"),
+				sess.StartTime.Local().Format("15:04"))
+		}
 		if err := store.UpdateSession(sess); err != nil {
 			return fmt.Errorf("update session: %w", err)
 		}

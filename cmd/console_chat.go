@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/tolgazorlu/btrack/internal/ai"
 	"github.com/tolgazorlu/btrack/internal/config"
@@ -87,7 +88,9 @@ func runConsoleChat(input string) error {
 	ui.Blank()
 	ui.Dim("✦ asking " + provider.Name() + "…")
 
-	resp, err := provider.Complete(context.Background(), sb.String())
+	chatCtx, chatCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer chatCancel()
+	resp, err := provider.Complete(chatCtx, sb.String())
 	if err != nil {
 		ui.Blank()
 		ui.Warn("AI error: " + err.Error())

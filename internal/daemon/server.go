@@ -299,7 +299,7 @@ func (s *Server) handleResume() Response {
 
 	sess, err := s.store.GetLastSession()
 	if err != nil || sess == nil {
-		return Response{Success: false, Error: "no previous session to resume"}
+		return Response{Success: false, Error: "no previous session found — start your first one with: btrack start <task>"}
 	}
 
 	// Create a new session copying the task context from the last session.

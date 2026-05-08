@@ -43,7 +43,9 @@ Tips:
 		}
 
 		var sess daemon.SessionDTO
-		json.Unmarshal(resp.Data, &sess)
+		if err := json.Unmarshal(resp.Data, &sess); err != nil {
+			return fmt.Errorf("parse daemon response: %w", err)
+		}
 
 		ui.Blank()
 		ui.Sign(ui.StyleSuccess.Render(ui.Sym.Resume), ui.StyleHighlight.Render(sess.TaskName))

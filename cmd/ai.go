@@ -219,12 +219,14 @@ Tips:
 		ui.Dim("✦ generating standup…")
 		ui.Blank()
 
+		aiCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 		var summary string
 		var sumErr error
 		if githubActivity != "" {
-			summary, sumErr = ai.SummarizeStandupWithGitHub(context.Background(), provider, sessions, logsMap, githubActivity)
+			summary, sumErr = ai.SummarizeStandupWithGitHub(aiCtx, provider, sessions, logsMap, githubActivity)
 		} else {
-			summary, sumErr = ai.SummarizeStandup(context.Background(), provider, sessions, logsMap)
+			summary, sumErr = ai.SummarizeStandup(aiCtx, provider, sessions, logsMap)
 		}
 		if sumErr != nil {
 			return fmt.Errorf("AI error: %w", sumErr)
@@ -325,12 +327,14 @@ Setup:
 		ui.Dim("✦ analysing with " + provider.Name() + "…")
 		ui.Blank()
 
+		insCtx, insCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer insCancel()
 		var analysis string
 		var anaErr error
 		if githubActivity != "" {
-			analysis, anaErr = ai.AnalyzeStatsWithGitHub(context.Background(), provider, stats.ToJSON(), githubActivity)
+			analysis, anaErr = ai.AnalyzeStatsWithGitHub(insCtx, provider, stats.ToJSON(), githubActivity)
 		} else {
-			analysis, anaErr = ai.AnalyzeStats(context.Background(), provider, stats.ToJSON())
+			analysis, anaErr = ai.AnalyzeStats(insCtx, provider, stats.ToJSON())
 		}
 		if anaErr != nil {
 			ui.Warn("AI error: " + anaErr.Error())
