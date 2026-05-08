@@ -147,11 +147,34 @@ func handleSlash(input string) (bool, string) {
 		if !ok {
 			return false, "unknown command: /" + name + "  ·  /help to list"
 		}
+		// Natural-language args: let AI extract task name and flags.
+		if looksLikeNaturalLanguage(expanded[1:]) {
+			if err := runConsoleChat(input); err != nil {
+				return false, ui.StyleError.Render(" error ") + " " + err.Error()
+			}
+			return false, ""
+		}
 		if dispErr := dispatch(expanded); dispErr != nil {
 			return false, ui.StyleError.Render(" error ") + " " + dispErr.Error()
 		}
 		return false, ""
 	}
+}
+
+// looksLikeNaturalLanguage returns true when args contain connector words
+// that indicate the user wrote a sentence rather than CLI flags.
+func looksLikeNaturalLanguage(args []string) bool {
+	nlWords := map[string]bool{
+		"with": true, "about": true, "for": true, "in": true,
+		"to": true, "and": true, "project": true, "task": true,
+		"named": true, "called": true, "on": true,
+	}
+	for _, a := range args {
+		if !strings.HasPrefix(a, "-") && nlWords[strings.ToLower(a)] {
+			return true
+		}
+	}
+	return false
 }
 
 // printToolCatalog renders the registered MCP tools as a one-per-line list.
