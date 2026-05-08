@@ -116,7 +116,9 @@ Setup:
 		ui.Dim("✦ generating standup…")
 		ui.Blank()
 
-		summary, err := ai.GenerateStandup(context.Background(), provider, sessions, logsMap, targetDate)
+		aiCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		summary, err := ai.GenerateStandup(aiCtx, provider, sessions, logsMap, targetDate)
 		if err != nil {
 			return fmt.Errorf("AI error: %w", err)
 		}
