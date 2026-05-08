@@ -38,6 +38,9 @@ Tips:
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskName := strings.Join(args, " ")
+		if strings.TrimSpace(taskName) == "" {
+			return fmt.Errorf("task name cannot be empty")
+		}
 		project, _ := cmd.Flags().GetString("project")
 
 		// Apply .btrack project file defaults (overridden by explicit flags).
@@ -69,7 +72,9 @@ Tips:
 		}
 
 		var sess daemon.SessionDTO
-		json.Unmarshal(resp.Data, &sess)
+		if err := json.Unmarshal(resp.Data, &sess); err != nil {
+			return fmt.Errorf("parse daemon response: %w", err)
+		}
 
 		// One-line confirmation before TUI takes over.
 		line := ui.StyleSuccess.Render(ui.Sym.Start) + "  " + ui.StyleHighlight.Render(sess.TaskName)

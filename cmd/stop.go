@@ -76,7 +76,9 @@ Tips:
 		}
 
 		var sess daemon.SessionDTO
-		json.Unmarshal(resp.Data, &sess)
+		if err := json.Unmarshal(resp.Data, &sess); err != nil {
+			return fmt.Errorf("parse daemon response: %w", err)
+		}
 
 		start, _ := time.Parse(time.RFC3339, sess.StartTime)
 		end := time.Now()
@@ -139,7 +141,9 @@ func suggestMessage() string {
 	}
 
 	fmt.Print(ui.Indent + ui.StyleDimmed.Render("✦ asking AI for a commit message…\r"))
-	suggestion, err := ai.SuggestCommitMessage(context.Background(), provider,
+	aiCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	suggestion, err := ai.SuggestCommitMessage(aiCtx, provider,
 		status.Session.TaskName, notes)
 	fmt.Print("                                                     \r")
 
