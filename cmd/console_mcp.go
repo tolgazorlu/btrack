@@ -49,7 +49,15 @@ func handleMCPSlash(input string) {
 		return
 	}
 
-	// Treat anything else as an addr override (":9000", "127.0.0.1:9000").
+	// Accept addr overrides: empty (default), ":port", or "host:port".
+	// Anything else is a typo — show a hint rather than trying to bind.
+	if sub != "" && !strings.HasPrefix(sub, ":") && !strings.Contains(sub, ":") {
+		ui.Blank()
+		ui.Hint("unknown /mcp option: " + sub)
+		ui.Hint("try: /mcp  /mcp stop  /mcp status  /mcp claude  /mcp cursor  /mcp gemini")
+		ui.Blank()
+		return
+	}
 	addr := "127.0.0.1:8765"
 	if sub != "" {
 		addr = sub

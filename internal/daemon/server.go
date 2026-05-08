@@ -340,15 +340,20 @@ func writePid() error {
 }
 
 func sessionToDTO(s *db.Session) *SessionDTO {
-	return &SessionDTO{
+	dto := &SessionDTO{
 		ID:        s.ID,
 		TaskName:  s.TaskName,
 		StartTime: s.StartTime.Format(time.RFC3339),
+		Message:   s.Message,
 		Tags:      s.Tags,
 		GitBranch: s.GitBranch,
 		GitRepo:   s.GitRepo,
 		Project:   s.Project,
 	}
+	if s.EndTime != nil {
+		dto.EndTime = s.EndTime.Format(time.RFC3339)
+	}
+	return dto
 }
 
 // idleWatcher runs in a goroutine and auto-stops the session if idle too long.

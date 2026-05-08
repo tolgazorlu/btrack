@@ -522,6 +522,8 @@ func sessionDTOToView(s daemon.SessionDTO, active bool) SessionView {
 		ID:        s.ID,
 		TaskName:  s.TaskName,
 		StartTime: s.StartTime,
+		EndTime:   s.EndTime,
+		Message:   s.Message,
 		Active:    active,
 		Tags:      s.Tags,
 		GitBranch: s.GitBranch,
@@ -529,7 +531,13 @@ func sessionDTOToView(s daemon.SessionDTO, active bool) SessionView {
 		Project:   s.Project,
 	}
 	if t, err := time.Parse(time.RFC3339, s.StartTime); err == nil {
-		v.DurationMins = int64(time.Since(t).Minutes())
+		if active {
+			v.DurationMins = int64(time.Since(t).Minutes())
+		} else if s.EndTime != "" {
+			if e, err := time.Parse(time.RFC3339, s.EndTime); err == nil {
+				v.DurationMins = int64(e.Sub(t).Minutes())
+			}
+		}
 	}
 	return v
 }

@@ -66,6 +66,8 @@ type SessionDTO struct {
 	ID        int64    `json:"id"`
 	TaskName  string   `json:"task_name"`
 	StartTime string   `json:"start_time"` // RFC3339
+	EndTime   string   `json:"end_time,omitempty"` // RFC3339; empty when active
+	Message   string   `json:"message,omitempty"`
 	Tags      []string `json:"tags,omitempty"`
 	GitBranch string   `json:"git_branch,omitempty"`
 	GitRepo   string   `json:"git_repo,omitempty"`
