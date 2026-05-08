@@ -302,7 +302,7 @@ func (s *Server) handleResume() Response {
 		return Response{Success: false, Error: "no previous session found — start your first one with: btrack start <task>"}
 	}
 
-	// Create a new session copying the full context from the last session.
+	// Create a new session copying the task context from the last session.
 	newSess := &db.Session{
 		TaskName:  sess.TaskName,
 		Project:   sess.Project,
