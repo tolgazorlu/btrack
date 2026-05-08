@@ -292,6 +292,10 @@ claude mcp add --transport http btrack http://127.0.0.1:8765/mcp
 
 Once registered, ask the assistant things like *"What am I tracking right now?"*, *"What did I work on this week?"*, or *"Start a session called 'fix flaky CI'"* — it will call the right tool itself. The MCP server shares state with the daemon, so anything an AI starts shows up immediately in `btrack w` and vice versa.
 
+### Claude Skill
+
+This repo also ships a [Claude Code skill](.claude/skills/btrack-tracker/SKILL.md) that turns the MCP into a workflow — Claude auto-starts a session before coding, drops checkpoint notes for non-obvious findings, and stops the session right before `git commit` so [`btrack shipped`](#shipped) lines up. To use it in your own projects, copy it into `~/.claude/skills/`. Full docs: [docs/claude-skill](https://btrack.dev/docs/claude-skill).
+
 ---
 
 ## Google Calendar

@@ -48,7 +48,14 @@
       "Bash(mkdir -p /tmp/btrack-test)",
       "Bash(cp /tmp/console_test.go /tmp/btrack-test/main.go)",
       "Read(//tmp/**)",
-      "Bash(go run *)"
+      "Bash(go run *)",
+      "Bash(btrack /tools)",
+      "Bash(btrack tools *)",
+      "Bash(claude mcp *)",
+      "Bash(mkdir -p ~/.claude/skills/btrack-tracker)",
+      "Read(//Users/tolgazorlu/.claude/skills/**)",
+      "Bash(mkdir -p /Users/tolgazorlu/Projects/btrack/.claude/skills/btrack-tracker)",
+      "Bash(cp /Users/tolgazorlu/.claude/skills/btrack-tracker/SKILL.md /Users/tolgazorlu/Projects/btrack/.claude/skills/btrack-tracker/SKILL.md)"
     ]
   }
 }
