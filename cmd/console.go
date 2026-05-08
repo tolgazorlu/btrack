@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,8 +23,8 @@ import (
 //
 // Input syntax:
 //   - bare command:   s "fix bug" -p myapp
-//   - @-quick action: @create-session "fix bug" -p myapp
-//   - slash command:  /help, /exit, /clear
+//   - /slash action:  /start "fix bug" -p myapp
+//   - slash meta:     /help, /exit, /clear
 //   - free text:      treated as AI chat (when configured)
 func runConsole() error {
 	tagline := "time tracker for developers"
@@ -34,7 +33,7 @@ func runConsole() error {
 	// just render the input box so the screen doesn't reflow on every Enter.
 	hint := ""
 	first := true
-	suggestions := atSuggestions()
+	suggestions := slashSuggestions()
 	for {
 		model := ui.NewConsoleModel(tagline, Version, hint, first).
 			WithSuggestions(suggestions)
@@ -76,43 +75,8 @@ func runConsole() error {
 			continue
 		}
 
-		// @-actions: expand to the equivalent btrack command path.
-		isAt := strings.HasPrefix(args[0], "@")
-		if isAt {
-			action := strings.ToLower(strings.TrimPrefix(args[0], "@"))
-			if action == "clear" || action == "cls" {
-				fmt.Fprint(ui.Out, "\033[H\033[2J")
-				hint = ""
-				continue
-			}
-			// Debug-only @tool invoker (gated behind BTRACK_DEBUG to avoid
-			// surfacing it as a user-facing feature). Use it to verify a tool
-			// returns the same JSON the MCP server would.
-			if action == "tool" && os.Getenv("BTRACK_DEBUG") != "" {
-				out, err := invokeMCPTool(args[1:])
-				if err != nil {
-					hint = ui.StyleError.Render(" error ") + " " + err.Error()
-				} else {
-					fmt.Fprintln(ui.Out, out)
-					hint = ""
-				}
-				continue
-			}
-			expanded, ok := expandAtAction(args)
-			if !ok {
-				hint = "unknown @-action: " + args[0] + "  ·  /help to list"
-				continue
-			}
-			args = expanded
-		}
-
 		// Dispatch: known command → cobra, unknown → AI chat.
-		var execErr error
-		if isAt {
-			execErr = dispatch(args)
-		} else {
-			execErr = dispatchOrChat(args, input)
-		}
+		execErr := dispatchOrChat(args, input)
 		if execErr != nil {
 			hint = ui.StyleError.Render(" error ") + " " + execErr.Error()
 			continue
@@ -149,10 +113,17 @@ func dispatch(args []string) error {
 // ErrSilent — sentinel for subcommands that handled their own messaging.
 var ErrSilent = errors.New("silent")
 
-// handleSlash processes /-prefixed meta commands. Returns (quit, hint).
+// handleSlash processes /-prefixed commands. Returns (quit, hint).
+// Meta-commands are handled inline; everything else is looked up in
+// slashAlias and dispatched through cobra.
 func handleSlash(input string) (bool, string) {
-	cmd := strings.ToLower(strings.TrimPrefix(input, "/"))
-	switch strings.SplitN(cmd, " ", 2)[0] {
+	raw := strings.TrimPrefix(input, "/")
+	parts, err := shlex.Split(raw)
+	if err != nil || len(parts) == 0 {
+		return false, ""
+	}
+	name := strings.ToLower(parts[0])
+	switch name {
 	case "exit", "quit", "q":
 		ui.Blank()
 		ui.Hint("bye — see you next session")
@@ -160,10 +131,9 @@ func handleSlash(input string) (bool, string) {
 		return true, ""
 	case "help", "?":
 		_ = rootCmd.Help()
-		printAtActions()
+		printSlashActions()
 		return false, ""
 	case "clear", "cls":
-		// Bubble Tea handles its own draw; the next iteration paints fresh.
 		fmt.Fprint(ui.Out, "\033[H\033[2J")
 		return false, ""
 	case "tools":
@@ -173,7 +143,14 @@ func handleSlash(input string) (bool, string) {
 		handleMCPSlash(input)
 		return false, ""
 	default:
-		return false, "unknown slash command: /" + cmd
+		expanded, ok := expandSlashAction(parts)
+		if !ok {
+			return false, "unknown command: /" + name + "  ·  /help to list"
+		}
+		if dispErr := dispatch(expanded); dispErr != nil {
+			return false, ui.StyleError.Render(" error ") + " " + dispErr.Error()
+		}
+		return false, ""
 	}
 }
 
@@ -197,7 +174,7 @@ func printToolCatalog() {
 // Usage: @tool <name> [json-args]
 func invokeMCPTool(args []string) (string, error) {
 	if len(args) == 0 {
-		return "", fmt.Errorf("usage: @tool <name> [json-args]")
+		return "", fmt.Errorf("usage: /tools <name> [json-args]")
 	}
 	name := args[0]
 	rawArgs := json.RawMessage(`{}`)

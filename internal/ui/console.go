@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Suggestion is one row in the @-autocomplete dropdown.
+// Suggestion is one row in the /-autocomplete dropdown.
 type Suggestion struct {
 	Trigger string // e.g. "@create-session"
 	Hint    string // e.g. "→ btrack start"
@@ -51,7 +51,7 @@ type ConsoleModel struct {
 //   - showBanner: render the big banner + tips block on top
 func NewConsoleModel(tagline, version, hint string, showBanner bool) ConsoleModel {
 	ti := textinput.New()
-	ti.Placeholder = "type a command, @action, or ask anything…"
+	ti.Placeholder = "type a command, /action, or ask anything…"
 	ti.Prompt = "> "
 	ti.PromptStyle = StyleSuccess
 	ti.CharLimit = 500
@@ -72,29 +72,29 @@ func NewConsoleModel(tagline, version, hint string, showBanner bool) ConsoleMode
 	}
 }
 
-// WithSuggestions wires the @-autocomplete list into the model.
+// WithSuggestions wires the /-autocomplete list into the model.
 func (m ConsoleModel) WithSuggestions(s []Suggestion) ConsoleModel {
 	m.suggestions = SortSuggestions(s)
 	return m
 }
 
-// filteredSuggestions returns the @-actions matching the current input.
-// Returns nil when the input doesn't start with "@".
+// filteredSuggestions returns the /-actions matching the current input.
+// Returns nil when the input doesn't start with "/".
 func (m ConsoleModel) filteredSuggestions() []Suggestion {
 	v := m.input.Value()
-	if !strings.HasPrefix(v, "@") {
+	if !strings.HasPrefix(v, "/") {
 		return nil
 	}
-	q := strings.ToLower(strings.TrimPrefix(v, "@"))
+	q := strings.ToLower(strings.TrimPrefix(v, "/"))
 	// Only filter on the first whitespace-delimited token — once the user
-	// types "@create-session ", suggestions should disappear.
+	// types "/start ", suggestions should disappear.
 	if i := strings.IndexAny(q, " \t"); i >= 0 {
 		return nil
 	}
 
 	out := make([]Suggestion, 0, len(m.suggestions))
 	for _, s := range m.suggestions {
-		needle := strings.TrimPrefix(strings.ToLower(s.Trigger), "@")
+		needle := strings.TrimPrefix(strings.ToLower(s.Trigger), "/")
 		if strings.HasPrefix(needle, q) {
 			out = append(out, s)
 		}
@@ -203,8 +203,8 @@ func (m ConsoleModel) View() string {
 		sb.WriteString(Indent + StyleDimmed.Render("1. ") +
 			"Run any command — e.g. " + StyleHighlight.Render(`s "fix bug" -p myapp`) + "\n")
 		sb.WriteString(Indent + StyleDimmed.Render("2. ") +
-			"Use " + StyleHighlight.Render("@") + " for quick actions, e.g. " +
-			StyleHighlight.Render("@create-session") + "\n")
+			"Use " + StyleHighlight.Render("/") + " for quick actions, e.g. " +
+			StyleHighlight.Render("/start") + "\n")
 		sb.WriteString(Indent + StyleDimmed.Render("3. ") +
 			"Ask anything — free text goes to " + StyleHighlight.Render("btrack ai") + " chat\n")
 		sb.WriteString(Indent + StyleDimmed.Render("4. ") +
@@ -246,8 +246,8 @@ func (m ConsoleModel) View() string {
 	} else {
 		hints = []string{
 			StyleHighlight.Render("enter") + " run",
-			StyleHighlight.Render("@") + " quick actions",
-			StyleHighlight.Render("/help") + " commands",
+			StyleHighlight.Render("/") + " commands",
+			StyleHighlight.Render("/help") + " full reference",
 			StyleHighlight.Render("ctrl+c") + " exit",
 		}
 	}
