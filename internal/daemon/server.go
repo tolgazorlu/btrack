@@ -302,9 +302,10 @@ func (s *Server) handleResume() Response {
 		return Response{Success: false, Error: "no previous session to resume"}
 	}
 
-	// Create a new session copying the task name.
+	// Create a new session copying the task context from the last session.
 	newSess := &db.Session{
 		TaskName:  sess.TaskName,
+		Project:   sess.Project,
 		StartTime: time.Now(),
 		GitBranch: sess.GitBranch,
 		GitRepo:   sess.GitRepo,
@@ -320,8 +321,14 @@ func (s *Server) handleResume() Response {
 }
 
 func writeResponse(conn net.Conn, resp Response) {
-	data, _ := json.Marshal(resp)
-	_, _ = conn.Write(data)
+	data, err := json.Marshal(resp)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[btrack daemon] marshal response: %v\n", err)
+		return
+	}
+	if _, err := conn.Write(data); err != nil {
+		fmt.Fprintf(os.Stderr, "[btrack daemon] write response: %v\n", err)
+	}
 }
 
 func writePid() error {
