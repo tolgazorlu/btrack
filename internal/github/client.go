@@ -139,8 +139,8 @@ func (c *Client) GetUser() (*UserInfo, error) {
 // in a date range. More reliable than events API for private repos.
 func (c *Client) searchCommits(since, until time.Time) ([]*Commit, error) {
 	dateFilter := fmt.Sprintf("%s..%s",
-		since.UTC().Format("2006-01-02"),
-		until.UTC().Format("2006-01-02"),
+		since.Local().Format("2006-01-02"),
+		until.Local().Format("2006-01-02"),
 	)
 	path := fmt.Sprintf(
 		"/search/commits?q=author%%3A%s+committer-date%%3A%s&per_page=100&sort=committer-date&order=desc",
