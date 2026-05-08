@@ -44,13 +44,10 @@ Tips:
 		message, _ := cmd.Flags().GetString("message")
 		noAI, _ := cmd.Flags().GetBool("no-ai")
 
-		// If no message provided, offer an AI suggestion. Declining is fine — empty
-		// messages are now valid and the session is saved without one.
 		if message == "" && !noAI {
 			message = suggestMessage()
 		}
 
-		// Auto-detect tags and append if not already present.
 		if message != "" {
 			existingTags := map[string]bool{}
 			for _, w := range strings.Fields(message) {
@@ -91,7 +88,6 @@ Tips:
 			ui.KV("message", ui.StyleHighlight.Render(message))
 		}
 
-		// Auto-push to Google Calendar if configured.
 		if cfg, err := config.Load(); err == nil && cfg.GCal.AutoSync && cfg.GCal.ClientID != "" {
 			fmt.Printf("%s%s  syncing to Google Calendar…\r", ui.Indent, ui.StyleDimmed.Render(ui.Sym.Up))
 			svc, err := gcal.NewService(cfg.GCal.ClientID, cfg.GCal.ClientSecret, config.DataDir())
@@ -124,7 +120,6 @@ func suggestMessage() string {
 		return ""
 	}
 
-	// Get current session info for the suggestion.
 	client := daemon.NewClient()
 	resp, err := client.Send(daemon.ActionStatus, nil)
 	if err != nil || !resp.Success {

@@ -13,10 +13,9 @@ import (
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
-// intentResp is the structured JSON the AI returns when routing input.
 type intentResp struct {
-	Exec []string `json:"exec,omitempty"` // command args to dispatch
-	Chat string   `json:"chat,omitempty"` // plain-text reply
+	Exec []string `json:"exec,omitempty"`
+	Chat string   `json:"chat,omitempty"`
 }
 
 const intentSystemPrompt = `You are the command parser for btrack, a developer time tracker.
@@ -42,8 +41,6 @@ Rules:
 Command intent: {"exec": ["command", "arg", "--flag", "value"]}
 Chat/question:  {"chat": "concise plain-prose reply, max 100 words"}`
 
-// runConsoleChat handles free-text and natural-language slash commands.
-// It uses AI to decide whether to execute a btrack command or reply in chat.
 func runConsoleChat(input string) error {
 	cfg, err := config.Load()
 	if err != nil {
@@ -118,9 +115,6 @@ func runConsoleChat(input string) error {
 	return nil
 }
 
-// parseIntentResp decodes the AI's JSON response, stripping markdown fences.
-// Returns (resp, chatText): resp is non-nil on valid JSON, chatText is the
-// fallback plain-text reply when JSON parsing fails.
 func parseIntentResp(raw string) (*intentResp, string) {
 	raw = strings.TrimSpace(raw)
 	if strings.HasPrefix(raw, "```") {
@@ -138,8 +132,6 @@ func parseIntentResp(raw string) (*intentResp, string) {
 	return &r, r.Chat
 }
 
-// isKnownSubcommand reports whether name matches a top-level rootCmd
-// subcommand, an alias, or "help".
 func isKnownSubcommand(name string) bool {
 	if name == "help" {
 		return true
@@ -157,9 +149,6 @@ func isKnownSubcommand(name string) bool {
 	return false
 }
 
-// dispatchOrChat routes parsed args. Known cobra subcommands with clean
-// CLI args dispatch directly; natural-language args and unknown inputs
-// go through the AI intent router.
 func dispatchOrChat(args []string, raw string) error {
 	if len(args) == 0 {
 		return nil

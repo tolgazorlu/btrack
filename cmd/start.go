@@ -43,7 +43,6 @@ Tips:
 		}
 		project, _ := cmd.Flags().GetString("project")
 
-		// Apply .btrack project file defaults (overridden by explicit flags).
 		if cwd, err := os.Getwd(); err == nil {
 			if pf, _ := config.FindProjectFile(cwd); pf != nil {
 				if project == "" && pf.Project != "" {
@@ -76,7 +75,6 @@ Tips:
 			return fmt.Errorf("parse daemon response: %w", err)
 		}
 
-		// One-line confirmation before TUI takes over.
 		line := ui.StyleSuccess.Render(ui.Sym.Start) + "  " + ui.StyleHighlight.Render(sess.TaskName)
 		var meta []string
 		if sess.Project != "" {
@@ -92,7 +90,6 @@ Tips:
 		fmt.Println(ui.Indent + line)
 		ui.Blank()
 
-		// Open status TUI automatically
 		cfg, _ := config.Load()
 		dailyHours := 8
 		idleMinutes := 0

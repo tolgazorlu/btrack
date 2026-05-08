@@ -11,7 +11,7 @@ type Session struct {
 	Tags      []string
 	GitBranch string
 	GitRepo   string
-	Project   string // optional project grouping
+	Project   string
 }
 
 func (s *Session) Duration() time.Duration {
@@ -24,12 +24,11 @@ func (s *Session) Duration() time.Duration {
 type LogEntry struct {
 	ID        int64
 	SessionID int64
-	ParentID  *int64 // nil = top-level note; non-nil = sub-note
+	ParentID  *int64
 	Note      string
 	Timestamp time.Time
 }
 
-// Store is the persistence interface. Both SQLite and PostgreSQL implement it.
 type Store interface {
 	CreateSession(s *Session) error
 	UpdateSession(s *Session) error

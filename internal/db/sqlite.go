@@ -54,7 +54,6 @@ func (s *SQLiteStore) migrate() error {
 	if err != nil {
 		return err
 	}
-	// Add project column to existing databases (idempotent).
 	rows, _ := s.db.Query(`PRAGMA table_info(sessions)`)
 	hasProject := false
 	if rows != nil {
@@ -78,7 +77,6 @@ func (s *SQLiteStore) migrate() error {
 		}
 	}
 
-	// Add parent_id to log_entries on existing databases that predate the initial schema fix (idempotent).
 	logRows, _ := s.db.Query(`PRAGMA table_info(log_entries)`)
 	hasParentID := false
 	if logRows != nil {

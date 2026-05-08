@@ -1,12 +1,3 @@
-// Package mcp implements the btrack MCP server. It exposes the same set of
-// tools to two consumers: AI clients (Claude Code, Cursor, Gemini CLI) over
-// the Model Context Protocol stdio transport, and the interactive btrack
-// console (`btrack` with no args) via /tools and the debug @tool invoker.
-//
-// State-mutating tools (start, stop, switch, resume, log_note, status) go
-// through the daemon so they share its mutex-protected active-session view.
-// Read-only history queries hit db.Store directly — ended sessions are
-// immutable, so there is no staleness risk there.
 package mcp
 
 import (
@@ -24,32 +15,18 @@ import (
 	"github.com/tolgazorlu/btrack/internal/db"
 )
 
-// Deps bundles the runtime dependencies the tool handlers need. Constructed
-// once by the MCP command (and by the console for /tools listing).
 type Deps struct {
 	Client *daemon.Client
 	Store  db.Store
 }
 
-// Tool is the descriptor used by both the MCP server registration and the
-// interactive console. Each tool carries its own typed registration closure
-// (Register) so it can be added to an *mcp.Server without the registry
-// needing to know the concrete In/Out generics.
 type Tool struct {
 	Name        string
 	Description string
-	// Invoke runs the handler against a JSON-encoded argument blob. Used by
-	// the console's debug @tool path; the result is whatever the handler
-	// returned, ready for json.Marshal.
 	Invoke func(ctx context.Context, raw json.RawMessage) (any, error)
-	// Register attaches the tool to the given MCP server with full type
-	// information so the SDK can derive the JSON schema from struct tags.
 	Register func(s *mcp.Server)
 }
 
-// makeTool builds a Tool descriptor from a typed handler. The In and Out
-// generics are inferred from the handler signature; the SDK uses In to
-// derive the input schema and Out to expose structured output.
 func makeTool[In, Out any](name, desc string, h func(context.Context, In) (Out, error)) Tool {
 	invoke := func(ctx context.Context, raw json.RawMessage) (any, error) {
 		var in In
@@ -73,8 +50,6 @@ func makeTool[In, Out any](name, desc string, h func(context.Context, In) (Out, 
 						Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
 					}, zero, nil
 				}
-				// Provide a text-content fallback for clients that don't render
-				// structured output, alongside the typed Out for those that do.
 				body, mErr := json.Marshal(out)
 				if mErr != nil {
 					return nil, out, mErr
@@ -88,8 +63,6 @@ func makeTool[In, Out any](name, desc string, h func(context.Context, In) (Out, 
 	return Tool{Name: name, Description: desc, Invoke: invoke, Register: register}
 }
 
-// Tools returns the canonical tool registry for the given dependencies.
-// Order is stable so /tools listings render predictably.
 func Tools(d Deps) []Tool {
 	return []Tool{
 		makeTool("btrack_status", "Get the active session, its tags, and the most recent log notes attached to it. Returns active=false when no session is running.", d.statusHandler),
@@ -104,10 +77,6 @@ func Tools(d Deps) []Tool {
 		makeTool("btrack_get_session", "Get a single session by ID, including every log note attached to it.", d.getSessionHandler),
 	}
 }
-
-// ============================================================================
-// Tool input/output types
-// ============================================================================
 
 type StatusOut struct {
 	Active     bool          `json:"active"`
@@ -191,8 +160,6 @@ type GetSessionOut struct {
 	Notes   []LogEntryDTO `json:"notes"`
 }
 
-// SessionView is the shape every tool returns for a session. Includes
-// computed duration so AI clients don't have to parse RFC3339 themselves.
 type SessionView struct {
 	ID            int64    `json:"id"`
 	TaskName      string   `json:"task_name"`
@@ -213,10 +180,6 @@ type LogEntryDTO struct {
 	Note      string `json:"note"`
 	Timestamp string `json:"timestamp"`
 }
-
-// ============================================================================
-// Daemon-backed handlers (state-mutating)
-// ============================================================================
 
 type emptyArgs struct{}
 
@@ -343,10 +306,6 @@ func (d Deps) logNoteHandler(ctx context.Context, in LogNoteIn) (LogNoteOut, err
 	return LogNoteOut{NoteID: raw.ID, Note: raw.Note}, nil
 }
 
-// ============================================================================
-// Store-backed handlers (read-only)
-// ============================================================================
-
 func (d Deps) historyHandler(ctx context.Context, in HistoryIn) (HistoryOut, error) {
 	window := strings.TrimSpace(in.Window)
 	if window == "" {
@@ -435,12 +394,6 @@ func (d Deps) getSessionHandler(ctx context.Context, in GetSessionIn) (GetSessio
 	return out, nil
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
-// fetchWindow resolves the window string into a slice of sessions. Supports:
-//   today, yesterday, week, month, date:YYYY-MM-DD, last_n:N
 func (d Deps) fetchWindow(window string) ([]*db.Session, error) {
 	now := time.Now()
 
@@ -472,8 +425,6 @@ func (d Deps) fetchWindow(window string) ([]*db.Session, error) {
 	}
 }
 
-// fetchSince pulls a wide window of recent sessions and filters by start_time.
-// 1000 is well above any plausible weekly/monthly count.
 func (d Deps) fetchSince(since time.Time) ([]*db.Session, error) {
 	all, err := d.Store.GetRecentSessions(1000)
 	if err != nil {
@@ -542,8 +493,6 @@ func sessionDTOToView(s daemon.SessionDTO, active bool) SessionView {
 	return v
 }
 
-// gitContext mirrors cmd/start.go's helpers so MCP tools capture the same
-// branch/repo metadata the CLI does. Fails silently when not in a repo.
 func gitContext() (branch, repo string) {
 	if out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err == nil {
 		branch = strings.TrimSpace(string(out))

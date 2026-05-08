@@ -53,7 +53,6 @@ func (c *Client) send(action string, payload any) (*Response, error) {
 		return nil, fmt.Errorf("write request: %w", err)
 	}
 
-	// Signal EOF so server knows the full message arrived.
 	if tc, ok := conn.(*net.UnixConn); ok {
 		tc.CloseWrite()
 	}
@@ -76,8 +75,6 @@ func (c *Client) send(action string, payload any) (*Response, error) {
 	return &resp, nil
 }
 
-// Switch atomically stops the active session (if any) and starts a new one.
-// Returns the previously stopped session (may be nil) and the newly started one.
 func (c *Client) Switch(payload SwitchPayload) (*SwitchData, error) {
 	resp, err := c.Send(ActionSwitch, payload)
 	if err != nil {
@@ -98,8 +95,6 @@ func (c *Client) Ping() bool {
 	return err == nil && resp.Success
 }
 
-// QuietStatus returns the current session status without starting the daemon.
-// Returns nil if the daemon is not running or unreachable.
 func (c *Client) QuietStatus() *StatusData {
 	req := Request{Action: ActionStatus}
 	reqBytes, err := json.Marshal(req)

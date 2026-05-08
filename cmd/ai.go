@@ -49,7 +49,6 @@ your standups, work patterns, what you worked on, or anything else.`,
 			return err
 		}
 
-		// Build a compact context prompt from recent sessions.
 		var sb strings.Builder
 		sb.WriteString("You are a helpful assistant for a developer time tracker called btrack.\n")
 		sb.WriteString("Here are the user's recent sessions:\n\n")
@@ -88,8 +87,6 @@ your standups, work patterns, what you worked on, or anything else.`,
 	},
 }
 
-// ─── ai setup ────────────────────────────────────────────────────────────────
-
 var aiSetupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Configure an AI provider key (interactive)",
@@ -113,7 +110,6 @@ You can add multiple providers and switch between them.`,
 }
 
 func runSetupWizard() error {
-	// Inject save function (avoids import cycle between ui ↔ config).
 	ui.SetSaveKeyFunc(config.SaveProviderKey)
 
 	model := ui.NewSetupModel()
@@ -138,8 +134,6 @@ func runSetupWizard() error {
 	ui.Blank()
 	return nil
 }
-
-// ─── ai summarize ────────────────────────────────────────────────────────────
 
 var aiSummarizeCmd = &cobra.Command{
 	Use:     "summarize",
@@ -204,7 +198,6 @@ Tips:
 			return err
 		}
 
-		// Enrich with GitHub activity if connected.
 		githubActivity := ""
 		if ghClient := ghClientFromConfig(cfg); ghClient != nil {
 			now := time.Now()
@@ -236,8 +229,6 @@ Tips:
 		return nil
 	},
 }
-
-// ─── ai insights ─────────────────────────────────────────────────────────────
 
 var aiInsightsCmd = &cobra.Command{
 	Use:     "insights",
@@ -295,7 +286,6 @@ Setup:
 		printTagBreakdown(stats)
 		printPeakHours(stats)
 
-		// Fetch GitHub stats for the period if connected.
 		githubActivity := ""
 		if ghClient := ghClientFromConfig(cfg); ghClient != nil {
 			now := time.Now()
@@ -346,8 +336,6 @@ Setup:
 		return nil
 	},
 }
-
-// ─── stats rendering ─────────────────────────────────────────────────────────
 
 func printStatsHeader(s *db.Stats, days int) {
 	title := fmt.Sprintf("Stats — last %d days", days)
@@ -445,7 +433,6 @@ func printPeakHours(s *db.Stats) {
 		return
 	}
 	var sb strings.Builder
-	// Show 6am–10pm only
 	for h := 6; h <= 22; h++ {
 		count := s.HourlyPattern[h]
 		label := fmt.Sprintf("%02d:00", h)
@@ -467,9 +454,6 @@ func formatStatDur(d time.Duration) string {
 	return fmt.Sprintf("%ds", int(d.Seconds()))
 }
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-// loadConfigWithAICheck loads config and guides the user through setup if no key.
 func loadConfigWithAICheck() (*config.Config, error) {
 	cfg, err := config.Load()
 	if err != nil {

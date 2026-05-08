@@ -11,13 +11,11 @@ import (
 	"github.com/tolgazorlu/btrack/internal/db"
 )
 
-// Provider is the AI backend interface.
 type Provider interface {
 	Complete(ctx context.Context, prompt string) (string, error)
 	Name() string
 }
 
-// NewProvider creates the configured AI provider.
 func NewProvider(cfg *config.Config) (Provider, error) {
 	key := cfg.AI.ActiveKey()
 	if key == "" {
@@ -35,7 +33,6 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 	}
 }
 
-// NewProviderFor creates a provider for a specific provider name + key (used by setup wizard).
 func NewProviderFor(provider, key string) (Provider, error) {
 	switch provider {
 	case "claude":
@@ -49,21 +46,18 @@ func NewProviderFor(provider, key string) (Provider, error) {
 	}
 }
 
-// SummarizeStandup generates a daily standup from recent sessions.
 func SummarizeStandup(ctx context.Context, p Provider, sessions []*db.Session, logs map[int64][]*db.LogEntry) (string, error) {
 	gitDiff, _ := getGitContext()
 	prompt := buildStandupPrompt(sessions, logs, gitDiff, "")
 	return p.Complete(ctx, prompt)
 }
 
-// SummarizeStandupWithGitHub generates a standup enriched with GitHub activity.
 func SummarizeStandupWithGitHub(ctx context.Context, p Provider, sessions []*db.Session, logs map[int64][]*db.LogEntry, githubActivity string) (string, error) {
 	gitDiff, _ := getGitContext()
 	prompt := buildStandupPrompt(sessions, logs, gitDiff, githubActivity)
 	return p.Complete(ctx, prompt)
 }
 
-// AnalyzeStatsWithGitHub asks the AI to interpret stats enriched with GitHub data.
 func AnalyzeStatsWithGitHub(ctx context.Context, p Provider, statsJSON, githubActivity string) (string, error) {
 	prompt := fmt.Sprintf(`Analyze these developer time-tracking statistics and GitHub activity, then provide actionable insights.
 Be specific, encouraging, and concise (under 200 words).
@@ -83,21 +77,18 @@ GitHub Activity:
 	return p.Complete(ctx, prompt)
 }
 
-// GenerateStandup produces a standup in Yesterday/Today/Blockers format.
 func GenerateStandup(ctx context.Context, p Provider, sessions []*db.Session, logs map[int64][]*db.LogEntry, targetDate time.Time) (string, error) {
 	gitDiff, _ := getGitContext()
 	prompt := buildDailyStandupPrompt(sessions, logs, gitDiff, targetDate)
 	return p.Complete(ctx, prompt)
 }
 
-// SuggestCommitMessage proposes a stop message from git diff + log notes.
 func SuggestCommitMessage(ctx context.Context, p Provider, taskName string, notes []string) (string, error) {
 	gitDiff, _ := getGitContext()
 	prompt := buildCommitPrompt(taskName, notes, gitDiff)
 	return p.Complete(ctx, prompt)
 }
 
-// AnalyzeStats asks the AI to interpret tracking statistics.
 func AnalyzeStats(ctx context.Context, p Provider, statsJSON string) (string, error) {
 	prompt := fmt.Sprintf(`Analyze these developer time-tracking statistics and provide actionable insights.
 Be specific, encouraging, and concise (under 200 words).
@@ -113,7 +104,6 @@ Stats:
 	return p.Complete(ctx, prompt)
 }
 
-// CategorizeTask detects common tags from a message.
 func CategorizeTask(msg string) []string {
 	lower := strings.ToLower(msg)
 	tagMap := map[string][]string{
@@ -145,7 +135,6 @@ func CategorizeTask(msg string) []string {
 	return tags
 }
 
-// ValidateKey makes a minimal API call to confirm the key works.
 func ValidateKey(ctx context.Context, p Provider) error {
 	_, err := p.Complete(ctx, "Reply with only the word: ok")
 	return err

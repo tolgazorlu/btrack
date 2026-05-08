@@ -9,17 +9,6 @@ import (
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
-// handleMCPSlash dispatches /mcp inside the interactive console. The default
-// (`/mcp` with no subcommand) ensures the background HTTP server is running
-// and prints its URL plus copy-paste instructions for every supported AI
-// client. Subcommands target specific clients or stop the server.
-//
-//	/mcp                         start (if needed) + show register options
-//	/mcp :9000                   start on a custom port
-//	/mcp stop                    stop the background server
-//	/mcp status                  show url without (re)starting
-//	/mcp claude                  run `claude mcp add ...`
-//	/mcp cursor / gemini / chatgpt   print the JSON snippet to paste
 func handleMCPSlash(input string) {
 	rest := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(input), "/mcp"))
 	parts := strings.Fields(rest)
@@ -49,8 +38,6 @@ func handleMCPSlash(input string) {
 		return
 	}
 
-	// Accept addr overrides: empty (default), ":port", or "host:port".
-	// Anything else is a typo — show a hint rather than trying to bind.
 	if sub != "" && !strings.HasPrefix(sub, ":") && !strings.Contains(sub, ":") {
 		ui.Blank()
 		ui.Hint("unknown /mcp option: " + sub)
@@ -110,9 +97,6 @@ func printMCPStatus() {
 	ui.Blank()
 }
 
-// registerWithClaude shells out to `claude mcp add ...`. If the claude CLI
-// isn't on PATH (or the command fails), we fall back to printing the exact
-// command for the user to copy.
 func registerWithClaude() {
 	status := mcpserver.CurrentHTTPStatus()
 	if !status.Running {

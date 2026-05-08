@@ -41,7 +41,6 @@ Tips:
 		sessionID, _ := cmd.Flags().GetInt64("session")
 		force, _ := cmd.Flags().GetBool("force")
 
-		// --session flag: add note to a past session directly via DB.
 		if sessionID > 0 {
 			cfg, err := config.Load()
 			if err != nil {
@@ -77,7 +76,6 @@ Tips:
 			return nil
 		}
 
-		// Default: add note to the active session via daemon.
 		payload := daemon.LogPayload{Note: note}
 		client := daemon.NewClient()
 		resp, err := client.Send(daemon.ActionLog, payload)

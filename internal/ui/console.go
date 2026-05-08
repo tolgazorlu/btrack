@@ -10,13 +10,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Suggestion is one row in the /-autocomplete dropdown.
 type Suggestion struct {
-	Trigger string // e.g. "@create-session"
-	Hint    string // e.g. "→ btrack start"
+	Trigger string
+	Hint    string
 }
 
-// SortSuggestions returns s sorted alphabetically by Trigger (stable).
 func SortSuggestions(s []Suggestion) []Suggestion {
 	out := make([]Suggestion, len(s))
 	copy(out, s)
@@ -24,12 +22,6 @@ func SortSuggestions(s []Suggestion) []Suggestion {
 	return out
 }
 
-// ─── console (interactive REPL prompt) ───────────────────────────────────────
-
-// ConsoleModel renders the welcome banner (optionally) and a rounded
-// input box, mirroring the Claude Code / Gemini CLI splash. Each
-// `bubbletea` run captures one line of input then exits — the caller
-// loops to keep the REPL going.
 type ConsoleModel struct {
 	input       textinput.Model
 	tagline     string
@@ -40,15 +32,10 @@ type ConsoleModel struct {
 	quit        bool
 	showHelp    bool
 	showBanner  bool
-	suggestions []Suggestion // full alias list, alphabetised
-	suggCursor  int          // index inside the *filtered* list
+	suggestions []Suggestion
+	suggCursor  int
 }
 
-// NewConsoleModel returns a fresh console capturing one input.
-//   - tagline:    shown under the banner (e.g. "time tracker for developers")
-//   - version:    optional, shown next to tagline
-//   - hint:       optional one-line hint above the input
-//   - showBanner: render the big banner + tips block on top
 func NewConsoleModel(tagline, version, hint string, showBanner bool) ConsoleModel {
 	ti := textinput.New()
 	ti.Placeholder = "type a command, /action, or ask anything…"
@@ -72,22 +59,17 @@ func NewConsoleModel(tagline, version, hint string, showBanner bool) ConsoleMode
 	}
 }
 
-// WithSuggestions wires the /-autocomplete list into the model.
 func (m ConsoleModel) WithSuggestions(s []Suggestion) ConsoleModel {
 	m.suggestions = SortSuggestions(s)
 	return m
 }
 
-// filteredSuggestions returns the /-actions matching the current input.
-// Returns nil when the input doesn't start with "/".
 func (m ConsoleModel) filteredSuggestions() []Suggestion {
 	v := m.input.Value()
 	if !strings.HasPrefix(v, "/") {
 		return nil
 	}
 	q := strings.ToLower(strings.TrimPrefix(v, "/"))
-	// Only filter on the first whitespace-delimited token — once the user
-	// types "/start ", suggestions should disappear.
 	if i := strings.IndexAny(q, " \t"); i >= 0 {
 		return nil
 	}
@@ -130,7 +112,6 @@ func (m ConsoleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyTab:
-			// Tab fills the input with the highlighted suggestion.
 			if len(matches) > 0 {
 				if m.suggCursor >= len(matches) {
 					m.suggCursor = 0
@@ -164,18 +145,14 @@ func (m ConsoleModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
-	// Reset highlight whenever the visible suggestion list shrinks.
 	if n := len(m.filteredSuggestions()); m.suggCursor >= n {
 		m.suggCursor = 0
 	}
 	return m, cmd
 }
 
-// Value returns the trimmed input the user submitted.
-// Empty when the user pressed esc / ctrl-c.
 func (m ConsoleModel) Value() string { return m.value }
 
-// Aborted reports whether the user dismissed the prompt.
 func (m ConsoleModel) Aborted() bool { return m.quit }
 
 func (m ConsoleModel) View() string {
@@ -186,19 +163,16 @@ func (m ConsoleModel) View() string {
 	var sb strings.Builder
 
 	if m.showBanner {
-		// Banner
 		sb.WriteString("\n")
 		sb.WriteString(Banner())
 		sb.WriteString("\n")
 
-		// Tagline + version
 		taglineLine := Indent + StyleDimmed.Render(m.tagline)
 		if m.version != "" {
 			taglineLine += "  " + StyleDimmed.Render("·") + "  " + StyleHighlight.Render(m.version)
 		}
 		sb.WriteString(taglineLine + "\n\n")
 
-		// Tips block
 		sb.WriteString(Indent + StyleHighlight.Render("Tips for getting started:") + "\n")
 		sb.WriteString(Indent + StyleDimmed.Render("1. ") +
 			"Run any command — e.g. " + StyleHighlight.Render(`s "fix bug" -p myapp`) + "\n")
@@ -227,14 +201,12 @@ func (m ConsoleModel) View() string {
 		Render(m.input.View())
 	sb.WriteString(box + "\n")
 
-	// @-autocomplete dropdown.
 	if matches := m.filteredSuggestions(); len(matches) > 0 {
 		sb.WriteString(m.renderSuggestions(matches) + "\n")
 	} else {
 		sb.WriteString("\n")
 	}
 
-	// Footer hints — swap in tab/↑↓ when the dropdown is showing.
 	var hints []string
 	if len(m.filteredSuggestions()) > 0 {
 		hints = []string{
@@ -256,11 +228,9 @@ func (m ConsoleModel) View() string {
 	return sb.String()
 }
 
-// renderSuggestions draws the autocomplete dropdown under the input box.
 func (m ConsoleModel) renderSuggestions(matches []Suggestion) string {
 	const maxVisible = 6
 
-	// Window the list around the cursor so it stays visible.
 	start := 0
 	if len(matches) > maxVisible {
 		start = m.suggCursor - maxVisible/2
@@ -276,7 +246,6 @@ func (m ConsoleModel) renderSuggestions(matches []Suggestion) string {
 		end = len(matches)
 	}
 
-	// Pad triggers to a fixed column for alignment.
 	maxTrig := 0
 	for _, s := range matches[start:end] {
 		if len(s.Trigger) > maxTrig {
@@ -300,7 +269,6 @@ func (m ConsoleModel) renderSuggestions(matches []Suggestion) string {
 		rows = append(rows, row)
 	}
 
-	// Footer line if the list is truncated.
 	if len(matches) > maxVisible {
 		rows = append(rows,
 			StyleDimmed.Render("  … "+strconv.Itoa(len(matches)-maxVisible)+" more"),
@@ -317,4 +285,3 @@ func (m ConsoleModel) renderSuggestions(matches []Suggestion) string {
 
 	return box
 }
-

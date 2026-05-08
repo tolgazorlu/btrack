@@ -36,14 +36,13 @@ type StatusModel struct {
 	sessions         []*db.Session
 	mode             inputMode
 	inputText        string
-	subNoteParentID  int64 // ID of the last top-level note (for sub-note attachment)
+	subNoteParentID  int64
 	updateAvail      string
 	version          string
 	actionResult     string
 	actionIsErr      bool
 }
 
-// ── message types ─────────────────────────────────────────────────────────────
 type tickMsg time.Time
 type statusMsg *daemon.StatusData
 type errMsg error
@@ -55,8 +54,6 @@ type actionResultMsg struct {
 	isError bool
 }
 type clearResultMsg struct{}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 func NewStatusModel(client *daemon.Client, dailyHours int, idleMinutes int, store db.Store, version string) *StatusModel {
 	if dailyHours <= 0 {
@@ -85,7 +82,6 @@ func (m StatusModel) Init() tea.Cmd {
 func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// ── Input mode ────────────────────────────────────────────
 		if m.mode != modeNormal {
 			switch msg.Type {
 			case tea.KeyEsc:
@@ -109,8 +105,6 @@ func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.inputText = m.inputText[:len(m.inputText)-1]
 				}
 			default:
-				// Accept printable characters; space may arrive as KeyRunes or
-				// as a bare " " string depending on the terminal.
 				if msg.Type == tea.KeyRunes {
 					m.inputText += string(msg.Runes)
 				} else if s := msg.String(); len(s) == 1 && s != "\x00" {
@@ -120,7 +114,6 @@ func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// ── Normal mode ───────────────────────────────────────────
 		m.lastKey = time.Now()
 		switch msg.String() {
 		case "q", "ctrl+c", "esc":
@@ -158,7 +151,6 @@ func (m StatusModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg != nil && msg.Active && msg.Session != nil {
 			t, _ := time.Parse(time.RFC3339, msg.Session.StartTime)
 			m.startTime = t.Local()
-			// Track the most recent top-level note for sub-note attachment
 			m.subNoteParentID = 0
 			for _, log := range msg.RecentLog {
 				if log.ParentID == 0 && log.ID > m.subNoteParentID {
@@ -208,7 +200,6 @@ func (m StatusModel) View() string {
 		return b.String()
 	}
 
-	// ── Today's completed sessions ────────────────────────────────────────────
 	var completed []*db.Session
 	for _, s := range m.sessions {
 		if s.EndTime != nil {
@@ -251,13 +242,11 @@ func (m StatusModel) View() string {
 		b.WriteString("  " + sep + "\n\n")
 	}
 
-	// ── Sum of today's completed sessions ────────────────────────────────────
 	var completedToday time.Duration
 	for _, s := range completed {
 		completedToday += s.EndTime.Sub(s.StartTime)
 	}
 
-	// ── Active session ────────────────────────────────────────────────────────
 	if !m.status.Active || m.status.Session == nil {
 		b.WriteString(StyleSubtle.Render("  no active session\n"))
 		if completedToday > 0 {
@@ -305,7 +294,6 @@ func (m StatusModel) View() string {
 
 	b.WriteString("\n")
 
-	// Progress bar with time summary on the same line
 	totalToday := completedToday + elapsed
 	totalStr := fmt.Sprintf("%s / %dh today", compactDur(totalToday), m.dailyHours)
 	b.WriteString(fmt.Sprintf("%s  %s\n",
@@ -313,7 +301,6 @@ func (m StatusModel) View() string {
 		StyleDimmed.Render(totalStr),
 	))
 
-	// Idle warning when within last 20% of threshold
 	if m.idleMinutes > 0 {
 		idleThreshold := time.Duration(m.idleMinutes) * time.Minute
 		idleElapsed := time.Since(m.lastKey)
@@ -329,7 +316,6 @@ func (m StatusModel) View() string {
 
 	b.WriteString("\n")
 
-	// Recent notes — tree view (top-level + indented sub-notes)
 	if len(m.status.RecentLog) > 0 {
 		b.WriteString(StyleHighlight.Render("  recent notes") + "\n")
 
@@ -362,7 +348,6 @@ func (m StatusModel) View() string {
 		b.WriteString("\n")
 	}
 
-	// Action result feedback (note added / session stopped)
 	if m.actionResult != "" {
 		if m.actionIsErr {
 			b.WriteString(StyleError.Render("  ✗  "+m.actionResult) + "\n")
@@ -372,7 +357,6 @@ func (m StatusModel) View() string {
 		b.WriteString("\n")
 	}
 
-	// ── Input overlay / key hints ─────────────────────────────────────────────
 	switch m.mode {
 	case modeNote:
 		b.WriteString(StyleDimmed.Render("  ─────────────────────────────────────\n"))
@@ -415,8 +399,6 @@ func (m StatusModel) View() string {
 	return b.String()
 }
 
-// ─── progress bar ─────────────────────────────────────────────────────────────
-
 func RenderProgressBar(d time.Duration, dailyHours int) string {
 	return renderProgressBar(d, dailyHours)
 }
@@ -425,9 +407,6 @@ func renderProgressBar(d time.Duration, dailyHours int) string {
 	return renderProgressBarDual(d, 0, dailyHours)
 }
 
-// renderProgressBarDual draws a two-colour progress bar:
-//   fd-primary            = completed work (past sessions today)
-//   fd-accent-foreground  = active session elapsed time
 func renderProgressBarDual(completed, active time.Duration, dailyHours int) string {
 	const width = 40
 	if dailyHours <= 0 {
@@ -456,8 +435,6 @@ func renderProgressBarDual(completed, active time.Duration, dailyHours int) stri
 
 	return "  " + bar
 }
-
-// ─── tea.Cmd helpers ──────────────────────────────────────────────────────────
 
 func tickCmd() tea.Cmd {
 	return tea.Tick(250*time.Millisecond, func(t time.Time) tea.Msg {
@@ -575,8 +552,6 @@ func clearResultAfter(d time.Duration) tea.Cmd {
 		return clearResultMsg{}
 	})
 }
-
-// ─── local formatting ─────────────────────────────────────────────────────────
 
 func compactDur(d time.Duration) string {
 	h := int(d.Hours())

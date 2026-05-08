@@ -43,7 +43,7 @@ type PullRequest struct {
 	Number int
 	Title  string
 	Repo   string
-	Action string // opened | merged | closed | reviewed
+	Action string
 	Time   time.Time
 	URL    string
 }
@@ -68,7 +68,6 @@ func (a *Activity) IsEmpty() bool {
 	return len(a.Commits) == 0 && len(a.PullRequests) == 0 && len(a.Issues) == 0
 }
 
-// Summary returns a plain-text description of the activity for AI prompts.
 func (a *Activity) Summary() string {
 	if a.IsEmpty() {
 		return ""
@@ -135,8 +134,6 @@ func (c *Client) GetUser() (*UserInfo, error) {
 	return &u, nil
 }
 
-// searchCommits uses the GitHub search API to find commits authored by the user
-// in a date range. More reliable than events API for private repos.
 func (c *Client) searchCommits(since, until time.Time) ([]*Commit, error) {
 	dateFilter := fmt.Sprintf("%s..%s",
 		since.Local().Format("2006-01-02"),
@@ -164,7 +161,6 @@ func (c *Client) searchCommits(since, until time.Time) ([]*Commit, error) {
 	}
 
 	var result searchResult
-	// Search commits API requires the cloak preview header.
 	if err := c.do(path, "application/vnd.github.cloak-preview+json", &result); err != nil {
 		return nil, err
 	}
@@ -187,7 +183,6 @@ func (c *Client) searchCommits(since, until time.Time) ([]*Commit, error) {
 	return commits, nil
 }
 
-// raw event types used only for decoding
 type ghEvent struct {
 	Type      string          `json:"type"`
 	CreatedAt time.Time       `json:"created_at"`
@@ -223,16 +218,12 @@ type issuePayload struct {
 	} `json:"issue"`
 }
 
-// GetActivity fetches commits (via search API) and PR/issue events (via events API)
-// between since and until.
 func (c *Client) GetActivity(since, until time.Time) (*Activity, error) {
 	act := &Activity{Date: since}
 
-	// Use search API for commits — more reliable than events API for private repos.
 	if commits, err := c.searchCommits(since, until); err == nil {
 		act.Commits = commits
 	}
-	// Fall back to events API for PR and issue activity.
 	for page := 1; page <= 5; page++ {
 		var events []ghEvent
 		path := fmt.Sprintf("/users/%s/events?per_page=100&page=%d", c.username, page)
@@ -314,7 +305,6 @@ func (c *Client) GetActivity(since, until time.Time) (*Activity, error) {
 
 func (c *Client) Username() string { return c.username }
 
-// SplitByDay partitions an Activity into per-day buckets keyed by "2006-01-02" (local time).
 func SplitByDay(act *Activity) map[string]*Activity {
 	m := map[string]*Activity{}
 	add := func(key string) *Activity {

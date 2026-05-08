@@ -16,7 +16,7 @@ type Stats struct {
 	TagCounts      map[string]int
 	DailyBreakdown []DayStat
 	TopTasks       []TaskStat
-	HourlyPattern  [24]int // sessions started per hour
+	HourlyPattern  [24]int
 }
 
 type DayStat struct {
@@ -32,7 +32,6 @@ type TaskStat struct {
 	Duration time.Duration
 }
 
-// ComputeStats derives aggregate statistics from a slice of sessions.
 func ComputeStats(sessions []*Session, days int) *Stats {
 	s := &Stats{
 		Period:    fmt.Sprintf("last %d days", days),
@@ -58,22 +57,18 @@ func ComputeStats(sessions []*Session, days int) *Stats {
 			s.LongestSession = d
 		}
 
-		// Tags
 		for _, tag := range sess.Tags {
 			s.TagCounts[tag]++
 		}
 
-		// Hourly pattern
 		s.HourlyPattern[sess.StartTime.Local().Hour()]++
 
-		// Per-task
 		if _, ok := taskMap[sess.TaskName]; !ok {
 			taskMap[sess.TaskName] = &TaskStat{Name: sess.TaskName}
 		}
 		taskMap[sess.TaskName].Sessions++
 		taskMap[sess.TaskName].Duration += d
 
-		// Per-day
 		dayKey := sess.StartTime.Local().Format("2006-01-02")
 		if _, ok := dayMap[dayKey]; !ok {
 			dayMap[dayKey] = &DayStat{
@@ -89,7 +84,6 @@ func ComputeStats(sessions []*Session, days int) *Stats {
 		s.AvgDuration = s.TotalDuration / time.Duration(s.TotalSessions)
 	}
 
-	// Top tasks (sorted by duration desc)
 	for _, t := range taskMap {
 		s.TopTasks = append(s.TopTasks, *t)
 	}
@@ -100,7 +94,6 @@ func ComputeStats(sessions []*Session, days int) *Stats {
 		s.TopTasks = s.TopTasks[:5]
 	}
 
-	// Daily breakdown for last `days` days (fill gaps)
 	for i := days - 1; i >= 0; i-- {
 		day := now.Local().AddDate(0, 0, -i).Truncate(24 * time.Hour)
 		key := day.Format("2006-01-02")
@@ -117,7 +110,6 @@ func ComputeStats(sessions []*Session, days int) *Stats {
 	return s
 }
 
-// ToJSON produces a human-readable JSON-like summary for the AI prompt.
 func (s *Stats) ToJSON() string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "{\n")
@@ -127,7 +119,6 @@ func (s *Stats) ToJSON() string {
 	fmt.Fprintf(&sb, "  \"avg_session_minutes\": %.1f,\n", s.AvgDuration.Minutes())
 	fmt.Fprintf(&sb, "  \"longest_session_minutes\": %.1f,\n", s.LongestSession.Minutes())
 
-	// Top tasks
 	fmt.Fprintf(&sb, "  \"top_tasks\": [\n")
 	for i, t := range s.TopTasks {
 		comma := ","
@@ -139,7 +130,6 @@ func (s *Stats) ToJSON() string {
 	}
 	fmt.Fprintf(&sb, "  ],\n")
 
-	// Tags
 	fmt.Fprintf(&sb, "  \"tag_distribution\": {")
 	i := 0
 	for tag, count := range s.TagCounts {
@@ -151,7 +141,6 @@ func (s *Stats) ToJSON() string {
 	}
 	fmt.Fprintf(&sb, "},\n")
 
-	// Peak hours
 	peakHour, peakCount := 0, 0
 	for h, c := range s.HourlyPattern {
 		if c > peakCount {
@@ -161,7 +150,6 @@ func (s *Stats) ToJSON() string {
 	}
 	fmt.Fprintf(&sb, "  \"peak_hour\": %d,\n", peakHour)
 
-	// Daily sessions
 	fmt.Fprintf(&sb, "  \"daily_sessions\": [")
 	for i, d := range s.DailyBreakdown {
 		if i > 0 {

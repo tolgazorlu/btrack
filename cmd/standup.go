@@ -41,14 +41,12 @@ Setup:
 		}
 		defer store.Close()
 
-		// Determine the target date and sessions to include.
 		now := time.Now()
 		var sessions []*db.Session
 		var targetDate time.Time
 
 		switch {
 		case days > 1:
-			// Multi-day: fetch recent sessions spanning the range.
 			targetDate = now
 			sessions, err = store.GetRecentSessions(days * 15)
 			if err != nil {
@@ -69,7 +67,6 @@ Setup:
 				return fmt.Errorf("load sessions: %w", err)
 			}
 		default:
-			// Default: yesterday.
 			targetDate = now.AddDate(0, 0, -1)
 			sessions, err = store.GetSessionsForDate(targetDate)
 			if err != nil {
@@ -98,7 +95,6 @@ Setup:
 			return err
 		}
 
-		// Optionally enrich with GitHub activity.
 		githubActivity := ""
 		if ghClient := ghClientFromConfig(cfg); ghClient != nil {
 			since := startOfDay(targetDate)

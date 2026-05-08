@@ -96,9 +96,6 @@ Tools exposed:
 }
 
 func init() {
-	// NoOptDefVal lets `--http` (no value) act as a shortcut for the default
-	// localhost address; pass `--http :9000` or `--http 127.0.0.1:9000` to
-	// pick your own.
 	mcpCmd.Flags().String("http", "", "run as Streamable HTTP server on this address (default 127.0.0.1:8765 if no value)")
 	mcpCmd.Flags().Lookup("http").NoOptDefVal = "127.0.0.1:8765"
 	rootCmd.AddCommand(mcpCmd)

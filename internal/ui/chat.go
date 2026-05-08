@@ -9,10 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// ─── types ────────────────────────────────────────────────────────────────────
-
 type chatMsg struct {
-	role string // "you" | "ai"
+	role string
 	text string
 }
 
@@ -21,10 +19,7 @@ type chatResponseMsg struct {
 	err  error
 }
 
-// SendFn is the AI completion function injected from cmd layer.
 type SendFn func(ctx context.Context, prompt string) (string, error)
-
-// ─── model ───────────────────────────────────────────────────────────────────
 
 type ChatModel struct {
 	msgs      []chatMsg
@@ -32,7 +27,7 @@ type ChatModel struct {
 	loading   bool
 	frame     int
 	sendFn    SendFn
-	sysPrompt string // btrack context injected at startup
+	sysPrompt string
 	quitting  bool
 	width     int
 }
@@ -59,8 +54,6 @@ func NewChatModel(sysPrompt string, fn SendFn) ChatModel {
 		},
 	}
 }
-
-// ─── tea interface ───────────────────────────────────────────────────────────
 
 func (m ChatModel) Init() tea.Cmd {
 	return textinput.Blink
@@ -118,8 +111,6 @@ func (m ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func chatTickCmd() tea.Cmd {
 	return func() tea.Msg {
-		// Small sleep via tea.Tick would be cleaner, but a no-op tick is fine
-		// for spinner — each keypress or response will also redraw.
 		return chatTickMsg{}
 	}
 }
@@ -147,8 +138,6 @@ func (m ChatModel) doSend(userText string) tea.Cmd {
 	}
 }
 
-// ─── view ────────────────────────────────────────────────────────────────────
-
 func (m ChatModel) View() string {
 	if m.quitting {
 		return ""
@@ -161,7 +150,6 @@ func (m ChatModel) View() string {
 	sb.WriteString("  " + StyleTitle.Render("btrack ai") + "  " + StyleDimmed.Render("chat  ·  ctrl+c to exit") + "\n")
 	sb.WriteString("  " + sep + "\n\n")
 
-	// Show messages — cap at last 12 to avoid overflow.
 	msgs := m.msgs
 	if len(msgs) > 12 {
 		msgs = msgs[len(msgs)-12:]

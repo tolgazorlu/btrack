@@ -142,7 +142,6 @@ func extractTagsFromMessage(msg string) []string {
 	return tags
 }
 
-// parseTimeOnDay parses "HH:MM" and places it on the same calendar day as ref.
 func parseTimeOnDay(hhmm string, ref time.Time) (time.Time, error) {
 	var h, m int
 	if _, err := fmt.Sscanf(hhmm, "%d:%d", &h, &m); err != nil || h < 0 || h > 23 || m < 0 || m > 59 {

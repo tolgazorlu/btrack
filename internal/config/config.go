@@ -27,17 +27,17 @@ type Config struct {
 type GCalConfig struct {
 	ClientID     string `mapstructure:"client_id"`
 	ClientSecret string `mapstructure:"client_secret"`
-	CalendarID   string `mapstructure:"calendar_id"` // default: "primary"
-	AutoSync     bool   `mapstructure:"auto_sync"`   // push event after every stop
+	CalendarID   string `mapstructure:"calendar_id"`
+	AutoSync     bool   `mapstructure:"auto_sync"`
 }
 
 type WorkConfig struct {
 	DailyHours  int `mapstructure:"daily_hours"`
-	IdleMinutes int `mapstructure:"idle_minutes"` // 0 = disabled
+	IdleMinutes int `mapstructure:"idle_minutes"`
 }
 
 type ProjectConfig struct {
-	Rate float64 `mapstructure:"rate"` // hourly billing rate
+	Rate float64 `mapstructure:"rate"`
 }
 
 type DatabaseConfig struct {
@@ -47,14 +47,13 @@ type DatabaseConfig struct {
 }
 
 type AIConfig struct {
-	Provider  string `mapstructure:"provider"`   // active provider: "openai" | "claude" | "gemini"
-	OpenAIKey string `mapstructure:"openai_key"` // per-provider keys
+	Provider  string `mapstructure:"provider"`
+	OpenAIKey string `mapstructure:"openai_key"`
 	ClaudeKey string `mapstructure:"claude_key"`
 	GeminiKey string `mapstructure:"gemini_key"`
-	Model     string `mapstructure:"model"` // optional model override
+	Model     string `mapstructure:"model"`
 }
 
-// ActiveKey returns the API key for the currently selected provider.
 func (a AIConfig) ActiveKey() string {
 	switch a.Provider {
 	case "claude":
@@ -161,13 +160,11 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// Reload forces a fresh read of the config file.
 func Reload() (*Config, error) {
 	instance = nil
 	return Load()
 }
 
-// SaveProviderKey persists an API key for a provider and sets it as active.
 func SaveProviderKey(provider, key string) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -190,12 +187,10 @@ func SaveProviderKey(provider, key string) error {
 		return fmt.Errorf("write config: %w", err)
 	}
 
-	// Invalidate cache so next Load() picks up new values.
 	instance = nil
 	return nil
 }
 
-// SaveGitHub persists the GitHub PAT and username.
 func SaveGitHub(pat, username string) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -209,7 +204,6 @@ func SaveGitHub(pat, username string) error {
 	return nil
 }
 
-// SaveDailyHours persists the daily work-hours target.
 func SaveDailyHours(hours int) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -222,7 +216,6 @@ func SaveDailyHours(hours int) error {
 	return nil
 }
 
-// SaveIdleMinutes persists the idle auto-stop threshold (0 = disabled).
 func SaveIdleMinutes(minutes int) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -235,7 +228,6 @@ func SaveIdleMinutes(minutes int) error {
 	return nil
 }
 
-// SaveProjectRate persists an hourly billing rate for a project.
 func SaveProjectRate(project string, rate float64) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -248,7 +240,6 @@ func SaveProjectRate(project string, rate float64) error {
 	return nil
 }
 
-// SaveGCal persists Google Calendar credentials.
 func SaveGCal(clientID, clientSecret, calendarID string, autoSync bool) error {
 	if _, err := Load(); err != nil {
 		return err

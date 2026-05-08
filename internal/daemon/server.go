@@ -65,12 +65,10 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	// Restore any in-progress session from db.
 	if sess, err := s.store.GetActiveSession(); err == nil && sess != nil {
 		s.state.session = sess
 	}
 
-	// Start idle-detection goroutine if configured.
 	if s.idleMinutes > 0 {
 		go s.idleWatcher()
 	}
@@ -194,9 +192,6 @@ func (s *Server) handleStop(req Request) Response {
 	return Response{Success: true, Data: raw}
 }
 
-// handleSwitch atomically stops the active session (if any) and starts a new
-// one in the same locked critical section. This avoids the race window the
-// CLI used to create when calling stop+start as two separate IPC round-trips.
 func (s *Server) handleSwitch(req Request) Response {
 	var p SwitchPayload
 	if err := json.Unmarshal(req.Payload, &p); err != nil {
@@ -302,7 +297,6 @@ func (s *Server) handleResume() Response {
 		return Response{Success: false, Error: "no previous session found — start your first one with: btrack start <task>"}
 	}
 
-	// Create a new session copying the task context from the last session.
 	newSess := &db.Session{
 		TaskName:  sess.TaskName,
 		Project:   sess.Project,
@@ -356,7 +350,6 @@ func sessionToDTO(s *db.Session) *SessionDTO {
 	return dto
 }
 
-// idleWatcher runs in a goroutine and auto-stops the session if idle too long.
 func (s *Server) idleWatcher() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
@@ -369,7 +362,6 @@ func (s *Server) idleWatcher() {
 	}
 }
 
-// autoStopIdle must be called with s.mu held.
 func (s *Server) autoStopIdle() {
 	if s.state.session == nil {
 		return

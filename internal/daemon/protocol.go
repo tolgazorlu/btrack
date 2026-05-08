@@ -2,7 +2,6 @@ package daemon
 
 import "encoding/json"
 
-// Action constants for IPC protocol.
 const (
 	ActionStart  = "start"
 	ActionStop   = "stop"
@@ -35,8 +34,6 @@ type StopPayload struct {
 	Message string `json:"message"`
 }
 
-// SwitchPayload combines the closing message for the active session with
-// the parameters for the new session that should start atomically.
 type SwitchPayload struct {
 	TaskName  string `json:"task_name"`
 	Message   string `json:"message,omitempty"`
@@ -45,7 +42,6 @@ type SwitchPayload struct {
 	Project   string `json:"project,omitempty"`
 }
 
-// SwitchData is returned by ActionSwitch: both the stopped and started sessions.
 type SwitchData struct {
 	Stopped *SessionDTO `json:"stopped,omitempty"`
 	Started *SessionDTO `json:"started"`
@@ -53,7 +49,7 @@ type SwitchData struct {
 
 type LogPayload struct {
 	Note     string `json:"note"`
-	ParentID int64  `json:"parent_id,omitempty"` // 0 = top-level note
+	ParentID int64  `json:"parent_id,omitempty"`
 }
 
 type StatusData struct {
@@ -65,8 +61,8 @@ type StatusData struct {
 type SessionDTO struct {
 	ID        int64    `json:"id"`
 	TaskName  string   `json:"task_name"`
-	StartTime string   `json:"start_time"` // RFC3339
-	EndTime   string   `json:"end_time,omitempty"` // RFC3339; empty when active
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time,omitempty"`
 	Message   string   `json:"message,omitempty"`
 	Tags      []string `json:"tags,omitempty"`
 	GitBranch string   `json:"git_branch,omitempty"`
@@ -76,7 +72,7 @@ type SessionDTO struct {
 
 type LogDTO struct {
 	ID        int64  `json:"id"`
-	ParentID  int64  `json:"parent_id,omitempty"` // 0 = top-level
+	ParentID  int64  `json:"parent_id,omitempty"`
 	Note      string `json:"note"`
-	Timestamp string `json:"timestamp"` // RFC3339
+	Timestamp string `json:"timestamp"`
 }

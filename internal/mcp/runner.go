@@ -14,24 +14,17 @@ import (
 	"github.com/tolgazorlu/btrack/internal/config"
 )
 
-// HTTPStatus reports whether a background MCP HTTP server is currently
-// running, plus where to reach it. Zero value means "not running".
 type HTTPStatus struct {
 	Running bool
 	PID     int
-	Addr    string // host:port, e.g. "127.0.0.1:8765"
-	URL     string // http://host:port/mcp
+	Addr    string
+	URL     string
 }
 
-// httpPidFile holds the pid+addr of any background HTTP server started by
-// `/mcp` from the console (or by `btrack mcp start` later). Lives next to
-// the daemon's pid/socket files in DataDir.
 func httpPidFile() string {
 	return filepath.Join(config.DataDir(), "mcp-http.pid")
 }
 
-// CurrentHTTPStatus reads the pid file, probes the process, and returns
-// the current state. Cleans up stale pid files automatically.
 func CurrentHTTPStatus() HTTPStatus {
 	data, err := os.ReadFile(httpPidFile())
 	if err != nil {
@@ -58,10 +51,6 @@ func CurrentHTTPStatus() HTTPStatus {
 	}
 }
 
-// StartHTTPBackground forks `btrack mcp --http addr` as a detached child
-// process and waits briefly for it to start listening. If a server is
-// already recorded in the pid file and still alive, returns its status
-// without spawning a new one.
 func StartHTTPBackground(addr string) (HTTPStatus, error) {
 	addr = NormalizeHTTPAddr(addr)
 
@@ -69,8 +58,6 @@ func StartHTTPBackground(addr string) (HTTPStatus, error) {
 		return cur, nil
 	}
 
-	// Fail fast if the port is already taken — beats spawning a child that
-	// will exit a few hundred ms later with a confusing error.
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return HTTPStatus{}, fmt.Errorf("port %s in use: %w", addr, err)
@@ -104,7 +91,6 @@ func StartHTTPBackground(addr string) (HTTPStatus, error) {
 		return HTTPStatus{}, fmt.Errorf("write pid file: %w", err)
 	}
 
-	// Poll the address until it accepts a connection (or we give up).
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
 		if conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond); err == nil {
@@ -114,8 +100,6 @@ func StartHTTPBackground(addr string) (HTTPStatus, error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	// Spawn succeeded but listener never came up — return whatever we have
-	// so the caller can decide whether to surface it as an error.
 	cur := CurrentHTTPStatus()
 	if !cur.Running {
 		return HTTPStatus{}, errors.New("server did not start in time")
@@ -123,7 +107,6 @@ func StartHTTPBackground(addr string) (HTTPStatus, error) {
 	return cur, nil
 }
 
-// StopHTTPBackground kills the recorded background HTTP server.
 func StopHTTPBackground() error {
 	cur := CurrentHTTPStatus()
 	if !cur.Running {

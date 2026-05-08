@@ -7,32 +7,24 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Palette — docs Emerald fd-* theme (@theme + .dark), hex from the same HSL values.
-// lipgloss.AdaptiveColor: Light = @theme (light UI), Dark = .dark
-//
-// Docs also define fd-background, fd-primary-foreground, fd-secondary, fd-card,
-// fd-popover, fd-ring (same hue as primary) — available for future full-bleed UI;
-// this file maps the tokens used by btrack TUI and plain-text helpers.
 const (
-	// @theme (light) — hex from docs fd-* HSL
-	hexLightForeground          = "#1c4037" // hsl(165, 40%, 18%)  fd-foreground
-	hexLightPrimary             = "#1fad91" // hsl(168, 70%, 40%)  fd-primary
-	hexLightAccent              = "#d9f2ec" // hsl(165, 50%, 90%)  fd-accent
-	hexLightAccentForeground    = "#0f5748" // hsl(168, 70%, 20%)  fd-accent-foreground
-	hexLightMuted               = "#e2f3ef" // hsl(165, 40%, 92%)  fd-muted
-	hexLightMutedForeground     = "#509584" // hsl(165, 30%, 45%)  fd-muted-foreground
-	hexLightSecondaryForeground = "#12493e" // hsl(168, 60%, 18%)  fd-secondary-foreground
-	hexLightBorderOpaque        = "#94d1c5" // hsl(168, 40%, 70%)  fd-border (opaque TUI stand-in)
+	hexLightForeground          = "#1c4037"
+	hexLightPrimary             = "#1fad91"
+	hexLightAccent              = "#d9f2ec"
+	hexLightAccentForeground    = "#0f5748"
+	hexLightMuted               = "#e2f3ef"
+	hexLightMutedForeground     = "#509584"
+	hexLightSecondaryForeground = "#12493e"
+	hexLightBorderOpaque        = "#94d1c5"
 
-	// .dark
-	hexDarkForeground          = "#d4ede8" // hsl(168, 40%, 88%)  fd-foreground
-	hexDarkPrimary             = "#52e0c4" // hsl(168, 70%, 60%)  fd-primary
-	hexDarkAccent              = "#20323c" // hsl(200, 30%, 18%)  fd-accent
-	hexDarkAccentForeground    = "#93ecda" // hsl(168, 70%, 75%)  fd-accent-foreground
-	hexDarkMuted               = "#152228" // hsl(200, 30%, 12%)  fd-muted
-	hexDarkMutedForeground     = "#8fbcb3" // hsl(168, 25%, 65%)  fd-muted-foreground
-	hexDarkSecondaryForeground = "#d4ede8" // hsl(168, 40%, 88%)  fd-secondary-foreground
-	hexDarkBorderOpaque        = "#367d6f" // hsl(168, 40%, 35%)  fd-border (opaque TUI stand-in)
+	hexDarkForeground          = "#d4ede8"
+	hexDarkPrimary             = "#52e0c4"
+	hexDarkAccent              = "#20323c"
+	hexDarkAccentForeground    = "#93ecda"
+	hexDarkMuted               = "#152228"
+	hexDarkMutedForeground     = "#8fbcb3"
+	hexDarkSecondaryForeground = "#d4ede8"
+	hexDarkBorderOpaque        = "#367d6f"
 )
 
 func ac(light, dark string) lipgloss.AdaptiveColor {
@@ -48,7 +40,7 @@ var (
 	colorAccentForeground   = ac(hexLightAccentForeground, hexDarkAccentForeground)
 	colorMutedFill          = ac(hexLightMuted, hexDarkMuted)
 	colorBorder             = ac(hexLightBorderOpaque, hexDarkBorderOpaque)
-	colorSuccess            = colorPrimary // completed / positive — fd-primary
+	colorSuccess            = colorPrimary
 	colorWarning            = colorAccentForeground
 	colorError              = colorForeground
 )
@@ -100,8 +92,6 @@ var (
 			Bold(true)
 )
 
-// ColorBorder, ColorMuted, ColorPrimary, ColorSecondary — for cmd-local lipgloss
-// (tables, welcome). Other fd tokens drive Style* above and the hex const block.
 var (
 	ColorBorder    = colorBorder
 	ColorMuted     = colorMuted
@@ -109,7 +99,6 @@ var (
 	ColorSecondary = colorSecondary
 )
 
-// PulseFrames are animation frames for the active indicator.
 var PulseFrames = []string{"●", "◉", "○", "◉"}
 
 func FormatDuration(d time.Duration) string {

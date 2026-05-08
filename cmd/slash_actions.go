@@ -7,11 +7,7 @@ import (
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
-// slashAlias maps a /command name to the cobra command path it expands to.
-// Every action here is reachable as "/name [args…]" inside the interactive
-// console. Short single-letter aliases are included so muscle-memory works.
 var slashAlias = map[string][]string{
-	// ── session ──────────────────────────────────────────────────────────────
 	"start":  {"start"},
 	"s":      {"start"},
 	"stop":   {"stop"},
@@ -24,7 +20,6 @@ var slashAlias = map[string][]string{
 	"n":      {"note"},
 	"break":  {"break"},
 
-	// ── views ─────────────────────────────────────────────────────────────────
 	"status":   {"status"},
 	"w":        {"status"},
 	"history":  {"history"},
@@ -36,7 +31,6 @@ var slashAlias = map[string][]string{
 	"search":   {"search"},
 	"tag":      {"tag"},
 
-	// ── ai ────────────────────────────────────────────────────────────────────
 	"standup":  {"standup"},
 	"su":       {"standup"},
 	"insights": {"ai", "ins"},
@@ -44,16 +38,12 @@ var slashAlias = map[string][]string{
 	"chat":     {"ai"},
 	"setup":    {"ai", "setup"},
 
-	// ── system ────────────────────────────────────────────────────────────────
 	"config":  {"config"},
 	"export":  {"export"},
 	"invoice": {"invoice"},
 	"init":    {"init"},
 }
 
-// slashActionHints provides a human-readable one-liner for each canonical
-// command shown in the autocomplete dropdown. Keys are the primary (longest)
-// name; aliases deliberately share the same hint so the list is informative.
 var slashActionHints = map[string]string{
 	"start":    "start a new tracking session",
 	"s":        "start a new tracking session",
@@ -88,11 +78,6 @@ var slashActionHints = map[string]string{
 	"init":     "create .btrack project file",
 }
 
-// expandSlashAction converts ["/s", "fix bug", "-p", "myapp"]
-// into ["start", "fix bug", "-p", "myapp"].
-//
-// The leading "/" must already be stripped from args[0] by the caller.
-// Returns (args, true) on a match, (nil, false) when unknown.
 func expandSlashAction(args []string) ([]string, bool) {
 	if len(args) == 0 {
 		return nil, false
@@ -108,9 +93,6 @@ func expandSlashAction(args []string) ([]string, bool) {
 	return out, true
 }
 
-// slashSuggestions returns the slash-action aliases as ui.Suggestion rows for
-// the console autocomplete dropdown. Meta-commands (/help, /exit, /clear,
-// /tools, /mcp) are added separately in runConsole so they appear in the list.
 func slashSuggestions() []ui.Suggestion {
 	out := make([]ui.Suggestion, 0, len(slashAlias))
 	for k, target := range slashAlias {
@@ -126,8 +108,6 @@ func slashSuggestions() []ui.Suggestion {
 	return out
 }
 
-// printSlashActions renders a help table of all known slash commands.
-// Used by /help inside the console.
 func printSlashActions() {
 	ui.Blank()
 	ui.Section("/ commands")
