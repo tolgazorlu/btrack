@@ -1,11 +1,18 @@
-.PHONY: build install clean test lint release
+.PHONY: build install clean test lint release sync-skill
 
 BINARY   = btrack
 VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS  = -ldflags "-X github.com/tolgazorlu/btrack/cmd.Version=$(VERSION) -s -w"
 GOFLAGS  =
 
-build:
+# Keep the embedded skill copy in sync with the canonical one used by Claude Code
+# inside this repo. Run before `make build` if SKILL.md changed.
+sync-skill:
+	@mkdir -p cmd/skill_data/btrack-tracker
+	@cp .claude/skills/btrack-tracker/SKILL.md cmd/skill_data/btrack-tracker/SKILL.md
+	@echo "synced .claude/skills/btrack-tracker/SKILL.md -> cmd/skill_data/btrack-tracker/SKILL.md"
+
+build: sync-skill
 	go build $(LDFLAGS) -o $(BINARY) .
 
 install: build
@@ -22,7 +29,7 @@ lint:
 	golangci-lint run ./...
 
 # Cross-platform release builds
-release:
+release: sync-skill
 	mkdir -p dist
 	GOOS=linux   GOARCH=amd64  go build $(LDFLAGS) -o dist/$(BINARY)-linux-amd64 .
 	GOOS=linux   GOARCH=arm64  go build $(LDFLAGS) -o dist/$(BINARY)-linux-arm64 .

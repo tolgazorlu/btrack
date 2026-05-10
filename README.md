@@ -294,7 +294,25 @@ Once registered, ask the assistant things like *"What am I tracking right now?"*
 
 ### Claude Skill
 
-This repo also ships a [Claude Code skill](.claude/skills/btrack-tracker/SKILL.md) that turns the MCP into a workflow — Claude auto-starts a session before coding, drops checkpoint notes for non-obvious findings, and stops the session right before `git commit` so [`btrack shipped`](#shipped) lines up. To use it in your own projects, copy it into `~/.claude/skills/`. Full docs: [docs/claude-skill](https://btrack.dev/docs/claude-skill).
+The MCP gives Claude the *ability* to call `btrack_*` tools. The bundled `btrack-tracker` skill teaches it to *use them automatically* — auto-start a session before coding, drop checkpoint notes for non-obvious findings, and stop the session right before `git commit` so [`btrack shipped`](#shipped) lines commits up with sessions.
+
+Install it with one command:
+
+```bash
+btrack skill install
+```
+
+This writes `~/.claude/skills/btrack-tracker/SKILL.md` (the skill is embedded in the binary, so it always matches your installed btrack version). Restart Claude Code afterward so it picks up both the MCP and the skill.
+
+Other skill commands:
+
+```bash
+btrack skill print       # dump the skill markdown to stdout
+btrack skill path        # print the install path
+btrack skill install --force   # overwrite an existing customized skill
+```
+
+Full docs: [docs/claude-skill](https://btrack.dev/docs/claude-skill).
 
 ---
 
