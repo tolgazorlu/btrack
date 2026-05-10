@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/daemon"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
@@ -47,6 +48,19 @@ Controls:
 		noSound, _ := cmd.Flags().GetBool("no-sound")
 		noNotify, _ := cmd.Flags().GetBool("no-notify")
 
+		// Config sets the defaults; --no-sound / --no-notify suppress on top.
+		sound, notify := true, true
+		if cfg, err := config.Load(); err == nil {
+			sound = cfg.Pomo.Sound
+			notify = cfg.Pomo.Notify
+		}
+		if noSound {
+			sound = false
+		}
+		if noNotify {
+			notify = false
+		}
+
 		client := daemon.NewClient()
 
 		// Check no session is already active
@@ -59,7 +73,7 @@ Controls:
 		}
 
 		model := ui.NewPomoModel(taskName, client, workMins, breakMins, longBreakMins, rounds).
-			WithAlerts(!noSound, !noNotify)
+			WithAlerts(sound, notify)
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		_, err = p.Run()
 		return err

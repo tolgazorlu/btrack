@@ -38,9 +38,10 @@ type GCalConfig struct {
 }
 
 type WorkConfig struct {
-	DailyHours  int `mapstructure:"daily_hours"`
-	IdleMinutes int `mapstructure:"idle_minutes"`
-	MaxHours    int `mapstructure:"max_hours"`
+	DailyHours      int `mapstructure:"daily_hours"`
+	IdleMinutes     int `mapstructure:"idle_minutes"`
+	MaxHours        int `mapstructure:"max_hours"`
+	ReminderMinutes int `mapstructure:"reminder_minutes"`
 }
 
 type ProjectConfig struct {
@@ -250,6 +251,18 @@ func SaveMaxHours(hours int) error {
 	return nil
 }
 
+func SaveReminderMinutes(minutes int) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("work.reminder_minutes", minutes)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
 func SavePomoSound(enabled bool) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -323,6 +336,7 @@ work:
   daily_hours: 8        # target working hours per day
   # idle_minutes: 0     # auto-stop after N minutes with no btrack activity (0 = off)
   # max_hours: 12       # hard cap on a single session's duration (0 = off)
+  # reminder_minutes: 0 # OS notification every N min while a session is running (0 = off)
 
 pomo:
   sound: true           # play a sound on phase transitions

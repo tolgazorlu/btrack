@@ -63,7 +63,11 @@
       "Bash(./btrack status *)",
       "Bash(./btrack daemon *)",
       "Bash(./btrack history *)",
-      "Bash(./btrack pomo *)"
+      "Bash(./btrack pomo *)",
+      "Bash(grep -A4 \"pomo$\")",
+      "Bash(grep -A3 \"pomo$\")",
+      "Bash(./btrack notify-test *)",
+      "Bash(grep -A6 \"^  work$\")"
     ]
   }
 }

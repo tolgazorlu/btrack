@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
@@ -19,6 +20,7 @@ Examples:
   btrack config hours 6                  set daily work target
   btrack config idle 15                  auto-stop after 15 min idle (0 = off)
   btrack config max-hours 12             cap any session at 12h (0 = off)
+  btrack config reminder 60              ping every 60 min while session runs (0 = off)
   btrack config pomo-sound off           silence pomo phase-change sound
   btrack config pomo-notify off          silence pomo phase-change notifications
   btrack config project myapp rate 150   set hourly rate for a project
@@ -48,6 +50,11 @@ Config file: ~/.config/btrack/config.yaml`,
 			maxVal = fmt.Sprintf("%d h", cfg.Work.MaxHours)
 		}
 		ui.KV("max session", ui.StyleHighlight.Render(maxVal))
+		reminderVal := "off"
+		if cfg.Work.ReminderMinutes > 0 {
+			reminderVal = fmt.Sprintf("every %d min", cfg.Work.ReminderMinutes)
+		}
+		ui.KV("reminder", ui.StyleHighlight.Render(reminderVal))
 		ui.Blank()
 
 		ui.Section("pomo")
@@ -203,6 +210,43 @@ var configPomoNotifyCmd = &cobra.Command{
 	},
 }
 
+var configReminderCmd = &cobra.Command{
+	Use:   "reminder <minutes>",
+	Short: "OS notification every N minutes while a session is running (0 = off)",
+	Long: `Send an OS notification + sound every N minutes the active session
+keeps running. Designed to catch forgotten sessions — if you start a
+timer and walk away, the daemon will ping you on a regular cadence.
+
+The reminder counter resets when a session ends (via stop, switch, or
+auto-stop), so a fresh session starts with a clean cadence.
+
+Examples:
+  btrack config reminder 60    ping every 1h
+  btrack config reminder 30    ping every 30 min (more aggressive)
+  btrack config reminder 0     disable reminders
+
+Tip: run  btrack notify-test  to verify notifications work on your machine.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		minutes, err := strconv.Atoi(args[0])
+		if err != nil || minutes < 0 {
+			return fmt.Errorf("minutes must be a non-negative number")
+		}
+		if err := config.SaveReminderMinutes(minutes); err != nil {
+			return err
+		}
+		ui.Blank()
+		if minutes == 0 {
+			ui.OK("session reminders disabled")
+		} else {
+			ui.OK("session reminder → " + ui.StyleHighlight.Render(fmt.Sprintf("every %d min", minutes)))
+		}
+		ui.Hint("restart the daemon to apply: btrack daemon restart")
+		ui.Blank()
+		return nil
+	},
+}
+
 var configMaxHoursCmd = &cobra.Command{
 	Use:   "max-hours <hours>",
 	Short: "Cap any single session at N hours (0 = disabled)",
@@ -267,6 +311,14 @@ Examples:
 }
 
 func init() {
-	configCmd.AddCommand(configHoursCmd, configIdleCmd, configMaxHoursCmd, configProjectCmd)
+	configCmd.AddCommand(
+		configHoursCmd,
+		configIdleCmd,
+		configMaxHoursCmd,
+		configReminderCmd,
+		configPomoSoundCmd,
+		configPomoNotifyCmd,
+		configProjectCmd,
+	)
 	rootCmd.AddCommand(configCmd)
 }
