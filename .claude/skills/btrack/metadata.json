@@ -1,0 +1,18 @@
+{
+  "name": "btrack",
+  "version": "0.6.7",
+  "author": "tolgazorlu",
+  "license": "MIT",
+  "description": "Time-track coding sessions automatically from Claude Code via the btrack CLI and its local MCP server. Auto-starts a session before non-trivial work, drops checkpoint notes, and stops right before git commit so btrack shipped lines commits up with sessions.",
+  "homepage": "https://btrack.dev",
+  "repository": "https://github.com/tolgazorlu/btrack",
+  "tags": [
+    "time-tracking",
+    "productivity",
+    "mcp",
+    "git",
+    "standup",
+    "developer-tools",
+    "claude-code"
+  ]
+}

@@ -1,0 +1,169 @@
+---
+title: Adding a Skill
+description: How to add a new Claude Code skill to the btrack repo — folder convention, frontmatter, sync target, and publishing to skills.sh.
+---
+
+# Adding a Skill
+
+This guide is for contributors who want to add a new skill to the btrack repo (e.g. `btrack-invoice`, `btrack-shipped`) alongside the existing [`btrack` skill](/docs/claude-skill). Users installing skills don't need this page.
+
+The btrack repo follows the [skills.sh](https://skills.sh) convention so that any skill in `skills/<name>/` is installable via `npx skills add tolgazorlu/btrack` and discoverable on the skills.sh leaderboard.
+
+## TL;DR
+
+```bash
+mkdir -p skills/<your-skill>/{scripts,references}
+$EDITOR skills/<your-skill>/SKILL.md            # required
+$EDITOR skills/<your-skill>/metadata.json       # skills.sh manifest
+$EDITOR skills/<your-skill>/README.md           # human overview
+make sync-skill                                 # only refreshes the canonical btrack skill
+go test ./cmd/                                  # confirms embedded skill is in sync
+```
+
+For a new skill that should *also* be embedded in the binary (so `btrack skill install <name>` works), see [Embedded vs documentation-only skills](#embedded-vs-documentation-only-skills) below.
+
+## Folder convention
+
+Every skill lives at `skills/<skill-name>/` and must contain a `SKILL.md`. Optional supporting files: `README.md`, `metadata.json`, `scripts/`, `references/`.
+
+```
+skills/
+└── <skill-name>/
+    ├── SKILL.md             # required — the skill itself, loaded by Claude
+    ├── README.md            # optional — human-readable overview
+    ├── metadata.json        # required for skills.sh — manifest
+    ├── scripts/             # optional — setup or helper scripts
+    │   └── setup.sh
+    └── references/          # optional — deep-dive docs the skill links to
+        └── *.md
+```
+
+Naming rule: skill folder name **must match** the `name:` field in the SKILL.md frontmatter and the `"name"` field in `metadata.json`.
+
+## SKILL.md format
+
+```yaml
+---
+name: <skill-name>
+description: One-paragraph description that includes the trigger phrases the skill should activate on. This is what makes the skill discover its own use cases — be specific.
+license: MIT
+metadata:
+  author: tolgazorlu
+  version: "0.1.0"
+  homepage: "https://btrack.dev"
+  repository: "https://github.com/tolgazorlu/btrack"
+---
+
+# <skill name>
+
+[skill body — see existing skills/btrack/SKILL.md for shape]
+```
+
+### Description guidance
+
+The `description` field is the most important part. It's what skill-aware clients (Claude Code, etc.) use to decide *when to activate the skill*. Bad descriptions cause skills to misfire — either always or never.
+
+Good descriptions:
+
+- **Lead with the verb the user is doing**, not what your skill does. *"Use when the user is writing tests"* beats *"This skill helps with testing."*
+- **List concrete trigger phrases.** "Trigger on phrases like 'fix the bug', 'implement X', 'refactor'" lets Claude pattern-match.
+- **State the negative space.** "Do not trigger for read-only questions, typo fixes, or pure exploration" prevents over-firing.
+
+See `skills/btrack/SKILL.md` for a worked example.
+
+## metadata.json
+
+```json
+{
+  "name": "<skill-name>",
+  "version": "0.1.0",
+  "author": "tolgazorlu",
+  "license": "MIT",
+  "description": "Short description (different from SKILL.md frontmatter — this is for skills.sh listing pages).",
+  "homepage": "https://btrack.dev",
+  "repository": "https://github.com/tolgazorlu/btrack",
+  "tags": ["productivity", "developer-tools", "..."]
+}
+```
+
+Tags should overlap with skills.sh leaderboard categories. Look at neighboring skills for conventions.
+
+## Embedded vs documentation-only skills
+
+The btrack binary embeds the **canonical `btrack` skill** so users get one-command install (`btrack skill install`). If you're adding a *different* skill (say `btrack-invoice`), there are two paths:
+
+### Path A — documentation-only skill
+
+The skill ships in the repo at `skills/<name>/`. Users install it with `npx skills add tolgazorlu/btrack` (which copies the whole `skills/` tree). The btrack binary doesn't know about it. **Easier**, no code changes required.
+
+### Path B — embedded skill, installable via the binary
+
+The skill ships embedded in the binary, installable via `btrack skill install <name>`. Requires:
+
+1. The directory `cmd/skill_data/<name>/` mirroring `skills/<name>/`, populated by the `sync-skill` Makefile target.
+2. An additional `//go:embed all:skill_data/<name>` directive in `cmd/skill.go` (or a refactor that walks every embedded skill dir).
+3. Tests asserting the embedded copy matches the canonical one.
+
+Path B is heavier and only worth it if the skill is *btrack's headline skill* (currently only `btrack`). Default to Path A for everything else.
+
+## The Makefile sync target
+
+`make sync-skill` mirrors `skills/btrack/` into the two consumer locations:
+
+```
+skills/btrack/             ←  canonical (what you edit)
+.claude/skills/btrack/     ←  used by Claude Code when working IN this repo
+cmd/skill_data/btrack/     ←  embedded into the binary by go:embed
+```
+
+Run it any time you change something under `skills/btrack/`. The `make build` and `make release` targets run `sync-skill` first, so a clean build is always in sync.
+
+If you add a new embedded skill (Path B above), extend the `sync-skill` target to mirror it the same way.
+
+## Tests
+
+The drift test in `cmd/skill_test.go` (`TestEmbeddedTreeMatchesCanonical`) walks `skills/btrack/` and asserts every file is present and identical in the embedded FS. If you forget `make sync-skill`, this test fails with a clear message.
+
+For a documentation-only skill (Path A), no test is required — the skill ships as-is from `skills/<name>/`.
+
+For an embedded skill (Path B), add an analogous walk test for your new skill's tree.
+
+## Publishing to skills.sh
+
+Skills.sh is a **registry without explicit publishing** — it indexes any GitHub repo where someone has run `npx skills add owner/repo` at least once. So:
+
+1. Land your skill in `main` on GitHub.
+2. Run `npx skills add tolgazorlu/btrack` from somewhere (your laptop is fine) to seed the registry.
+3. The skill appears on [skills.sh](https://skills.sh) within a day, ranked by install count thereafter.
+
+There is no manual review step. Skills.sh runs routine security audits — make sure your `scripts/` doesn't do anything sketchy. If your skill ships scripts that need elevated permissions, document why in the README and they should pass review.
+
+## Style guide
+
+Skills in this repo follow a few conventions, mostly to keep the install experience consistent:
+
+- **Skip emojis** in SKILL.md and READMEs — they survive copy/paste poorly across clients.
+- **Use real CLI commands** in examples, never pseudo-code. Readers should be able to copy-paste and run.
+- **Keep SKILL.md under ~250 lines.** Push deep-dives into `references/*.md` and link from SKILL.md. Long SKILL.md files dilute the trigger description and cost more tokens per call.
+- **Make scripts idempotent.** Re-running `setup.sh` should not error.
+- **MIT-license everything.** Match btrack's main license unless there's a strong reason not to.
+
+## Checklist for a new skill PR
+
+- [ ] `skills/<name>/SKILL.md` with valid frontmatter (name, description, license, metadata block)
+- [ ] `skills/<name>/metadata.json` with matching `name` field
+- [ ] `skills/<name>/README.md` (optional but strongly recommended)
+- [ ] If the skill has setup steps: `skills/<name>/scripts/setup.sh` (executable, idempotent)
+- [ ] If the skill has deep-dive docs: `skills/<name>/references/*.md`
+- [ ] Run `make sync-skill && go test ./...` — all green
+- [ ] Verify `btrack skill install` (canonical skill) and `npx skills add tolgazorlu/btrack` (your skill) both work
+- [ ] Update [Skills index](#existing-skills) in this page if you're adding to the public list
+- [ ] Mention the new skill in the main [README](https://github.com/tolgazorlu/btrack#readme) Skill section
+
+## Existing skills
+
+| Skill | Location | Purpose |
+|-------|----------|---------|
+| `btrack` | [`skills/btrack/`](https://github.com/tolgazorlu/btrack/tree/main/skills/btrack) | Auto-track coding sessions and tie them to git commits |
+
+Add new entries here as they ship.

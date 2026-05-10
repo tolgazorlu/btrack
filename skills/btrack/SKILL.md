@@ -1,9 +1,15 @@
 ---
-name: btrack-tracker
+name: btrack
 description: Use btrack to time-track coding sessions and tie them to git commits. Trigger this skill whenever the user starts a non-trivial coding task — implementing a feature, fixing a bug, refactoring, or working toward a commit — even if they don't mention btrack. Also trigger when the user mentions btrack, time tracking, sessions, standups, "what did I work on", `btrack shipped`, or asks Claude to log/track work. The skill walks through one-time MCP setup if needed, starts a session at the start of work, drops checkpoint notes during, and stops with a closing message right before the commit so `btrack shipped` lines up sessions with commits.
+license: MIT
+metadata:
+  author: tolgazorlu
+  version: "0.6.7"
+  homepage: "https://btrack.dev"
+  repository: "https://github.com/tolgazorlu/btrack"
 ---
 
-# btrack-tracker
+# btrack
 
 btrack is a CLI time tracker for developers. It exposes a local MCP server with 10 tools (`btrack_start`, `btrack_stop`, `btrack_log_note`, etc.), so Claude Code can drive it directly — no shell calls needed once it's wired up.
 
@@ -48,7 +54,7 @@ claude mcp add btrack -- btrack mcp
 
 Then tell the user: "btrack MCP registered. Restart Claude Code (or this session) so the tools load, then we can start tracking." The tools won't appear in the *current* session — registration takes effect on the next launch. Until then, fall back to the CLI (see the "CLI fallback" section).
 
-If `btrack` itself isn't installed, point them at: `brew install tolgazorlu/btrack/btrack`.
+If `btrack` itself isn't installed, point them at: `brew install tolgazorlu/btrack/btrack` (full install matrix in [references/installation.md](references/installation.md)).
 
 ## Step 1 — Start the session
 
@@ -102,6 +108,8 @@ If the user runs many small commits in one logical session, you have two reasona
 - **One session per logical chunk** — keep the session running across several commits, stop at the end. Less granular but lower friction.
 
 Default to the second unless the user asks for per-commit tracking.
+
+Full deep-dive in [references/shipped-workflow.md](references/shipped-workflow.md).
 
 ## Step 4 — Tie commit messages to the session
 
@@ -173,7 +181,7 @@ The CLI commits state to the same SQLite DB the MCP uses, so it doesn't matter w
 
 **User says "draft my standup":**
 
-`btrack_history` window=`yesterday` → group by project, summarize. The CLI has `btrack standup` which does the AI summarization itself; if available, prefer that over reimplementing it.
+`btrack_history` window=`yesterday` → group by project, summarize. The CLI has `btrack standup` which does the AI summarization itself; if available, prefer that over reimplementing it. Full recipe in [references/standup-workflow.md](references/standup-workflow.md).
 
 **User asks for `btrack shipped`:**
 
@@ -185,3 +193,10 @@ Run `btrack shipped` via Bash from inside the repo. It cross-references sessions
 - **Don't log a note for every tool call.** Notes are signal, not telemetry.
 - **Don't rename `task` mid-session.** If the work has changed, `btrack_switch` to a new task — preserves history honesty.
 - **Don't track meta-work** ("read btrack docs", "set up the MCP") unless the user is specifically billing or reporting on it.
+
+## Further reading
+
+- [references/installation.md](references/installation.md) — installing the btrack binary, registering the MCP, PATH troubleshooting
+- [references/standup-workflow.md](references/standup-workflow.md) — daily standup recipe with `btrack ai sum` and `btrack standup`
+- [references/shipped-workflow.md](references/shipped-workflow.md) — how `btrack shipped` pairs sessions with commits
+- [references/troubleshooting.md](references/troubleshooting.md) — common issues (MCP not loading, Windows install, missing Brew tap)

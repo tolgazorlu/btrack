@@ -294,25 +294,47 @@ Once registered, ask the assistant things like *"What am I tracking right now?"*
 
 ### Claude Skill
 
-The MCP gives Claude the *ability* to call `btrack_*` tools. The bundled `btrack-tracker` skill teaches it to *use them automatically* — auto-start a session before coding, drop checkpoint notes for non-obvious findings, and stop the session right before `git commit` so [`btrack shipped`](#shipped) lines commits up with sessions.
+The MCP gives Claude the *ability* to call `btrack_*` tools. The bundled `btrack` skill teaches it to *use them automatically* — auto-start a session before coding, drop checkpoint notes for non-obvious findings, and stop the session right before `git commit` so [`btrack shipped`](#shipped) lines commits up with sessions.
 
-Install it with one command:
+**Install — pick one:**
 
 ```bash
+btrack skill install                 # writes ~/.claude/skills/btrack/, no Node required
+```
+
+```bash
+npx skills add tolgazorlu/btrack     # via skills.sh — same destination
+```
+
+Both write the same files: `SKILL.md`, `README.md`, `metadata.json`, `scripts/setup.sh`, plus a `references/` directory with deep-dive docs. Then register the MCP and restart Claude Code:
+
+```bash
+claude mcp add btrack -- btrack mcp
+# fully quit and reopen Claude Code
+```
+
+Or run the bundled setup script which does the MCP step for you:
+
+```bash
+~/.claude/skills/btrack/scripts/setup.sh
+```
+
+**Other skill commands:**
+
+```bash
+btrack skill print       # dump SKILL.md to stdout
+btrack skill path        # print the install path
+btrack skill install --force   # overwrite a customized skill on upgrade
+```
+
+**Migrating from `btrack-tracker`** (pre-v0.6.7): the skill was renamed from `btrack-tracker` to `btrack`. Remove the old install before reinstalling:
+
+```bash
+rm -rf ~/.claude/skills/btrack-tracker
 btrack skill install
 ```
 
-This writes `~/.claude/skills/btrack-tracker/SKILL.md` (the skill is embedded in the binary, so it always matches your installed btrack version). Restart Claude Code afterward so it picks up both the MCP and the skill.
-
-Other skill commands:
-
-```bash
-btrack skill print       # dump the skill markdown to stdout
-btrack skill path        # print the install path
-btrack skill install --force   # overwrite an existing customized skill
-```
-
-Full docs: [docs/claude-skill](https://btrack.dev/docs/claude-skill).
+The skill source lives in [`skills/btrack/`](skills/btrack/) — see [docs/skills.md](docs/skills.md) for the contributor guide on adding new skills.
 
 ---
 

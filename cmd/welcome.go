@@ -26,8 +26,6 @@ func init() {
 	rootCmd.AddCommand(welcomeCmd)
 }
 
-// welcomeSuppressed skips the auto-banner when stdout must stay clean
-// (prompt, completion) or when the command immediately opens a fullscreen TUI.
 func welcomeSuppressed(cmd *cobra.Command) bool {
 	if cmd == nil || cmd == rootCmd {
 		return true
@@ -37,17 +35,16 @@ func welcomeSuppressed(cmd *cobra.Command) bool {
 		return true
 	}
 	if cmd == welcomeCmd {
-		return true // explicit invocation handles its own output
+		return true
 	}
 	switch cmd {
-	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd, mcpCmd:
+	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd, mcpCmd, skillPrintCmd, skillPathCmd:
 		return true
 	default:
 		return false
 	}
 }
 
-// checkWelcome auto-prints the banner the first time a new version runs.
 func checkWelcome() {
 	versionFile := filepath.Join(config.ConfigDir(), ".version")
 	data, _ := os.ReadFile(filepath.Clean(versionFile))
@@ -62,13 +59,8 @@ func checkWelcome() {
 	_ = os.WriteFile(filepath.Clean(versionFile), []byte(Version), 0600)
 }
 
-// printWelcome renders the welcome / upgrade banner.
-// First-run = isUpgrade false. Upgrade = isUpgrade true with prevVersion set.
 func printWelcome(isUpgrade bool, prevVersion string) {
-	// Big pixel-block banner — Gemini CLI style.
 	ui.PrintBanner("", "time tracker for developers")
-
-	// Status line under the banner.
 	var status string
 	switch {
 	case isUpgrade:

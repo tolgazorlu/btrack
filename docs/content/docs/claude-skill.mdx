@@ -5,16 +5,60 @@ description: Drop-in Claude Code skill that auto-tracks coding sessions and ties
 
 # Claude Skill
 
-btrack ships with a [Claude Skill](https://docs.anthropic.com/en/docs/claude-code/skills) at `.claude/skills/btrack-tracker/`. When you open the repo in Claude Code, Claude picks it up automatically — starts a btrack session at the beginning of meaningful coding work, drops checkpoint notes for non-obvious findings, and stops the session right before `git commit` so [`btrack shipped`](/docs/shipped) lines up sessions with commits.
+btrack ships with a [Claude Skill](https://docs.anthropic.com/en/docs/claude-code/skills) — the canonical source lives at [`skills/btrack/`](https://github.com/tolgazorlu/btrack/tree/main/skills/btrack) in the repo and ships embedded in the binary. Once installed, Claude picks it up automatically: starts a btrack session at the beginning of meaningful coding work, drops checkpoint notes for non-obvious findings, and stops the session right before `git commit` so [`btrack shipped`](/docs/shipped) lines up sessions with commits.
 
 The skill works alongside the [btrack MCP server](/docs/mcp). The MCP gives Claude the *tools*; the skill gives Claude the *workflow*.
+
+## Install
+
+Two equivalent paths. Both write `~/.claude/skills/btrack/` with `SKILL.md`, a `README.md`, `metadata.json`, a `scripts/setup.sh` helper, and a `references/` deep-dive directory.
+
+**With the btrack binary directly** (no Node required):
+
+```bash
+btrack skill install
+```
+
+**Via [skills.sh](https://skills.sh)** (npm-based, works the same as any other skill in the registry):
+
+```bash
+npx skills add tolgazorlu/btrack
+```
+
+Then register the MCP server with Claude Code and restart:
+
+```bash
+claude mcp add btrack -- btrack mcp
+# fully quit and reopen Claude Code
+```
+
+Or run the bundled setup script which does the MCP step for you:
+
+```bash
+~/.claude/skills/btrack/scripts/setup.sh
+```
+
+> **Migrating from `btrack-tracker`** (pre-v0.6.7): the skill was renamed from `btrack-tracker` to `btrack`. Remove the old install before reinstalling:
+>
+> ```bash
+> rm -rf ~/.claude/skills/btrack-tracker
+> btrack skill install
+> ```
+
+## Other skill commands
+
+```bash
+btrack skill print       # dump SKILL.md to stdout
+btrack skill path        # print the install path
+btrack skill install --force   # overwrite a customized skill on upgrade
+```
 
 ## Quick look
 
 ```text
 > fix the JWT clock skew in auth middleware
 
-  Claude (using btrack-tracker skill):
+  Claude (using btrack skill skill):
   → btrack: tracking "fix JWT clock skew in auth middleware"
 
   ... investigates code ...
@@ -197,14 +241,7 @@ The skill calls these out explicitly so Claude doesn't drift into them:
 
 ## Using the skill outside the btrack repo
 
-The workflow isn't btrack-specific in its design — it works anywhere you have btrack installed. Copy it into your global skills directory once:
-
-```bash
-mkdir -p ~/.claude/skills
-cp -r ~/Projects/btrack/.claude/skills/btrack-tracker ~/.claude/skills/
-```
-
-It now triggers in every Claude Code session, regardless of which repo you're in. Cloning the btrack repo isn't a requirement — the skill is the only file you need.
+The workflow isn't btrack-specific in its design — it works anywhere you have btrack installed. The recommended install path is `btrack skill install` or `npx skills add tolgazorlu/btrack` (see "Install" above) — both write to `~/.claude/skills/btrack/` so the skill triggers in every Claude Code session, regardless of which repo you're in. Cloning the btrack repo isn't a requirement.
 
 ## Customizing
 

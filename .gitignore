@@ -1,5 +1,7 @@
-btrack
-btrack.exe
+# Binary at repo root only — do NOT match skills/btrack/, .claude/skills/btrack/,
+# or cmd/skill_data/btrack/ which are tracked source.
+/btrack
+/btrack.exe
 dist/
 *.test
 *.out
