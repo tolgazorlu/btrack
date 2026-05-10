@@ -62,7 +62,8 @@
       "Bash(./btrack config *)",
       "Bash(./btrack status *)",
       "Bash(./btrack daemon *)",
-      "Bash(./btrack history *)"
+      "Bash(./btrack history *)",
+      "Bash(./btrack pomo *)"
     ]
   }
 }

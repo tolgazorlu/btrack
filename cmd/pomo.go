@@ -28,6 +28,8 @@ Flags:
   -b, --break        short break in minutes (default 5)
   -l, --long-break   long break after all rounds (default 15)
   -r, --rounds       focus rounds before long break (default 4)
+      --no-sound     don't play a sound on phase transitions
+      --no-notify    don't send a system notification on phase transitions
 
 Controls:
   q / esc   Stop current session and quit`,
@@ -42,6 +44,8 @@ Controls:
 		breakMins, _ := cmd.Flags().GetInt("break")
 		longBreakMins, _ := cmd.Flags().GetInt("long-break")
 		rounds, _ := cmd.Flags().GetInt("rounds")
+		noSound, _ := cmd.Flags().GetBool("no-sound")
+		noNotify, _ := cmd.Flags().GetBool("no-notify")
 
 		client := daemon.NewClient()
 
@@ -54,7 +58,8 @@ Controls:
 			}
 		}
 
-		model := ui.NewPomoModel(taskName, client, workMins, breakMins, longBreakMins, rounds)
+		model := ui.NewPomoModel(taskName, client, workMins, breakMins, longBreakMins, rounds).
+			WithAlerts(!noSound, !noNotify)
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		_, err = p.Run()
 		return err
@@ -66,5 +71,7 @@ func init() {
 	pomoCmd.Flags().IntP("break", "b", 5, "short break in minutes")
 	pomoCmd.Flags().IntP("long-break", "l", 15, "long break in minutes")
 	pomoCmd.Flags().IntP("rounds", "r", 4, "focus rounds before long break")
+	pomoCmd.Flags().Bool("no-sound", false, "silence the sound on phase transitions")
+	pomoCmd.Flags().Bool("no-notify", false, "silence OS notifications on phase transitions")
 	rootCmd.AddCommand(pomoCmd)
 }

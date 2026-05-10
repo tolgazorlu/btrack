@@ -19,9 +19,15 @@ type Config struct {
 	AI       AIConfig                 `mapstructure:"ai"`
 	Daemon   DaemonConfig             `mapstructure:"daemon"`
 	Work     WorkConfig               `mapstructure:"work"`
+	Pomo     PomoConfig               `mapstructure:"pomo"`
 	GitHub   GitHubConfig             `mapstructure:"github"`
 	Projects map[string]ProjectConfig `mapstructure:"projects"`
 	GCal     GCalConfig               `mapstructure:"gcal"`
+}
+
+type PomoConfig struct {
+	Sound  bool `mapstructure:"sound"`
+	Notify bool `mapstructure:"notify"`
 }
 
 type GCalConfig struct {
@@ -143,6 +149,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("ai.provider", "")
 	viper.SetDefault("work.daily_hours", 8)
 	viper.SetDefault("work.max_hours", 12)
+	viper.SetDefault("pomo.sound", true)
+	viper.SetDefault("pomo.notify", true)
 
 	viper.SetEnvPrefix("BTRACK")
 	viper.AutomaticEnv()
@@ -242,6 +250,30 @@ func SaveMaxHours(hours int) error {
 	return nil
 }
 
+func SavePomoSound(enabled bool) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("pomo.sound", enabled)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
+func SavePomoNotify(enabled bool) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("pomo.notify", enabled)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
 func SaveProjectRate(project string, rate float64) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -291,6 +323,10 @@ work:
   daily_hours: 8        # target working hours per day
   # idle_minutes: 0     # auto-stop after N minutes with no btrack activity (0 = off)
   # max_hours: 12       # hard cap on a single session's duration (0 = off)
+
+pomo:
+  sound: true           # play a sound on phase transitions
+  notify: true          # send a system notification on phase transitions
 
 github:
   pat: ""               # personal access token (read:user, repo)

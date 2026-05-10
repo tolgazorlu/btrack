@@ -40,6 +40,8 @@ type PomoModel struct {
 	sessionActive bool
 	quitting      bool
 	width         int
+	sound         bool
+	notify        bool
 }
 
 func NewPomoModel(task string, client *daemon.Client, workMins, breakMins, longBreakMins, rounds int) PomoModel {
@@ -56,6 +58,23 @@ func NewPomoModel(task string, client *daemon.Client, workMins, breakMins, longB
 		longBreakMins: longBreakMins,
 		client:        client,
 		width:         80,
+		sound:         true,
+		notify:        true,
+	}
+}
+
+func (m PomoModel) WithAlerts(sound, notify bool) PomoModel {
+	m.sound = sound
+	m.notify = notify
+	return m
+}
+
+func (m PomoModel) alert(title, body string) {
+	if m.notify {
+		Notify(title, body)
+	}
+	if m.sound {
+		Bell()
 	}
 }
 
@@ -108,29 +127,34 @@ func (m PomoModel) advancePhase() (PomoModel, tea.Cmd) {
 		m.sessionActive = false
 
 		if m.pomoCount >= m.rounds {
-			// Long break after completing all rounds
 			dur := time.Duration(m.longBreakMins) * time.Minute
 			m.phase = PhaseLongBreak
 			m.remaining = dur
 			m.total = dur
+			m.alert("btrack — focus done",
+				fmt.Sprintf("All %d rounds complete. Long break: %d min.", m.rounds, m.longBreakMins))
 		} else {
 			dur := time.Duration(m.breakMins) * time.Minute
 			m.phase = PhaseBreak
 			m.remaining = dur
 			m.total = dur
+			m.alert("btrack — focus done",
+				fmt.Sprintf("Round %d/%d done. Break: %d min.", m.pomoCount, m.rounds, m.breakMins))
 		}
 
 	case PhaseBreak, PhaseLongBreak:
 		if m.phase == PhaseLongBreak {
-			// All done after long break
 			m.phase = PhaseDone
+			m.alert("btrack — pomodoro complete",
+				fmt.Sprintf("All %d rounds finished.", m.pomoCount))
 			return m, tea.Quit
 		}
-		// Start next focus round
 		dur := time.Duration(m.workMins) * time.Minute
 		m.phase = PhaseFocus
 		m.remaining = dur
 		m.total = dur
+		m.alert("btrack — break over",
+			fmt.Sprintf("Back to focus: round %d/%d.", m.pomoCount+1, m.rounds))
 		cmds = append(cmds, m.startSession())
 	}
 
