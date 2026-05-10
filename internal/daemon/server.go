@@ -23,7 +23,10 @@ type Server struct {
 	state        *activeState
 	lastActivity time.Time
 	idleMinutes  int
+	maxHours     int
 }
+
+const staleSessionThreshold = 6 * time.Hour
 
 type activeState struct {
 	session *db.Session
@@ -32,14 +35,17 @@ type activeState struct {
 func NewServer(store db.Store) *Server {
 	cfg, _ := config.Load()
 	idleMinutes := 0
+	maxHours := 0
 	if cfg != nil {
 		idleMinutes = cfg.Work.IdleMinutes
+		maxHours = cfg.Work.MaxHours
 	}
 	return &Server{
 		store:        store,
 		state:        &activeState{},
 		lastActivity: time.Now(),
 		idleMinutes:  idleMinutes,
+		maxHours:     maxHours,
 	}
 }
 
@@ -71,6 +77,9 @@ func (s *Server) Start() error {
 
 	if s.idleMinutes > 0 {
 		go s.idleWatcher()
+	}
+	if s.maxHours > 0 {
+		go s.maxHoursWatcher()
 	}
 
 	for {
@@ -117,24 +126,54 @@ func (s *Server) dispatch(req Request) Response {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastActivity = time.Now()
+
+	var resp Response
 	switch req.Action {
 	case ActionPing:
-		return Response{Success: true}
+		resp = Response{Success: true}
 	case ActionStart:
-		return s.handleStart(req)
+		resp = s.handleStart(req)
 	case ActionStop:
-		return s.handleStop(req)
+		resp = s.handleStop(req)
 	case ActionSwitch:
-		return s.handleSwitch(req)
+		resp = s.handleSwitch(req)
 	case ActionLog:
-		return s.handleLog(req)
+		resp = s.handleLog(req)
 	case ActionStatus:
-		return s.handleStatus()
+		resp = s.handleStatus()
 	case ActionResume:
-		return s.handleResume()
+		resp = s.handleResume()
 	default:
-		return Response{Success: false, Error: "unknown action: " + req.Action}
+		resp = Response{Success: false, Error: "unknown action: " + req.Action}
 	}
+
+	if resp.Warning == "" {
+		resp.Warning = s.staleWarning()
+	}
+	return resp
+}
+
+func (s *Server) staleWarning() string {
+	if s.state.session == nil {
+		return ""
+	}
+	elapsed := time.Since(s.state.session.StartTime)
+	if elapsed < staleSessionThreshold {
+		return ""
+	}
+	return fmt.Sprintf(
+		"session #%d %q has been running %s — `btrack x` to stop, or `btrack x --at <time>` to backdate",
+		s.state.session.ID, s.state.session.TaskName, formatStaleDuration(elapsed),
+	)
+}
+
+func formatStaleDuration(d time.Duration) string {
+	h := int(d / time.Hour)
+	m := int((d % time.Hour) / time.Minute)
+	if h > 0 {
+		return fmt.Sprintf("%dh%02dm", h, m)
+	}
+	return fmt.Sprintf("%dm", m)
 }
 
 func (s *Server) handleStart(req Request) Response {
@@ -177,8 +216,24 @@ func (s *Server) handleStop(req Request) Response {
 		return Response{Success: false, Error: err.Error()}
 	}
 
-	now := time.Now()
-	s.state.session.EndTime = &now
+	end := time.Now()
+	if p.EndTime != "" {
+		t, err := time.Parse(time.RFC3339, p.EndTime)
+		if err != nil {
+			return Response{Success: false, Error: fmt.Sprintf("invalid end_time: %v", err)}
+		}
+		if t.Before(s.state.session.StartTime) {
+			return Response{Success: false, Error: fmt.Sprintf(
+				"end time %s is before session start %s",
+				t.Format(time.RFC3339), s.state.session.StartTime.Format(time.RFC3339),
+			)}
+		}
+		if t.After(time.Now().Add(time.Minute)) {
+			return Response{Success: false, Error: "end time cannot be in the future"}
+		}
+		end = t
+	}
+	s.state.session.EndTime = &end
 	s.state.session.Message = p.Message
 	s.state.session.Tags = extractTags(p.Message)
 
@@ -366,12 +421,44 @@ func (s *Server) autoStopIdle() {
 	if s.state.session == nil {
 		return
 	}
-	now := time.Now()
-	s.state.session.EndTime = &now
+	end := s.lastActivity
+	if end.Before(s.state.session.StartTime) {
+		end = s.state.session.StartTime
+	}
+	s.state.session.EndTime = &end
 	s.state.session.Message = "auto-stopped: idle"
 	s.state.session.Tags = append(s.state.session.Tags, "#idle")
 	_ = s.store.UpdateSession(s.state.session)
 	fmt.Fprintf(os.Stderr, "[btrack daemon] idle auto-stop: %q\n", s.state.session.TaskName)
+	s.state.session = nil
+}
+
+func (s *Server) maxHoursWatcher() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		s.mu.Lock()
+		if s.state.session != nil {
+			cap := time.Duration(s.maxHours) * time.Hour
+			if time.Since(s.state.session.StartTime) > cap {
+				s.autoStopMaxHours(cap)
+			}
+		}
+		s.mu.Unlock()
+	}
+}
+
+func (s *Server) autoStopMaxHours(cap time.Duration) {
+	if s.state.session == nil {
+		return
+	}
+	end := s.state.session.StartTime.Add(cap)
+	s.state.session.EndTime = &end
+	s.state.session.Message = fmt.Sprintf("auto-stopped: exceeded max duration (%dh)", s.maxHours)
+	s.state.session.Tags = append(s.state.session.Tags, "#runaway")
+	_ = s.store.UpdateSession(s.state.session)
+	fmt.Fprintf(os.Stderr, "[btrack daemon] max-hours auto-stop: %q (cap %dh)\n",
+		s.state.session.TaskName, s.maxHours)
 	s.state.session = nil
 }
 

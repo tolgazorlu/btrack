@@ -18,6 +18,7 @@ Examples:
   btrack config                          show all settings
   btrack config hours 6                  set daily work target
   btrack config idle 15                  auto-stop after 15 min idle (0 = off)
+  btrack config max-hours 12             cap any session at 12h (0 = off)
   btrack config project myapp rate 150   set hourly rate for a project
 
 Other settings:
@@ -40,6 +41,11 @@ Config file: ~/.config/btrack/config.yaml`,
 			idleVal = fmt.Sprintf("%d min", cfg.Work.IdleMinutes)
 		}
 		ui.KV("idle stop", ui.StyleHighlight.Render(idleVal))
+		maxVal := "off"
+		if cfg.Work.MaxHours > 0 {
+			maxVal = fmt.Sprintf("%d h", cfg.Work.MaxHours)
+		}
+		ui.KV("max session", ui.StyleHighlight.Render(maxVal))
 		ui.Blank()
 
 		ui.Section("ai")
@@ -135,6 +141,41 @@ Examples:
 	},
 }
 
+var configMaxHoursCmd = &cobra.Command{
+	Use:   "max-hours <hours>",
+	Short: "Cap any single session at N hours (0 = disabled)",
+	Long: `Hard cap on how long a single session can run before the daemon
+auto-stops it. Backdates the end time to start + cap so a forgotten
+session doesn't pollute your records with phantom hours.
+
+The auto-stopped session is tagged #runaway and gets the message
+"auto-stopped: exceeded max duration (Nh)".
+
+Examples:
+  btrack config max-hours 12   cap sessions at 12h (default)
+  btrack config max-hours 8    cap at 8h
+  btrack config max-hours 0    disable the hard cap`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		hours, err := strconv.Atoi(args[0])
+		if err != nil || hours < 0 || hours > 168 {
+			return fmt.Errorf("hours must be a non-negative number ≤ 168")
+		}
+		if err := config.SaveMaxHours(hours); err != nil {
+			return err
+		}
+		ui.Blank()
+		if hours == 0 {
+			ui.OK("max session cap disabled")
+		} else {
+			ui.OK("max session cap → " + ui.StyleHighlight.Render(fmt.Sprintf("%dh", hours)))
+		}
+		ui.Hint("restart the daemon to apply: btrack daemon restart")
+		ui.Blank()
+		return nil
+	},
+}
+
 var configProjectCmd = &cobra.Command{
 	Use:   "project <name> rate <amount>",
 	Short: "Set the hourly billing rate for a project",
@@ -164,6 +205,6 @@ Examples:
 }
 
 func init() {
-	configCmd.AddCommand(configHoursCmd, configIdleCmd, configProjectCmd)
+	configCmd.AddCommand(configHoursCmd, configIdleCmd, configMaxHoursCmd, configProjectCmd)
 	rootCmd.AddCommand(configCmd)
 }

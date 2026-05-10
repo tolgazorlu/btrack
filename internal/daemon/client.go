@@ -8,14 +8,16 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-"strconv"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/tolgazorlu/btrack/internal/config"
 )
 
-type Client struct{}
+type Client struct {
+	Quiet bool
+}
 
 func NewClient() *Client { return &Client{} }
 
@@ -23,7 +25,11 @@ func (c *Client) Send(action string, payload any) (*Response, error) {
 	if err := c.ensureDaemon(); err != nil {
 		return nil, err
 	}
-	return c.send(action, payload)
+	resp, err := c.send(action, payload)
+	if err == nil && resp != nil && resp.Warning != "" && !c.Quiet {
+		fmt.Fprintf(os.Stderr, "  \x1b[33m⚠  %s\x1b[0m\n", resp.Warning)
+	}
+	return resp, err
 }
 
 func (c *Client) send(action string, payload any) (*Response, error) {

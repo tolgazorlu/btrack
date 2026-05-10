@@ -59,6 +59,9 @@ func NewStatusModel(client *daemon.Client, dailyHours int, idleMinutes int, stor
 	if dailyHours <= 0 {
 		dailyHours = 8
 	}
+	if client != nil {
+		client.Quiet = true
+	}
 	return &StatusModel{
 		client:      client,
 		dailyHours:  dailyHours,

@@ -34,6 +34,7 @@ type GCalConfig struct {
 type WorkConfig struct {
 	DailyHours  int `mapstructure:"daily_hours"`
 	IdleMinutes int `mapstructure:"idle_minutes"`
+	MaxHours    int `mapstructure:"max_hours"`
 }
 
 type ProjectConfig struct {
@@ -141,6 +142,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("database.type", "sqlite")
 	viper.SetDefault("ai.provider", "")
 	viper.SetDefault("work.daily_hours", 8)
+	viper.SetDefault("work.max_hours", 12)
 
 	viper.SetEnvPrefix("BTRACK")
 	viper.AutomaticEnv()
@@ -228,6 +230,18 @@ func SaveIdleMinutes(minutes int) error {
 	return nil
 }
 
+func SaveMaxHours(hours int) error {
+	if _, err := Load(); err != nil {
+		return err
+	}
+	viper.Set("work.max_hours", hours)
+	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	instance = nil
+	return nil
+}
+
 func SaveProjectRate(project string, rate float64) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -275,6 +289,8 @@ ai:
 
 work:
   daily_hours: 8        # target working hours per day
+  # idle_minutes: 0     # auto-stop after N minutes with no btrack activity (0 = off)
+  # max_hours: 12       # hard cap on a single session's duration (0 = off)
 
 github:
   pat: ""               # personal access token (read:user, repo)

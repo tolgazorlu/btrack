@@ -21,6 +21,7 @@ type Response struct {
 	Success bool            `json:"success"`
 	Data    json.RawMessage `json:"data,omitempty"`
 	Error   string          `json:"error,omitempty"`
+	Warning string          `json:"warning,omitempty"`
 }
 
 type StartPayload struct {
@@ -32,6 +33,7 @@ type StartPayload struct {
 
 type StopPayload struct {
 	Message string `json:"message"`
+	EndTime string `json:"end_time,omitempty"`
 }
 
 type SwitchPayload struct {

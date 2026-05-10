@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,16 +26,20 @@ Usage:
   btrack stop                stop without a message
   btrack stop -m "message"   stop with a message
   btrack x -m "message"      short alias
+  btrack x --at "2h ago"     backdate the stop time
 
 Examples:
   btrack x                                  (AI suggests a message; skip = save without one)
   btrack x --no-ai                          (skip AI, save without a message)
   btrack x -m "fixed JWT expiry #bugfix"
-  btrack x -m "added 12 unit tests #test"
+  btrack x --at "2h ago"                    (forgot to stop earlier today)
+  btrack x --at "yesterday 18:00"           (forgot to stop yesterday)
+  btrack x --at "15:30"                     (today at 15:30)
 
 Flags:
   -m, --message   Closing message (optional)
       --no-ai     Skip AI message suggestion
+      --at        Backdate the stop time (relative or absolute)
 
 Tips:
   · Add #tags at the end to categorize your work
@@ -43,6 +48,16 @@ Tips:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		message, _ := cmd.Flags().GetString("message")
 		noAI, _ := cmd.Flags().GetBool("no-ai")
+		atRaw, _ := cmd.Flags().GetString("at")
+
+		var atRFC3339 string
+		if atRaw != "" {
+			t, err := parseAtTime(atRaw, time.Now())
+			if err != nil {
+				return fmt.Errorf("invalid --at value %q: %w", atRaw, err)
+			}
+			atRFC3339 = t.Format(time.RFC3339)
+		}
 
 		if message == "" && !noAI {
 			message = suggestMessage()
@@ -62,7 +77,7 @@ Tips:
 			}
 		}
 
-		payload := daemon.StopPayload{Message: message}
+		payload := daemon.StopPayload{Message: message, EndTime: atRFC3339}
 		client := daemon.NewClient()
 		resp, err := client.Send(daemon.ActionStop, payload)
 		if err != nil {
@@ -78,7 +93,10 @@ Tips:
 		}
 
 		start, _ := time.Parse(time.RFC3339, sess.StartTime)
-		end := time.Now()
+		end, _ := time.Parse(time.RFC3339, sess.EndTime)
+		if end.IsZero() {
+			end = time.Now()
+		}
 		elapsed := end.Sub(start)
 
 		ui.Blank()
@@ -106,7 +124,74 @@ Tips:
 func init() {
 	stopCmd.Flags().StringP("message", "m", "", "closing message for the session (optional)")
 	stopCmd.Flags().Bool("no-ai", false, "skip AI message suggestion")
+	stopCmd.Flags().String("at", "", "backdate the stop time (e.g. \"2h ago\", \"15:30\", \"yesterday 18:00\", or RFC3339)")
 	rootCmd.AddCommand(stopCmd)
+}
+
+// parseAtTime accepts a few forgiving formats for backdating a stop:
+//   - duration ago:    "2h ago", "30m ago", "1h30m ago"
+//   - bare duration:   "2h", "30m", "1h30m"  (treated as "<dur> ago")
+//   - HH:MM today:     "15:30"
+//   - yesterday HH:MM: "yesterday 18:00"
+//   - absolute:        RFC3339, e.g. "2026-05-10T15:30:00Z"
+func parseAtTime(raw string, now time.Time) (time.Time, error) {
+	s := strings.TrimSpace(strings.ToLower(raw))
+	if s == "" {
+		return time.Time{}, fmt.Errorf("empty value")
+	}
+
+	if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		return t, nil
+	}
+
+	if rest, ok := strings.CutSuffix(s, " ago"); ok {
+		d, err := time.ParseDuration(strings.TrimSpace(rest))
+		if err != nil {
+			return time.Time{}, fmt.Errorf("parse duration: %w", err)
+		}
+		return now.Add(-d), nil
+	}
+
+	if d, err := time.ParseDuration(s); err == nil {
+		return now.Add(-d), nil
+	}
+
+	parseHHMM := func(v string) (h, m int, err error) {
+		parts := strings.Split(v, ":")
+		if len(parts) != 2 {
+			return 0, 0, fmt.Errorf("expected HH:MM")
+		}
+		h, err = strconv.Atoi(parts[0])
+		if err != nil || h < 0 || h > 23 {
+			return 0, 0, fmt.Errorf("invalid hour")
+		}
+		m, err = strconv.Atoi(parts[1])
+		if err != nil || m < 0 || m > 59 {
+			return 0, 0, fmt.Errorf("invalid minute")
+		}
+		return h, m, nil
+	}
+
+	if rest, ok := strings.CutPrefix(s, "yesterday "); ok {
+		h, m, err := parseHHMM(strings.TrimSpace(rest))
+		if err != nil {
+			return time.Time{}, err
+		}
+		y := now.AddDate(0, 0, -1)
+		return time.Date(y.Year(), y.Month(), y.Day(), h, m, 0, 0, now.Location()), nil
+	}
+
+	if h, m, err := parseHHMM(s); err == nil {
+		t := time.Date(now.Year(), now.Month(), now.Day(), h, m, 0, 0, now.Location())
+		// If user typed a future time (e.g. it's 09:00 and they said 18:00),
+		// assume they meant yesterday.
+		if t.After(now) {
+			t = t.AddDate(0, 0, -1)
+		}
+		return t, nil
+	}
+
+	return time.Time{}, fmt.Errorf("unrecognized time format")
 }
 
 func suggestMessage() string {
