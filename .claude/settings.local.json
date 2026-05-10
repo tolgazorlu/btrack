@@ -67,7 +67,12 @@
       "Bash(grep -A4 \"pomo$\")",
       "Bash(grep -A3 \"pomo$\")",
       "Bash(./btrack notify-test *)",
-      "Bash(grep -A6 \"^  work$\")"
+      "Bash(grep -A6 \"^  work$\")",
+      "Bash(git fetch *)",
+      "Bash(grep -n \"^import\\\\|\\\\\"os\\\\\"$\\\\|internal/config\" /Users/tolgazorlu/Projects/btrack/cmd/stop.go)",
+      "Read(//private/tmp/btrack-init-test/**)",
+      "Bash(rm /tmp/btrack-init-test/.btrack)",
+      "Bash(rm -rf /tmp/btrack-init-test)"
     ]
   }
 }

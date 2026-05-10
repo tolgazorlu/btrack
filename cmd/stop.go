@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -63,17 +64,36 @@ Tips:
 			message = suggestMessage()
 		}
 
-		if message != "" {
-			existingTags := map[string]bool{}
-			for _, w := range strings.Fields(message) {
-				if strings.HasPrefix(w, "#") {
-					existingTags[strings.ToLower(w)] = true
-				}
+		// Collect tags that should be appended to the closing message:
+		// 1. AI-suggested category tags from the message itself
+		// 2. default_tags from the .btrack project file (if any)
+		// All deduplicated against tags the user already typed.
+		existingTags := map[string]bool{}
+		for _, w := range strings.Fields(message) {
+			if strings.HasPrefix(w, "#") {
+				existingTags[strings.ToLower(w)] = true
 			}
-			for _, tag := range ai.CategorizeTask(message) {
-				if !existingTags[tag] {
-					message += " " + tag
-				}
+		}
+
+		var autoTags []string
+		if message != "" {
+			autoTags = append(autoTags, ai.CategorizeTask(message)...)
+		}
+		if cwd, err := os.Getwd(); err == nil {
+			if pf, _ := config.FindProjectFile(cwd); pf != nil {
+				autoTags = append(autoTags, pf.DefaultTags...)
+			}
+		}
+		for _, tag := range autoTags {
+			tag = strings.ToLower(tag)
+			if existingTags[tag] {
+				continue
+			}
+			existingTags[tag] = true
+			if message == "" {
+				message = tag
+			} else {
+				message += " " + tag
 			}
 		}
 
