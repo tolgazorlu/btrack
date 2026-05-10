@@ -55,7 +55,10 @@
       "Bash(mkdir -p ~/.claude/skills/btrack-tracker)",
       "Read(//Users/tolgazorlu/.claude/skills/**)",
       "Bash(mkdir -p /Users/tolgazorlu/Projects/btrack/.claude/skills/btrack-tracker)",
-      "Bash(cp /Users/tolgazorlu/.claude/skills/btrack-tracker/SKILL.md /Users/tolgazorlu/Projects/btrack/.claude/skills/btrack-tracker/SKILL.md)"
+      "Bash(cp /Users/tolgazorlu/.claude/skills/btrack-tracker/SKILL.md /Users/tolgazorlu/Projects/btrack/.claude/skills/btrack-tracker/SKILL.md)",
+      "Bash(curl -s \"https://api.github.com/repos/tolgazorlu/btrack/releases/latest\")",
+      "Bash(make build *)",
+      "Bash(./btrack version *)"
     ]
   }
 }

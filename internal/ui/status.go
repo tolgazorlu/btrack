@@ -479,7 +479,7 @@ func fetchTodaySessions(store db.Store) tea.Cmd {
 }
 
 func checkForUpdateCmd(currentVersion string) tea.Cmd {
-	if currentVersion == "" || currentVersion == "dev" {
+	if currentVersion == "" || currentVersion == "dev" || currentVersion == "beta" {
 		return nil
 	}
 	return func() tea.Msg {
@@ -495,7 +495,9 @@ func checkForUpdateCmd(currentVersion string) tea.Cmd {
 		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 			return updateCheckMsg{}
 		}
-		if data.TagName != "" && data.TagName != currentVersion {
+		latest := strings.TrimPrefix(data.TagName, "v")
+		current := strings.TrimPrefix(currentVersion, "v")
+		if latest != "" && latest != current {
 			return updateCheckMsg{newVersion: data.TagName}
 		}
 		return updateCheckMsg{}
