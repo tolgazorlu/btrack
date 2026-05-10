@@ -19,6 +19,8 @@ Examples:
   btrack config hours 6                  set daily work target
   btrack config idle 15                  auto-stop after 15 min idle (0 = off)
   btrack config max-hours 12             cap any session at 12h (0 = off)
+  btrack config pomo-sound off           silence pomo phase-change sound
+  btrack config pomo-notify off          silence pomo phase-change notifications
   btrack config project myapp rate 150   set hourly rate for a project
 
 Other settings:
@@ -46,6 +48,11 @@ Config file: ~/.config/btrack/config.yaml`,
 			maxVal = fmt.Sprintf("%d h", cfg.Work.MaxHours)
 		}
 		ui.KV("max session", ui.StyleHighlight.Render(maxVal))
+		ui.Blank()
+
+		ui.Section("pomo")
+		ui.KV("sound", ui.StyleHighlight.Render(onOff(cfg.Pomo.Sound)))
+		ui.KV("notify", ui.StyleHighlight.Render(onOff(cfg.Pomo.Notify)))
 		ui.Blank()
 
 		ui.Section("ai")
@@ -136,6 +143,61 @@ Examples:
 		} else {
 			ui.OK("idle auto-stop → " + ui.StyleHighlight.Render(fmt.Sprintf("%d min", minutes)))
 		}
+		ui.Blank()
+		return nil
+	},
+}
+
+func parseOnOff(arg string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(arg)) {
+	case "on", "true", "yes", "1", "enable", "enabled":
+		return true, nil
+	case "off", "false", "no", "0", "disable", "disabled":
+		return false, nil
+	}
+	return false, fmt.Errorf("expected on|off, got %q", arg)
+}
+
+func onOff(b bool) string {
+	if b {
+		return "on"
+	}
+	return "off"
+}
+
+var configPomoSoundCmd = &cobra.Command{
+	Use:   "pomo-sound <on|off>",
+	Short: "Play a sound when a pomodoro phase ends",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		on, err := parseOnOff(args[0])
+		if err != nil {
+			return err
+		}
+		if err := config.SavePomoSound(on); err != nil {
+			return err
+		}
+		ui.Blank()
+		ui.OK("pomo sound → " + ui.StyleHighlight.Render(onOff(on)))
+		ui.Blank()
+		return nil
+	},
+}
+
+var configPomoNotifyCmd = &cobra.Command{
+	Use:   "pomo-notify <on|off>",
+	Short: "Send an OS notification when a pomodoro phase ends",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		on, err := parseOnOff(args[0])
+		if err != nil {
+			return err
+		}
+		if err := config.SavePomoNotify(on); err != nil {
+			return err
+		}
+		ui.Blank()
+		ui.OK("pomo notify → " + ui.StyleHighlight.Render(onOff(on)))
 		ui.Blank()
 		return nil
 	},
