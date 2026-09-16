@@ -14,7 +14,6 @@ import (
 
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
-	"github.com/tolgazorlu/btrack/internal/notify"
 )
 
 type Server struct {
@@ -25,8 +24,6 @@ type Server struct {
 	lastActivity    time.Time
 	idleMinutes     int
 	maxHours        int
-	reminderMinutes int
-	lastReminder    time.Time
 }
 
 const staleSessionThreshold = 6 * time.Hour
@@ -39,11 +36,9 @@ func NewServer(store db.Store) *Server {
 	cfg, _ := config.Load()
 	idleMinutes := 0
 	maxHours := 0
-	reminderMinutes := 0
 	if cfg != nil {
 		idleMinutes = cfg.Work.IdleMinutes
 		maxHours = cfg.Work.MaxHours
-		reminderMinutes = cfg.Work.ReminderMinutes
 	}
 	return &Server{
 		store:           store,
@@ -51,7 +46,6 @@ func NewServer(store db.Store) *Server {
 		lastActivity:    time.Now(),
 		idleMinutes:     idleMinutes,
 		maxHours:        maxHours,
-		reminderMinutes: reminderMinutes,
 	}
 }
 
@@ -86,9 +80,6 @@ func (s *Server) Start() error {
 	}
 	if s.maxHours > 0 {
 		go s.maxHoursWatcher()
-	}
-	if s.reminderMinutes > 0 {
-		go s.reminderWatcher()
 	}
 
 	for {
@@ -253,7 +244,6 @@ func (s *Server) handleStop(req Request) Response {
 	dto := sessionToDTO(s.state.session)
 	raw, _ := json.Marshal(dto)
 	s.state.session = nil
-	s.lastReminder = time.Time{}
 	return Response{Success: true, Data: raw}
 }
 
@@ -278,8 +268,7 @@ func (s *Server) handleSwitch(req Request) Response {
 		}
 		out.Stopped = sessionToDTO(s.state.session)
 		s.state.session = nil
-		s.lastReminder = time.Time{}
-	}
+		}
 
 	sess := &db.Session{
 		TaskName:  p.TaskName,
@@ -442,7 +431,6 @@ func (s *Server) autoStopIdle() {
 	_ = s.store.UpdateSession(s.state.session)
 	fmt.Fprintf(os.Stderr, "[btrack daemon] idle auto-stop: %q\n", s.state.session.TaskName)
 	s.state.session = nil
-	s.lastReminder = time.Time{}
 }
 
 func (s *Server) maxHoursWatcher() {
@@ -463,35 +451,6 @@ func (s *Server) maxHoursWatcher() {
 // reminderWatcher fires an OS notification + sound every reminderMinutes
 // while a session is active. Designed for catching forgotten sessions —
 // e.g. set to 60 to get pinged every hour the timer keeps running.
-func (s *Server) reminderWatcher() {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
-		s.mu.Lock()
-		s.maybeRemind()
-		s.mu.Unlock()
-	}
-}
-
-func (s *Server) maybeRemind() {
-	if s.state.session == nil {
-		return
-	}
-	interval := time.Duration(s.reminderMinutes) * time.Minute
-	elapsed := time.Since(s.state.session.StartTime)
-	if elapsed < interval {
-		return
-	}
-	if !s.lastReminder.IsZero() && time.Since(s.lastReminder) < interval {
-		return
-	}
-	s.lastReminder = time.Now()
-	body := fmt.Sprintf("%q has been running %s. Run `btrack x` to stop.",
-		s.state.session.TaskName, formatStaleDuration(elapsed))
-	notify.Notify("btrack — still tracking", body)
-	notify.Bell()
-}
-
 func (s *Server) autoStopMaxHours(cap time.Duration) {
 	if s.state.session == nil {
 		return
@@ -504,7 +463,6 @@ func (s *Server) autoStopMaxHours(cap time.Duration) {
 	fmt.Fprintf(os.Stderr, "[btrack daemon] max-hours auto-stop: %q (cap %dh)\n",
 		s.state.session.TaskName, s.maxHours)
 	s.state.session = nil
-	s.lastReminder = time.Time{}
 }
 
 func extractTags(msg string) []string {
