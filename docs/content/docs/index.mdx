@@ -12,17 +12,11 @@ Every time tracker I tried wanted me to open a browser, log in, pick a workspace
 ## Key Features
 
 - **Session tracking** — Start, note, and stop sessions with a single command
-- **Daily standup** — `btrack standup` generates a Yesterday/Today/Blockers summary from your sessions every morning
-- **Said vs shipped** — `btrack shipped` lines up sessions against `git log` so you can see what actually landed
+- **History and stats** — See today as a tree, filter by week, month, project or tag
 - **Shell prompt** — Display active session in your terminal prompt (Zsh, Bash, Fish, Starship)
-- **Interactive console** — Run `btrack` on its own to land in a REPL with `/`-commands, natural language input, and inline AI chat
+- **Interactive console** — Run `btrack` on its own to land in a REPL with `/`-commands
 - **Projects** — Organize work by project with per-project configuration via `.btrack` files
 - **Notes** — Attach notes to running or past sessions without interrupting flow
-- **Pomodoro** — Built-in Pomodoro timer that auto-tags sessions
-- **AI insights** — Chat with your session history, get productivity dashboards
-- **MCP server** — Drive btrack from Claude Code, Cursor, or any MCP-aware AI assistant
-- **Invoicing** — Generate invoice reports from tracked time with per-project rates
-- **Google Calendar sync** — Push sessions to Google Calendar after stopping
 - **Export** — Export sessions to CSV or JSON
 
 ## Getting Started
@@ -32,7 +26,7 @@ btrack s "fix login bug"              # start tracking
 btrack n "found the issue"            # add a note
 btrack x -m "fixed JWT clock skew"   # stop and save
 btrack h                              # see today's work
-btrack standup                        # tomorrow morning: generate standup
+btrack stats                          # quick snapshot
 ```
 
 - [Installation](/docs/installation)
