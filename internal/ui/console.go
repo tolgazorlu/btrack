@@ -180,8 +180,6 @@ func (m ConsoleModel) View() string {
 			"Use " + StyleHighlight.Render("/") + " for quick actions, e.g. " +
 			StyleHighlight.Render("/start") + "\n")
 		sb.WriteString(Indent + StyleDimmed.Render("3. ") +
-			"Ask anything — free text goes to " + StyleHighlight.Render("btrack ai") + " chat\n")
-		sb.WriteString(Indent + StyleDimmed.Render("4. ") +
 			StyleHighlight.Render("/help") + " for the full reference, " +
 			StyleHighlight.Render("/exit") + " to quit\n\n")
 	} else {
