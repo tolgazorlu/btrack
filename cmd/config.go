@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
@@ -20,14 +19,7 @@ Examples:
   btrack config hours 6                  set daily work target
   btrack config idle 15                  auto-stop after 15 min idle (0 = off)
   btrack config max-hours 12             cap any session at 12h (0 = off)
-  btrack config reminder 60              ping every 60 min while session runs (0 = off)
-  btrack config pomo-sound off           silence pomo phase-change sound
-  btrack config pomo-notify off          silence pomo phase-change notifications
   btrack config project myapp rate 150   set hourly rate for a project
-
-Other settings:
-  btrack ai setup            configure AI provider key
-  btrack github connect      link GitHub account
 
 Config file: ~/.config/btrack/config.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -50,41 +42,6 @@ Config file: ~/.config/btrack/config.yaml`,
 			maxVal = fmt.Sprintf("%d h", cfg.Work.MaxHours)
 		}
 		ui.KV("max session", ui.StyleHighlight.Render(maxVal))
-		reminderVal := "off"
-		if cfg.Work.ReminderMinutes > 0 {
-			reminderVal = fmt.Sprintf("every %d min", cfg.Work.ReminderMinutes)
-		}
-		ui.KV("reminder", ui.StyleHighlight.Render(reminderVal))
-		ui.Blank()
-
-		ui.Section("pomo")
-		ui.KV("sound", ui.StyleHighlight.Render(onOff(cfg.Pomo.Sound)))
-		ui.KV("notify", ui.StyleHighlight.Render(onOff(cfg.Pomo.Notify)))
-		ui.Blank()
-
-		ui.Section("ai")
-		provider := cfg.AI.Provider
-		if provider == "" {
-			provider = ui.StyleDimmed.Render("(not set — `btrack ai setup`)")
-		} else {
-			provider = ui.StyleHighlight.Render(provider)
-		}
-		ui.KV("provider", provider)
-		model := cfg.AI.Model
-		if model == "" {
-			model = ui.StyleDimmed.Render("(default)")
-		} else {
-			model = ui.StyleHighlight.Render(model)
-		}
-		ui.KV("model", model)
-		ui.Blank()
-
-		ui.Section("github")
-		if cfg.GitHub.Username != "" {
-			ui.KV("user", ui.StyleHighlight.Render("@"+cfg.GitHub.Username))
-		} else {
-			ui.KV("user", ui.StyleDimmed.Render("(not set — `btrack github connect`)"))
-		}
 		ui.Blank()
 
 		if len(cfg.Projects) > 0 {
@@ -97,8 +54,6 @@ Config file: ~/.config/btrack/config.yaml`,
 			ui.Blank()
 		}
 
-		ui.Section("database")
-		ui.KV("type", ui.StyleHighlight.Render(cfg.Database.Type))
 		ui.Footer("file: " + config.ConfigPath())
 		return nil
 	},
@@ -155,97 +110,8 @@ Examples:
 	},
 }
 
-func parseOnOff(arg string) (bool, error) {
-	switch strings.ToLower(strings.TrimSpace(arg)) {
-	case "on", "true", "yes", "1", "enable", "enabled":
-		return true, nil
-	case "off", "false", "no", "0", "disable", "disabled":
-		return false, nil
-	}
-	return false, fmt.Errorf("expected on|off, got %q", arg)
-}
 
-func onOff(b bool) string {
-	if b {
-		return "on"
-	}
-	return "off"
-}
 
-var configPomoSoundCmd = &cobra.Command{
-	Use:   "pomo-sound <on|off>",
-	Short: "Play a sound when a pomodoro phase ends",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		on, err := parseOnOff(args[0])
-		if err != nil {
-			return err
-		}
-		if err := config.SavePomoSound(on); err != nil {
-			return err
-		}
-		ui.Blank()
-		ui.OK("pomo sound → " + ui.StyleHighlight.Render(onOff(on)))
-		ui.Blank()
-		return nil
-	},
-}
-
-var configPomoNotifyCmd = &cobra.Command{
-	Use:   "pomo-notify <on|off>",
-	Short: "Send an OS notification when a pomodoro phase ends",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		on, err := parseOnOff(args[0])
-		if err != nil {
-			return err
-		}
-		if err := config.SavePomoNotify(on); err != nil {
-			return err
-		}
-		ui.Blank()
-		ui.OK("pomo notify → " + ui.StyleHighlight.Render(onOff(on)))
-		ui.Blank()
-		return nil
-	},
-}
-
-var configReminderCmd = &cobra.Command{
-	Use:   "reminder <minutes>",
-	Short: "OS notification every N minutes while a session is running (0 = off)",
-	Long: `Send an OS notification + sound every N minutes the active session
-keeps running. Designed to catch forgotten sessions — if you start a
-timer and walk away, the daemon will ping you on a regular cadence.
-
-The reminder counter resets when a session ends (via stop, switch, or
-auto-stop), so a fresh session starts with a clean cadence.
-
-Examples:
-  btrack config reminder 60    ping every 1h
-  btrack config reminder 30    ping every 30 min (more aggressive)
-  btrack config reminder 0     disable reminders
-
-Tip: run  btrack notify-test  to verify notifications work on your machine.`,
-	Args: cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		minutes, err := strconv.Atoi(args[0])
-		if err != nil || minutes < 0 {
-			return fmt.Errorf("minutes must be a non-negative number")
-		}
-		if err := config.SaveReminderMinutes(minutes); err != nil {
-			return err
-		}
-		ui.Blank()
-		if minutes == 0 {
-			ui.OK("session reminders disabled")
-		} else {
-			ui.OK("session reminder → " + ui.StyleHighlight.Render(fmt.Sprintf("every %d min", minutes)))
-		}
-		ui.Hint("restart the daemon to apply: btrack daemon restart")
-		ui.Blank()
-		return nil
-	},
-}
 
 var configMaxHoursCmd = &cobra.Command{
 	Use:   "max-hours <hours>",
@@ -315,9 +181,6 @@ func init() {
 		configHoursCmd,
 		configIdleCmd,
 		configMaxHoursCmd,
-		configReminderCmd,
-		configPomoSoundCmd,
-		configPomoNotifyCmd,
 		configProjectCmd,
 	)
 	rootCmd.AddCommand(configCmd)

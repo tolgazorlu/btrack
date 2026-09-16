@@ -9,39 +9,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-type GitHubConfig struct {
-	PAT      string `mapstructure:"pat"`
-	Username string `mapstructure:"username"`
-}
-
 type Config struct {
 	Database DatabaseConfig           `mapstructure:"database"`
-	AI       AIConfig                 `mapstructure:"ai"`
 	Daemon   DaemonConfig             `mapstructure:"daemon"`
 	Work     WorkConfig               `mapstructure:"work"`
-	Pomo     PomoConfig               `mapstructure:"pomo"`
-	GitHub   GitHubConfig             `mapstructure:"github"`
 	Projects map[string]ProjectConfig `mapstructure:"projects"`
-	GCal     GCalConfig               `mapstructure:"gcal"`
-}
-
-type PomoConfig struct {
-	Sound  bool `mapstructure:"sound"`
-	Notify bool `mapstructure:"notify"`
-}
-
-type GCalConfig struct {
-	ClientID     string `mapstructure:"client_id"`
-	ClientSecret string `mapstructure:"client_secret"`
-	CalendarID   string `mapstructure:"calendar_id"`
-	AutoSync     bool   `mapstructure:"auto_sync"`
 }
 
 type WorkConfig struct {
-	DailyHours      int `mapstructure:"daily_hours"`
-	IdleMinutes     int `mapstructure:"idle_minutes"`
-	MaxHours        int `mapstructure:"max_hours"`
-	ReminderMinutes int `mapstructure:"reminder_minutes"`
+	DailyHours  int `mapstructure:"daily_hours"`
+	IdleMinutes int `mapstructure:"idle_minutes"`
+	MaxHours    int `mapstructure:"max_hours"`
 }
 
 type ProjectConfig struct {
@@ -49,28 +27,7 @@ type ProjectConfig struct {
 }
 
 type DatabaseConfig struct {
-	Type       string `mapstructure:"type"`
-	DSN        string `mapstructure:"dsn"`
 	SQLitePath string `mapstructure:"sqlite_path"`
-}
-
-type AIConfig struct {
-	Provider  string `mapstructure:"provider"`
-	OpenAIKey string `mapstructure:"openai_key"`
-	ClaudeKey string `mapstructure:"claude_key"`
-	GeminiKey string `mapstructure:"gemini_key"`
-	Model     string `mapstructure:"model"`
-}
-
-func (a AIConfig) ActiveKey() string {
-	switch a.Provider {
-	case "claude":
-		return a.ClaudeKey
-	case "gemini":
-		return a.GeminiKey
-	default:
-		return a.OpenAIKey
-	}
 }
 
 type DaemonConfig struct {
@@ -146,12 +103,8 @@ func Load() (*Config, error) {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(dir)
 
-	viper.SetDefault("database.type", "sqlite")
-	viper.SetDefault("ai.provider", "")
 	viper.SetDefault("work.daily_hours", 8)
 	viper.SetDefault("work.max_hours", 12)
-	viper.SetDefault("pomo.sound", true)
-	viper.SetDefault("pomo.notify", true)
 
 	viper.SetEnvPrefix("BTRACK")
 	viper.AutomaticEnv()
@@ -176,44 +129,7 @@ func Reload() (*Config, error) {
 	return Load()
 }
 
-func SaveProviderKey(provider, key string) error {
-	if _, err := Load(); err != nil {
-		return err
-	}
 
-	keyField := map[string]string{
-		"openai": "ai.openai_key",
-		"claude": "ai.claude_key",
-		"gemini": "ai.gemini_key",
-	}
-	field, ok := keyField[provider]
-	if !ok {
-		return fmt.Errorf("unknown provider: %s", provider)
-	}
-
-	viper.Set(field, key)
-	viper.Set("ai.provider", provider)
-
-	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-
-	instance = nil
-	return nil
-}
-
-func SaveGitHub(pat, username string) error {
-	if _, err := Load(); err != nil {
-		return err
-	}
-	viper.Set("github.pat", pat)
-	viper.Set("github.username", username)
-	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-	instance = nil
-	return nil
-}
 
 func SaveDailyHours(hours int) error {
 	if _, err := Load(); err != nil {
@@ -251,41 +167,8 @@ func SaveMaxHours(hours int) error {
 	return nil
 }
 
-func SaveReminderMinutes(minutes int) error {
-	if _, err := Load(); err != nil {
-		return err
-	}
-	viper.Set("work.reminder_minutes", minutes)
-	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-	instance = nil
-	return nil
-}
 
-func SavePomoSound(enabled bool) error {
-	if _, err := Load(); err != nil {
-		return err
-	}
-	viper.Set("pomo.sound", enabled)
-	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-	instance = nil
-	return nil
-}
 
-func SavePomoNotify(enabled bool) error {
-	if _, err := Load(); err != nil {
-		return err
-	}
-	viper.Set("pomo.notify", enabled)
-	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-	instance = nil
-	return nil
-}
 
 func SaveProjectRate(project string, rate float64) error {
 	if _, err := Load(); err != nil {
@@ -299,22 +182,6 @@ func SaveProjectRate(project string, rate float64) error {
 	return nil
 }
 
-func SaveGCal(clientID, clientSecret, calendarID string, autoSync bool) error {
-	if _, err := Load(); err != nil {
-		return err
-	}
-	viper.Set("gcal.client_id", clientID)
-	viper.Set("gcal.client_secret", clientSecret)
-	if calendarID != "" {
-		viper.Set("gcal.calendar_id", calendarID)
-	}
-	viper.Set("gcal.auto_sync", autoSync)
-	if err := viper.WriteConfigAs(ConfigPath()); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-	instance = nil
-	return nil
-}
 
 func writeDefaultConfig(path string) {
 	content := `# btrack configuration
