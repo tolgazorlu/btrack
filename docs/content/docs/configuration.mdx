@@ -27,21 +27,35 @@ btrack config idle 30
 
 Sets the idle timeout in minutes. If btrack detects no activity for this period, it warns you that your session may have drifted.
 
+### Max Session Length
+
+```bash
+btrack config max-hours 12
+```
+
+Caps any single session at N hours (0 = off). A session that runs past the cap
+is auto-stopped by the daemon, backdated to `start + cap`, and tagged `#runaway`.
+
 ### Project Rates
 
 ```bash
 btrack config project myapp rate 150
 ```
 
-Sets the hourly billing rate for project `myapp`. Used by `btrack invoice`.
+Sets the hourly billing rate recorded for project `myapp`.
 
 ## Config File
 
 Location: `~/.config/btrack/config.yaml`
 
 ```yaml
-hours: 8
-idle: 30
+database:
+  # sqlite_path: ""
+
+work:
+  daily_hours: 8      # target working hours per day
+  # idle_minutes: 0   # auto-stop after N minutes with no btrack activity (0 = off)
+  # max_hours: 12     # hard cap on a single session's duration (0 = off)
 
 projects:
   myapp:
@@ -49,17 +63,12 @@ projects:
   clientco:
     rate: 120
 
-# AI provider settings (written by `btrack ai setup`)
-ai:
-  provider: openai
-  api_key: sk-...
-
-# Google Calendar (written by `btrack gcal connect`)
-gcal:
-  client_id: ...
-  client_secret: ...
-  auto_sync: false
+daemon:
+  # socket_path: ""
+  # pid_file: ""
 ```
+
+Sessions are always stored in SQLite under the btrack data directory.
 
 ## Viewing Config
 
