@@ -21,7 +21,6 @@ var rootCmd = &cobra.Command{
     btrack x -m "fixed JWT #bugfix"        stop and save         (stop)
     btrack sw "review PR #43"              stop + start new      (switch)
     btrack r                               continue last session  (resume)
-    btrack break                           pause for a break
 
   ` + ui.StyleHighlight.Render("VIEW YOUR WORK") + `
     btrack w                               live status           (status)
@@ -33,27 +32,12 @@ var rootCmd = &cobra.Command{
     btrack h -n 20                         last 20 sessions (table)
     btrack h -l 5                          last 5 hours
     btrack stats                           quick snapshot
-    btrack streak                          working day streak
     btrack tag #bugfix                     filter by tag
     btrack search "JWT"                    search sessions       (find, f)
 
-  ` + ui.StyleHighlight.Render("AI") + `
-    btrack ai                              interactive chat
-    btrack ai sum                          standup from today
-    btrack ai sum --days 3                 last 3 days
-    btrack ai ins                          productivity dashboard
-    btrack ai ins --no-ai                  stats only, no key needed
-    btrack ai setup                        configure API key
-
-  ` + ui.StyleHighlight.Render("PROJECTS & BILLING") + `
+  ` + ui.StyleHighlight.Render("PROJECTS") + `
     btrack s "task" -p myapp               assign to a project
     btrack projects                        list projects with time
-    btrack invoice -p myapp -r 150         generate invoice
-    btrack invoice --month 2026-05 -r 100  specific month
-
-  ` + ui.StyleHighlight.Render("FOCUS") + `
-    btrack pomo "write tests"              25/5 pomodoro timer
-    btrack pomo "task" --work 45           custom interval
 
   ` + ui.StyleHighlight.Render("DATA & SETTINGS") + `
     btrack export                          export to CSV
