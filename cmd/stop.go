@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/tolgazorlu/btrack/internal/ai"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/daemon"
 	"github.com/tolgazorlu/btrack/internal/gcal"
@@ -30,8 +28,7 @@ Usage:
   btrack x --at "2h ago"     backdate the stop time
 
 Examples:
-  btrack x                                  (AI suggests a message; skip = save without one)
-  btrack x --no-ai                          (skip AI, save without a message)
+  btrack x
   btrack x -m "fixed JWT expiry #bugfix"
   btrack x --at "2h ago"                    (forgot to stop earlier today)
   btrack x --at "yesterday 18:00"           (forgot to stop yesterday)
@@ -39,7 +36,6 @@ Examples:
 
 Flags:
   -m, --message   Closing message (optional)
-      --no-ai     Skip AI message suggestion
       --at        Backdate the stop time (relative or absolute)
 
 Tips:
@@ -48,7 +44,6 @@ Tips:
   · btrack shipped to compare what you said vs what landed in git`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		message, _ := cmd.Flags().GetString("message")
-		noAI, _ := cmd.Flags().GetBool("no-ai")
 		atRaw, _ := cmd.Flags().GetString("at")
 
 		var atRFC3339 string
@@ -60,14 +55,9 @@ Tips:
 			atRFC3339 = t.Format(time.RFC3339)
 		}
 
-		if message == "" && !noAI {
-			message = suggestMessage()
-		}
-
 		// Collect tags that should be appended to the closing message:
-		// 1. AI-suggested category tags from the message itself
-		// 2. default_tags from the .btrack project file (if any)
-		// All deduplicated against tags the user already typed.
+		// default_tags from the .btrack project file (if any), deduplicated
+		// against tags the user already typed.
 		existingTags := map[string]bool{}
 		for _, w := range strings.Fields(message) {
 			if strings.HasPrefix(w, "#") {
@@ -76,9 +66,6 @@ Tips:
 		}
 
 		var autoTags []string
-		if message != "" {
-			autoTags = append(autoTags, ai.CategorizeTask(message)...)
-		}
 		if cwd, err := os.Getwd(); err == nil {
 			if pf, _ := config.FindProjectFile(cwd); pf != nil {
 				autoTags = append(autoTags, pf.DefaultTags...)
@@ -143,7 +130,6 @@ Tips:
 
 func init() {
 	stopCmd.Flags().StringP("message", "m", "", "closing message for the session (optional)")
-	stopCmd.Flags().Bool("no-ai", false, "skip AI message suggestion")
 	stopCmd.Flags().String("at", "", "backdate the stop time (e.g. \"2h ago\", \"15:30\", \"yesterday 18:00\", or RFC3339)")
 	rootCmd.AddCommand(stopCmd)
 }
@@ -212,52 +198,4 @@ func parseAtTime(raw string, now time.Time) (time.Time, error) {
 	}
 
 	return time.Time{}, fmt.Errorf("unrecognized time format")
-}
-
-func suggestMessage() string {
-	cfg, err := config.Load()
-	if err != nil || cfg.AI.ActiveKey() == "" {
-		return ""
-	}
-
-	provider, err := ai.NewProvider(cfg)
-	if err != nil {
-		return ""
-	}
-
-	client := daemon.NewClient()
-	resp, err := client.Send(daemon.ActionStatus, nil)
-	if err != nil || !resp.Success {
-		return ""
-	}
-	var status daemon.StatusData
-	if err := json.Unmarshal(resp.Data, &status); err != nil || !status.Active {
-		return ""
-	}
-
-	var notes []string
-	for _, l := range status.RecentLog {
-		notes = append(notes, l.Note)
-	}
-
-	fmt.Print(ui.Indent + ui.StyleDimmed.Render("✦ asking AI for a commit message…\r"))
-	aiCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	suggestion, err := ai.SuggestCommitMessage(aiCtx, provider,
-		status.Session.TaskName, notes)
-	fmt.Print("                                                     \r")
-
-	if err != nil {
-		return ""
-	}
-	ui.Blank()
-	ui.KV("ai suggests", ui.StyleHighlight.Render(suggestion))
-	fmt.Printf("%s%s ", ui.Indent, ui.StyleDimmed.Render("use this? [y/N] "))
-
-	var input string
-	fmt.Scanln(&input)
-	if strings.ToLower(strings.TrimSpace(input)) == "y" {
-		return suggestion
-	}
-	return ""
 }
