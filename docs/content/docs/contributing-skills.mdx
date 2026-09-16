@@ -5,7 +5,7 @@ description: How to add a new Claude Code skill to the btrack repo — folder co
 
 # Adding a Skill
 
-This guide is for contributors who want to add a new skill to the btrack repo (e.g. `btrack-invoice`, `btrack-shipped`) alongside the existing [`btrack` skill](/docs/claude-skill). Users installing skills don't need this page.
+This guide is for contributors who want to add a new skill to the btrack repo (e.g. `btrack-reporting`) alongside the existing [`btrack` skill](/docs/claude-skill). Users installing skills don't need this page.
 
 The btrack repo follows the [skills.sh](https://skills.sh) convention so that any skill in `skills/<name>/` is installable via `npx skills add tolgazorlu/btrack` and discoverable on the skills.sh leaderboard.
 
@@ -32,8 +32,6 @@ skills/
     ├── SKILL.md             # required — the skill itself, loaded by Claude
     ├── README.md            # optional — human-readable overview
     ├── metadata.json        # required for skills.sh — manifest
-    ├── scripts/             # optional — setup or helper scripts
-    │   └── setup.sh
     └── references/          # optional — deep-dive docs the skill links to
         └── *.md
 ```
@@ -90,7 +88,7 @@ Tags should overlap with skills.sh leaderboard categories. Look at neighboring s
 
 ## Embedded vs documentation-only skills
 
-The btrack binary embeds the **canonical `btrack` skill** so users get one-command install (`btrack skill install`). If you're adding a *different* skill (say `btrack-invoice`), there are two paths:
+The btrack binary embeds the **canonical `btrack` skill** so users get one-command install (`btrack skill install`). If you're adding a *different* skill (say `btrack-reporting`), there are two paths:
 
 ### Path A — documentation-only skill
 
@@ -164,6 +162,6 @@ Skills in this repo follow a few conventions, mostly to keep the install experie
 
 | Skill | Location | Purpose |
 |-------|----------|---------|
-| `btrack` | [`skills/btrack/`](https://github.com/tolgazorlu/btrack/tree/main/skills/btrack) | Auto-track coding sessions and tie them to git commits |
+| `btrack` | [`skills/btrack/`](https://github.com/tolgazorlu/btrack/tree/main/skills/btrack) | Auto-track coding sessions from Claude Code |
 
 Add new entries here as they ship.
