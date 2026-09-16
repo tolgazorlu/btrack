@@ -7,7 +7,7 @@ description: Track your first session with btrack in under a minute.
 
 This guide walks you through a typical btrack workflow from starting a session to stopping it.
 
-If you'd rather drive everything from a single prompt, run `btrack` on its own to open the [interactive console](/docs/console) — a Gemini-style REPL with `@`-quick actions and free-text AI chat.
+If you'd rather drive everything from a single prompt, run `btrack` on its own to open the [interactive console](/docs/console) — a REPL with `/` quick actions.
 
 ## 1. Start a Session
 
@@ -42,22 +42,13 @@ Shows a live-updating status display with elapsed time, session description, and
 ## 4. Stop the Session
 
 ```bash
-btrack x                                            # AI offers a message; accept or skip
+btrack x                                            # stop without a message
 btrack x -m "fixed JWT clock skew, deployed to staging"
-btrack x --no-ai                                    # save without a message
 ```
 
-Stops the running session. The closing message is optional — running `btrack x` on its own asks AI for a one-line summary; declining saves the session without a message. Alias: `btrack stop`.
+Stops the running session. The closing message is optional. Alias: `btrack stop`.
 
-## 5. See What Shipped
-
-```bash
-btrack shipped
-```
-
-Cross-references your last session's time window with `git log` and shows the commits that landed. Pair it with `btrack stop` to do an honest end-of-task self-check. Alias: `btrack sh`.
-
-## 6. View History
+## 5. View History
 
 ```bash
 btrack h
@@ -72,8 +63,7 @@ btrack h -m   # this month
 
 ## What's Next
 
-- [Interactive Console](/docs/console) — the `btrack` REPL with `@`-actions and inline AI chat
+- [Interactive Console](/docs/console) — the `btrack` REPL with `/` actions
 - [Commands](/docs/commands) — full reference for all btrack commands
-- [Shipped](/docs/shipped) — what actually landed in git during each session
 - [Projects](/docs/projects) — organize sessions by project
-- [AI Summaries](/docs/ai) — generate standups from your sessions
+- [Export](/docs/export) — get your sessions out as CSV or JSON
