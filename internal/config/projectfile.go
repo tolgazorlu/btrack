@@ -17,7 +17,7 @@ type ProjectFile struct {
 	TaskPrefix  string   // text prepended to every task name
 	Description string   // short note on what this project is (used by AI features)
 	DailyHours  int      // override global daily_hours (0 = use global)
-	BillingRate float64  // hourly rate used by `btrack invoice` (0 = use global)
+	BillingRate float64  // hourly rate for the project (0 = use global)
 	DefaultTags []string // tags auto-applied to every session stopped in this dir
 }
 

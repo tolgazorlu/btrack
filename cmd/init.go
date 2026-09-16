@@ -28,7 +28,7 @@ Fields:
   task_prefix   — text prepended to every task name (e.g. "[myapp]")
   description   — short note on what this project is (used by AI features)
   daily_hours   — override the global daily hour target for this project
-  billing_rate  — hourly rate ($), used by ` + "`btrack invoice`" + `
+  billing_rate  — hourly rate ($), recorded with the project
   default_tags  — comma-separated tags auto-applied to every session
 
 Example .btrack file:
@@ -74,7 +74,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// ── identity ────────────────────────────────────────────────────────────
 	ui.Section("identity")
-	ui.Hint("how this project shows up in btrack history, stats, and invoices")
+	ui.Hint("how this project shows up in btrack history and stats")
 
 	suggestedProject := existing.Project
 	if suggestedProject == "" {
