@@ -40,7 +40,7 @@ Flags:
 Tips:
   · Add #tags at the end to categorize your work
   · Common tags: #bugfix #feature #test #docs #refactor #ci
-  · btrack shipped to compare what you said vs what landed in git`,
+  · Filter later with: btrack tag #bugfix`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		message, _ := cmd.Flags().GetString("message")
 		atRaw, _ := cmd.Flags().GetString("at")

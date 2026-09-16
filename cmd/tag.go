@@ -30,12 +30,10 @@ How tags are added:
        btrack x -m "fixed login redirect #bugfix"
   2. Auto-detected from keywords (fix/feat/refactor/test/doc):
        btrack x -m "fixed the JWT issue"  ->  auto-adds #bugfix
-  3. Auto-extracted from GitHub commits when using: btrack github sync
 
 Common tags: #bugfix #feature #test #docs #refactor #ci
 
 Tips:
-  · See all your tags with a count: btrack ai insights
   · Filter history to see all work in a category: btrack tag #feature`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

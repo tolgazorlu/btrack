@@ -41,15 +41,14 @@ var skillCmd = &cobra.Command{
 The skill teaches Claude Code (and other skill-aware clients) to:
   - start a btrack session before non-trivial coding work
   - drop checkpoint notes for non-obvious findings
-  - stop the session right before "git commit" so "btrack shipped" lines
-    sessions up with commits
+  - stop the session with a closing message when the work is done
 
-The skill works alongside the MCP server. Once both are wired up:
+The skill drives btrack through ordinary shell commands, so there is
+nothing else to register:
 
-  claude mcp add btrack -- btrack mcp
   btrack skill install
 
-…restart Claude Code so it picks up both.`,
+…then restart Claude Code so it picks the skill up.`,
 }
 
 type skillInstallStatus int

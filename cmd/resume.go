@@ -24,10 +24,6 @@ Usage:
 Examples:
   btrack r   (picks up where you left off)
 
-Common workflow:
-  btrack break      (pause — go grab coffee)
-  btrack r          (resume when you are back — same task name)
-
 Tips:
   · Creates a brand new session — does not modify the old one
   · Copies task name and git branch/repo from the last session

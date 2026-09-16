@@ -27,10 +27,8 @@ What you'll see:
   · Most used tag this week
 
 Tips:
-  · For full analytics with charts and AI analysis: btrack ai insights
   · For a day-by-day breakdown: btrack h -w
-  · For a quick tag filter: btrack tag #bugfix
-  · Connect GitHub to enrich AI insights: btrack github connect`,
+  · For a quick tag filter: btrack tag #bugfix`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -114,7 +112,7 @@ Tips:
 				"  "+ui.StyleDimmed.Render(fmt.Sprintf("(%d this week)", topCount)))
 		}
 
-		ui.Footer("btrack ai ins  for full analytics")
+		ui.Footer("btrack h -w  for a day-by-day breakdown")
 		return nil
 	},
 }
