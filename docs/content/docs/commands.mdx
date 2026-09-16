@@ -5,7 +5,7 @@ description: Full reference for all btrack commands and flags.
 
 # Command Reference
 
-Run `btrack` with no arguments to open the [interactive console](/docs/console) — a Gemini-style REPL with `@`-quick actions and inline AI chat. Every command below also works directly from your shell.
+Run `btrack` with no arguments to open the [interactive console](/docs/console) — a REPL with `/` quick actions. Every command below also works directly from your shell.
 
 ## Core Workflow
 
@@ -16,12 +16,9 @@ Run `btrack` with no arguments to open the [interactive console](/docs/console) 
 | `btrack note "text" --session N` | `btrack n --session N` | Add a note to a specific past session |
 | `btrack stop` | `btrack x` | Stop the active session (closing message optional) |
 | `btrack stop -m "message"` | `btrack x -m` | Stop with a final closing message |
-| `btrack stop --no-ai` | `btrack x --no-ai` | Stop without prompting AI for a message suggestion |
 | `btrack switch "description"` | `btrack sw` | Stop current session and start a new one |
 | `btrack resume` | `btrack r` | Resume the most recently stopped session |
-| `btrack break` | | Start a break (untracked pause) |
 | `btrack w` | | Live status display with elapsed time |
-| `btrack shipped` | `btrack sh` | Show git commits that landed during your sessions |
 | `btrack` | | Open the [interactive console](/docs/console) (no args) |
 
 ## History (`btrack h`)
@@ -52,18 +49,6 @@ btrack h -n 10        # last 10 sessions as a table
 btrack h -n 10 -v     # with notes
 ```
 
-## Standup
-
-Generate a standup from your tracked sessions. Defaults to yesterday — run it before your morning standup.
-
-```bash
-btrack standup              # yesterday (default)
-btrack standup --today      # today's sessions so far
-btrack standup --days 3     # last 3 days
-```
-
-See [AI](/docs/ai) for setup and usage.
-
 ## Projects
 
 | Command | Description |
@@ -83,47 +68,6 @@ btrack edit 42 --start 09:00 --end 17:30
 btrack edit 42 -p myapp -m "done #bugfix"
 ```
 
-## Shipped (Git Correlation)
-
-| Flag | Description |
-|------|-------------|
-| _(none)_ | Last completed session |
-| `-n N`, `--num N` | Last N completed sessions |
-| `--today` | All sessions from today |
-| `-i N`, `--session N` | A specific session by ID |
-
-### Examples
-
-```bash
-btrack shipped              # last session — what landed during it
-btrack sh -n 5              # last 5 sessions
-btrack shipped --today      # all of today's sessions
-btrack shipped -i 42        # session #42
-```
-
-Run from inside the git repository where the session was tracked. See [Shipped](/docs/shipped) for full documentation.
-
-## Pomodoro
-
-```bash
-btrack pomo "task description"
-btrack pomo "deep work" --work 45 --break 10
-```
-
-See [Pomodoro](/docs/pomodoro) for flags and details.
-
-## AI
-
-```bash
-btrack standup       # yesterday's standup (recommended)
-btrack ai            # interactive chat
-btrack ai sum        # standup from today's sessions
-btrack ai ins        # productivity insights
-btrack ai setup      # configure API key
-```
-
-See [AI](/docs/ai) for setup and usage.
-
 ## Shell Prompt
 
 ```bash
@@ -136,21 +80,11 @@ btrack shell fish                  # print fish integration snippet
 
 See [Shell Prompt](/docs/shell-prompt) for setup.
 
-## Google Calendar
+## Export
 
 ```bash
-btrack gcal connect
-btrack gcal sync
-btrack gcal push
+btrack export                          # CSV to stdout
+btrack export --format json --out f    # JSON to a file
 ```
 
-See [Google Calendar](/docs/google-calendar) for setup.
-
-## Export & Invoice
-
-```bash
-btrack export
-btrack invoice
-```
-
-See [Export](/docs/export) and [Invoicing](/docs/invoicing).
+See [Export](/docs/export).
