@@ -38,7 +38,7 @@ func welcomeSuppressed(cmd *cobra.Command) bool {
 		return true
 	}
 	switch cmd {
-	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd, mcpCmd, skillPrintCmd, skillPathCmd:
+	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd, skillPrintCmd, skillPathCmd:
 		return true
 	default:
 		return false

@@ -7,7 +7,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/google/shlex"
-	mcpserver "github.com/tolgazorlu/btrack/internal/mcp"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -57,7 +56,7 @@ func runConsole() error {
 			continue
 		}
 
-		execErr := dispatchOrChat(args, input)
+		execErr := dispatch(args)
 		if execErr != nil {
 			hint = ui.StyleError.Render(" error ") + " " + execErr.Error()
 			continue
@@ -108,51 +107,14 @@ func handleSlash(input string) (bool, string) {
 	case "clear", "cls":
 		fmt.Fprint(ui.Out, "\033[H\033[2J")
 		return false, ""
-	case "tools":
-		printToolCatalog()
-		return false, ""
-	case "mcp":
-		handleMCPSlash(input)
-		return false, ""
 	default:
 		expanded, ok := expandSlashAction(parts)
 		if !ok {
 			return false, "unknown command: /" + name + "  ·  /help to list"
-		}
-		if looksLikeNaturalLanguage(expanded[1:]) {
-			if err := runConsoleChat(input); err != nil {
-				return false, ui.StyleError.Render(" error ") + " " + err.Error()
-			}
-			return false, ""
 		}
 		if dispErr := dispatch(expanded); dispErr != nil {
 			return false, ui.StyleError.Render(" error ") + " " + dispErr.Error()
 		}
 		return false, ""
 	}
-}
-
-func looksLikeNaturalLanguage(args []string) bool {
-	nlWords := map[string]bool{
-		"with": true, "about": true, "for": true, "in": true,
-		"to": true, "and": true, "project": true, "task": true,
-		"named": true, "called": true, "on": true,
-	}
-	for _, a := range args {
-		if !strings.HasPrefix(a, "-") && nlWords[strings.ToLower(a)] {
-			return true
-		}
-	}
-	return false
-}
-
-func printToolCatalog() {
-	ui.Blank()
-	ui.Section("mcp tools")
-	for _, t := range mcpserver.Tools(mcpserver.Deps{}) {
-		ui.Cmd(t.Name, t.Description)
-	}
-	ui.Blank()
-	ui.Hint("expose to AI: `btrack mcp` (stdio MCP server)")
-	ui.Blank()
 }
