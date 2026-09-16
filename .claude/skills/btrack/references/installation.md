@@ -1,6 +1,6 @@
 # Installing btrack
 
-The skill drives the `btrack` binary, which must be installed and on `PATH`. This page covers every install path plus PATH-resolution gotchas that show up when MCP launches the binary as a subprocess.
+The skill drives the `btrack` binary, which must be installed and on `PATH`.
 
 ## Install the binary
 
@@ -40,102 +40,44 @@ go build -o btrack .
 sudo install -m 755 btrack /usr/local/bin/btrack
 ```
 
-## Register the MCP server
-
-### Claude Code
+## Install the skill
 
 ```bash
-claude mcp add btrack -- btrack mcp
-claude mcp list | grep btrack         # should show "✓ Connected"
+btrack skill install          # writes ~/.claude/skills/btrack/
 ```
 
-### Cursor / Claude Desktop / Continue
-
-Add to your client's MCP config (`~/.cursor/mcp.json`, `claude_desktop_config.json`, etc.):
-
-```json
-{
-  "mcpServers": {
-    "btrack": {
-      "command": "btrack",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### Gemini CLI
-
-In `~/.gemini/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "btrack": {
-      "command": "btrack",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### HTTP transport (if stdio fails)
-
-If your client's stdio launch can't find `btrack` (sandboxing, PATH, etc.), run the HTTP server yourself and register the URL:
-
-```bash
-btrack mcp --http              # 127.0.0.1:8765, path /mcp
-```
-
-Then for Claude Code:
-
-```bash
-claude mcp add --transport http btrack http://127.0.0.1:8765/mcp
-```
-
-## After registering
-
-**Fully quit and reopen the client.** MCP servers load at startup — they will not appear in a session that was already open when you ran `claude mcp add`.
-
-In a fresh session, ask "what am I tracking right now?" — Claude should call `btrack_status` and answer.
+Then reopen Claude Code so it picks the skill up. The skill calls `btrack`
+through ordinary shell commands, so there is nothing else to register.
 
 ## PATH troubleshooting
 
-The most common failure mode is "MCP registered, tools never appear." Almost always a PATH issue: the GUI client launches with a different `PATH` than your shell.
+If Claude reports `btrack: command not found`, the client is launching with a
+different `PATH` than your shell.
 
-### Symptoms
-
-- `claude mcp list` shows `btrack: ✗ Failed`
-- Tool names starting with `mcp__btrack__` never appear in the toolset
-- The client logs `exec: "btrack": executable file not found in $PATH`
-
-### Fixes
-
-**1. Use an absolute path.** Find `btrack` and register the absolute path instead:
+**Check where it lives:**
 
 ```bash
-which btrack                                            # e.g. /opt/homebrew/bin/btrack
-claude mcp remove btrack
-claude mcp add btrack -- /opt/homebrew/bin/btrack mcp
+which btrack                  # e.g. /opt/homebrew/bin/btrack
 ```
 
-**2. macOS Homebrew on Apple Silicon.** Brew installs to `/opt/homebrew/bin`, which GUI apps may not see. Either use the absolute path above, or symlink:
+**macOS Homebrew on Apple Silicon.** Brew installs to `/opt/homebrew/bin`, which
+GUI apps may not see. Symlink it into a directory they do see:
 
 ```bash
 sudo ln -s /opt/homebrew/bin/btrack /usr/local/bin/btrack
 ```
 
-**3. Switch to HTTP transport.** Bypasses the subprocess PATH entirely (see "HTTP transport" above).
+**Go installs.** `~/go/bin` is often missing from the GUI `PATH`. Either symlink
+as above, or add the directory to your shell profile and relaunch the client
+from a terminal.
 
 ## Verifying the install
 
-After all of the above:
-
 ```bash
 btrack --version              # binary works
-claude mcp list | grep btrack # MCP connected
 btrack skill install          # writes ~/.claude/skills/btrack/
-ls ~/.claude/skills/btrack/   # SKILL.md, README.md, scripts/, references/
+ls ~/.claude/skills/btrack/   # SKILL.md, README.md, references/
+btrack s "test session"       # start
+btrack w                      # live status
+btrack x -m "works"           # stop
 ```
-
-Restart Claude Code. In a fresh session, the toolset should include 10 `mcp__btrack__btrack_*` tools and the skill should auto-trigger when you start a coding task.

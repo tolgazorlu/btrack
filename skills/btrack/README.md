@@ -8,13 +8,13 @@ When you start a non-trivial coding task, the skill:
 
 1. Starts a btrack session with a meaningful task name.
 2. Drops checkpoint notes when something worth remembering happens.
-3. Stops the session right before `git commit` so [`btrack shipped`](https://btrack.dev/docs/shipped) lines commits up with sessions.
-4. Pulls real session data when you ask "what did I do yesterday?" or want a standup — no hallucination.
+3. Stops the session with a closing message when the work is done.
+4. Pulls real session data when you ask "what did I do yesterday?" — no hallucination.
 
 ## Prerequisites
 
 - [`btrack`](https://btrack.dev) installed (`brew install tolgazorlu/btrack/btrack` on macOS/Linux; full matrix in [references/installation.md](references/installation.md))
-- [Claude Code](https://claude.com/code) (or another MCP- and skill-aware client)
+- [Claude Code](https://claude.com/code) (or another skill-aware client)
 
 ## Install
 
@@ -32,21 +32,8 @@ btrack skill install
 
 Both write `~/.claude/skills/btrack/` so Claude Code picks it up at next launch.
 
-## One-time setup
-
-After installing the skill, register the MCP server with Claude Code:
-
-```bash
-claude mcp add btrack -- btrack mcp
-```
-
-Or run the bundled setup script which does both check + register:
-
-```bash
-~/.claude/skills/btrack/scripts/setup.sh
-```
-
-Then **fully quit and reopen Claude Code** so it loads the skill + MCP together.
+The skill drives btrack through ordinary shell calls, so there's nothing else to
+register — just reopen Claude Code once after installing.
 
 ## How it feels in use
 
@@ -76,13 +63,9 @@ skills/btrack/
 ├── SKILL.md                    # the skill itself (loaded by Claude)
 ├── README.md                   # this file (human-readable overview)
 ├── metadata.json               # skills.sh manifest
-├── scripts/
-│   └── setup.sh                # one-time MCP registration helper
 └── references/
-    ├── installation.md         # btrack binary install + MCP setup
-    ├── standup-workflow.md     # morning standup recipe
-    ├── shipped-workflow.md     # btrack shipped + git pairing
-    └── troubleshooting.md      # MCP/PATH/Windows issues
+    ├── installation.md         # btrack binary install
+    └── troubleshooting.md      # PATH / daemon / Windows issues
 ```
 
 ## License

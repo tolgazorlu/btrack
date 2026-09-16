@@ -12,7 +12,7 @@ import (
 )
 
 // btrackSkillFS contains the entire skills/btrack/ tree (SKILL.md + README +
-// metadata.json + scripts/ + references/), embedded at build time.
+// metadata.json + references/), embedded at build time.
 //
 // The "all:" prefix is required so files starting with "_" or "." (none today,
 // but defensive) are included.
@@ -126,7 +126,7 @@ var skillInstallCmd = &cobra.Command{
 	Long: `Install the bundled btrack skill into the Claude Code skills
 directory (default: ~/.claude/skills/btrack/).
 
-The skill markdown plus its README, metadata.json, scripts/, and references/
+The skill markdown plus its README, metadata.json and references/
 are embedded in this binary, so the install matches the btrack version you're
 running. Run again after upgrading btrack to refresh.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -147,12 +147,8 @@ running. Run again after upgrading btrack to refresh.`,
 			destDir := filepath.Dir(skillFile)
 			fmt.Printf("Installed btrack skill at %s\n\n", destDir)
 			fmt.Println("Next steps:")
-			fmt.Println("  1. Make sure the MCP is registered with your client. For Claude Code:")
-			fmt.Println("       claude mcp add btrack -- btrack mcp")
-			fmt.Println("  2. Fully quit and reopen Claude Code so it loads the skill + MCP.")
-			fmt.Println("  3. Start coding — Claude will begin tracking sessions automatically.")
-			fmt.Println()
-			fmt.Printf("  (or run %s/scripts/setup.sh to do step 1 for you)\n", destDir)
+			fmt.Println("  1. Fully quit and reopen Claude Code so it loads the skill.")
+			fmt.Println("  2. Start coding — Claude will begin tracking sessions automatically.")
 		}
 		return nil
 	},

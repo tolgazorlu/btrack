@@ -73,8 +73,8 @@ func TestInstallSkillWritesEmbeddedContent(t *testing.T) {
 	}
 }
 
-// TestInstallSkillCopiesWholeTree verifies that scripts and references land
-// in the destination, not just SKILL.md.
+// TestInstallSkillCopiesWholeTree verifies that the references land in the
+// destination, not just SKILL.md.
 func TestInstallSkillCopiesWholeTree(t *testing.T) {
 	tmp := t.TempDir()
 	if _, _, err := installSkill(tmp, false); err != nil {
@@ -84,10 +84,7 @@ func TestInstallSkillCopiesWholeTree(t *testing.T) {
 		"btrack/SKILL.md",
 		"btrack/README.md",
 		"btrack/metadata.json",
-		"btrack/scripts/setup.sh",
 		"btrack/references/installation.md",
-		"btrack/references/standup-workflow.md",
-		"btrack/references/shipped-workflow.md",
 		"btrack/references/troubleshooting.md",
 	}
 	for _, p := range want {
@@ -95,21 +92,6 @@ func TestInstallSkillCopiesWholeTree(t *testing.T) {
 		if _, err := os.Stat(full); err != nil {
 			t.Errorf("missing %s after install: %v", p, err)
 		}
-	}
-}
-
-// TestInstallSkillScriptsAreExecutable verifies setup.sh has +x after install.
-func TestInstallSkillScriptsAreExecutable(t *testing.T) {
-	tmp := t.TempDir()
-	if _, _, err := installSkill(tmp, false); err != nil {
-		t.Fatalf("install: %v", err)
-	}
-	info, err := os.Stat(filepath.Join(tmp, "btrack/scripts/setup.sh"))
-	if err != nil {
-		t.Fatalf("stat setup.sh: %v", err)
-	}
-	if info.Mode().Perm()&0o100 == 0 {
-		t.Fatalf("setup.sh is not executable: %v", info.Mode())
 	}
 }
 
