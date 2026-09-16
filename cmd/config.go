@@ -151,7 +151,7 @@ Examples:
 var configProjectCmd = &cobra.Command{
 	Use:   "project <name> rate <amount>",
 	Short: "Set the hourly billing rate for a project",
-	Long: `Set an hourly billing rate for a project used by btrack invoice.
+	Long: `Set an hourly billing rate recorded for a project.
 
 Examples:
   btrack config project myapp rate 150
