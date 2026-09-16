@@ -38,7 +38,7 @@ func welcomeSuppressed(cmd *cobra.Command) bool {
 		return true
 	}
 	switch cmd {
-	case startCmd, statusCmd, pomoCmd, aiCmd, aiSetupCmd, skillPrintCmd, skillPathCmd:
+	case startCmd, statusCmd, pomoCmd, skillPrintCmd, skillPathCmd:
 		return true
 	default:
 		return false
@@ -88,12 +88,6 @@ func printWelcome(isUpgrade bool, prevVersion string) {
 	ui.Cmd("btrack h -w", "this week")
 	ui.Cmd("btrack stats", "quick snapshot")
 	ui.Cmd("btrack shipped", "what landed in git during your sessions")
-	ui.Blank()
-
-	ui.Section("ai · optional, needs an API key")
-	ui.Cmd("btrack ai setup", "configure OpenAI / Claude / Gemini")
-	ui.Cmd("btrack ai sum", "standup summary from today")
-	ui.Cmd("btrack ai ins", "weekly stats + AI analysis")
 	ui.Blank()
 
 	ui.Section("setup")
