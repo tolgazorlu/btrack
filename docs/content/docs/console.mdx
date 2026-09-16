@@ -1,11 +1,11 @@
 ---
 title: Interactive Console
-description: The Gemini-style REPL you get when you run `btrack` with no arguments.
+description: The REPL you get when you run `btrack` with no arguments.
 ---
 
 # Interactive Console
 
-Run `btrack` on its own and you land in an interactive prompt — the same shape as Claude Code or the Gemini CLI splash. The console renders the welcome banner once, then loops a single rounded input box. Each Enter dispatches one command and immediately repaints the prompt for the next.
+Run `btrack` on its own and you land in an interactive prompt. The console renders the welcome banner once, then loops a single rounded input box. Each Enter dispatches one command and immediately repaints the prompt for the next.
 
 ```bash
 btrack          # opens the console
@@ -24,8 +24,7 @@ btrack          # opens the console
   Tips for getting started:
   1. Run any command — e.g. s "fix bug" -p myapp
   2. Use / for quick actions, e.g. /start
-  3. Ask anything — free text goes to btrack ai chat
-  4. /help for the full reference, /exit to quit
+  3. /help for the full reference, /exit to quit
 
   ╭────────────────────────────────────╮
   │ > _                                │
@@ -34,14 +33,12 @@ btrack          # opens the console
 
 ## What you can type
 
-The console understands four kinds of input:
+The console understands two kinds of input:
 
 | Pattern | Meaning |
 |---------|---------|
 | `s "fix bug" -p myapp` | Bare `btrack` subcommand — dispatches through cobra |
 | `/start "fix bug" -p myapp` | `/`-command — alias for a common workflow |
-| `/start fix bug for myapp project` | Natural language args — AI extracts task name and flags |
-| _anything else_ | Free text — AI decides: run a command or reply in chat |
 
 ## /Commands
 
@@ -58,7 +55,6 @@ Type `/` and an autocomplete dropdown appears under the input box, filtered live
 | `/switch` / `/sw` | Stop current and start a new task |
 | `/resume` / `/r` | Resume the last stopped session |
 | `/note` / `/n` | Add a checkpoint note |
-| `/break` | Log a break session |
 
 ### Views
 
@@ -67,20 +63,9 @@ Type `/` and an autocomplete dropdown appears under the input box, filtered live
 | `/status` / `/w` | Live session view |
 | `/history` / `/h` | Session history |
 | `/stats` | Productivity snapshot |
-| `/streak` | Working-day streak |
 | `/projects` | List all projects |
-| `/shipped` | Compare sessions vs git commits |
 | `/search` | Search sessions |
 | `/tag` | Filter history by tag |
-
-### AI
-
-| Command | What it does |
-|---------|-------------|
-| `/standup` / `/su` | Generate AI standup |
-| `/insights` / `/ins` | AI productivity analysis |
-| `/chat` | Open AI chat |
-| `/setup` | Configure AI provider key |
 
 ### System
 
@@ -88,23 +73,14 @@ Type `/` and an autocomplete dropdown appears under the input box, filtered live
 |---------|-------------|
 | `/config` | View or change settings |
 | `/export` | Export sessions to CSV/JSON |
-| `/invoice` | Generate billing invoice |
 | `/init` | Create `.btrack` project file |
 
 ### Examples
 
 ```text
 > /start "fix login bug" -p myapp
-> /stop -m "shipped #bugfix"
-> /standup --days 3
-> /setup
-```
-
-You can also use natural language — the AI will extract the task name and project for you:
-
-```text
-> /start mobile tests with project devredin-mobile
-> /stop with message done refactor
+> /stop -m "fixed it #bugfix"
+> /history -w
 ```
 
 ## Meta Commands
@@ -116,35 +92,8 @@ Meta commands control the console itself, not your tracker state.
 | `/help` | Print the full command reference + all `/`-commands |
 | `/exit`, `/quit`, `/q` | Leave the console |
 | `/clear`, `/cls` | Clear the screen and repaint |
-| `/tools` | List the MCP tool catalogue |
-| `/mcp` | Start a background MCP HTTP server and show register snippets for Claude / Cursor / Gemini / ChatGPT |
-| `/mcp claude\|cursor\|gemini\|chatgpt` | Per-client register helper |
-| `/mcp stop`, `/mcp status` | Manage the running MCP server |
 
 `Ctrl+C` and `Esc` are equivalent to `/exit`.
-
-## AI Intent Routing
-
-Anything that isn't dispatched as a clean CLI command is routed through the AI intent router. This covers two cases:
-
-**Natural language args** — When a command is followed by conversational words (`with`, `for`, `about`, `project`, etc.), the AI extracts the proper flags:
-
-```text
-> /start mobile tests with project devredin-mobile
-  ✦ thinking…
-  → start mobile tests -p devredin-mobile
-```
-
-**Free text** — Anything that doesn't match a known command goes to the AI, which decides whether to run a btrack command or reply in chat:
-
-```text
-> what did I work on yesterday?
-> draft a standup from this week's sessions
-> which project ate most of Tuesday?
-> start a session for code review
-```
-
-If no AI key is configured, the console prints a one-line `/setup` hint instead of an error and stays running.
 
 ## When _not_ to use the Console
 
