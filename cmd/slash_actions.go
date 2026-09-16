@@ -18,29 +18,18 @@ var slashAlias = map[string][]string{
 	"r":      {"resume"},
 	"note":   {"note"},
 	"n":      {"note"},
-	"break":  {"break"},
 
 	"status":   {"status"},
 	"w":        {"status"},
 	"history":  {"history"},
 	"h":        {"history"},
 	"stats":    {"stats"},
-	"streak":   {"streak"},
 	"projects": {"projects"},
-	"shipped":  {"shipped"},
 	"search":   {"search"},
 	"tag":      {"tag"},
 
-	"standup":  {"standup"},
-	"su":       {"standup"},
-	"insights": {"ai", "ins"},
-	"ins":      {"ai", "ins"},
-	"chat":     {"ai"},
-	"setup":    {"ai", "setup"},
-
 	"config":  {"config"},
 	"export":  {"export"},
-	"invoice": {"invoice"},
 	"init":    {"init"},
 }
 
@@ -55,26 +44,16 @@ var slashActionHints = map[string]string{
 	"r":        "resume the last stopped session",
 	"note":     "add a checkpoint note",
 	"n":        "add a checkpoint note",
-	"break":    "log a break session",
 	"status":   "live session view",
 	"w":        "live session view",
 	"history":  "view session history",
 	"h":        "view session history",
 	"stats":    "productivity snapshot",
-	"streak":   "working-day streak",
 	"projects": "list all projects",
-	"shipped":  "compare sessions vs git commits",
 	"search":   "search sessions",
 	"tag":      "filter history by tag",
-	"standup":  "generate AI standup",
-	"su":       "generate AI standup",
-	"insights": "AI productivity analysis",
-	"ins":      "AI productivity analysis",
-	"chat":     "open AI chat",
-	"setup":    "configure AI provider key",
 	"config":   "view or change settings",
 	"export":   "export sessions to CSV/JSON",
-	"invoice":  "generate billing invoice",
 	"init":     "create .btrack project file",
 }
 
@@ -124,6 +103,6 @@ func printSlashActions() {
 		ui.Cmd("/"+k, hint)
 	}
 	ui.Blank()
-	ui.Hint(`examples:  /start "fix bug" -p myapp   ·   /stop -m "shipped #refactor"   ·   /su`)
+	ui.Hint(`examples:  /start "fix bug" -p myapp   ·   /stop -m "fixed it #bugfix"`)
 	ui.Blank()
 }
