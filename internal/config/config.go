@@ -188,30 +188,12 @@ func writeDefaultConfig(path string) {
 # https://github.com/tolgazorlu/btrack
 
 database:
-  type: sqlite
-  # dsn: "postgres://user:pass@localhost/btrack?sslmode=disable"
   # sqlite_path: ""
 
-ai:
-  provider: ""          # active provider: openai | claude | gemini
-  openai_key: ""        # OpenAI API key
-  claude_key: ""        # Anthropic API key
-  gemini_key: ""        # Google Gemini API key
-  # model: ""           # optional override (e.g. gpt-4o, claude-sonnet-4-6)
-
 work:
-  daily_hours: 8        # target working hours per day
-  # idle_minutes: 0     # auto-stop after N minutes with no btrack activity (0 = off)
-  # max_hours: 12       # hard cap on a single session's duration (0 = off)
-  # reminder_minutes: 0 # OS notification every N min while a session is running (0 = off)
-
-pomo:
-  sound: true           # play a sound on phase transitions
-  notify: true          # send a system notification on phase transitions
-
-github:
-  pat: ""               # personal access token (read:user, repo)
-  username: ""          # your GitHub username (set automatically by: btrack github connect)
+  daily_hours: 8      # target working hours per day
+  # idle_minutes: 0   # auto-stop after N minutes with no btrack activity (0 = off)
+  # max_hours: 12     # hard cap on a single session's duration (0 = off)
 
 daemon:
   # socket_path: ""
