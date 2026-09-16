@@ -1,13 +1,11 @@
 import {
   ArrowRight,
-  Brain,
-  CalendarSync,
   Clock,
   FileJson,
   FolderKanban,
+  Search,
   Sparkles,
   Terminal,
-  Timer,
   Zap,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -17,7 +15,7 @@ import { docsRoute, gitConfig } from "@/lib/shared";
 export const metadata: Metadata = {
   title: { absolute: "btrack — Time tracker for developers" },
   description:
-    "A time tracker for developers. Runs in the terminal, stays out of your way — sessions, projects, Pomodoro, and more.",
+    "A time tracker for developers. Runs in the terminal, stays out of your way — sessions, notes, projects and export.",
 };
 
 const repoUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
@@ -37,22 +35,16 @@ const features = [
       "Organize time by project with `.btrack` files and attach notes to running or past sessions.",
   },
   {
-    icon: Timer,
-    title: "Pomodoro built in",
+    icon: Clock,
+    title: "History & stats",
     description:
-      "Focus blocks that auto-tag sessions so your history reflects real deep work.",
+      "See today as a tree, or filter by week, month, project and tag.",
   },
   {
-    icon: Brain,
-    title: "AI summaries",
+    icon: Search,
+    title: "Full-text search",
     description:
-      "Turn raw sessions into standups and insights when you need to communicate progress.",
-  },
-  {
-    icon: CalendarSync,
-    title: "Google Calendar",
-    description:
-      "Push sessions to your calendar or pull events into tracked time.",
+      "Find any past session by task name, closing message or note.",
   },
   {
     icon: FileJson,
