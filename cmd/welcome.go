@@ -87,7 +87,6 @@ func printWelcome(isUpgrade bool, prevVersion string) {
 	ui.Cmd("btrack d", "today as a tree")
 	ui.Cmd("btrack h -w", "this week")
 	ui.Cmd("btrack stats", "quick snapshot")
-	ui.Cmd("btrack shipped", "what landed in git during your sessions")
 	ui.Blank()
 
 	ui.Section("setup")
