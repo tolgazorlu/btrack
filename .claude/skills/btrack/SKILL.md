@@ -1,6 +1,6 @@
 ---
 name: btrack
-description: Use btrack to time-track coding sessions from the CLI. Trigger this skill whenever the user starts a non-trivial coding task — implementing a feature, fixing a bug, refactoring, or working toward a commit — even if they don't mention btrack. Also trigger when the user mentions btrack, time tracking, sessions, "what did I work on", or asks Claude to log/track work. The skill starts a session at the start of work, drops checkpoint notes during, and stops it with a closing message when the work is done.
+description: Use btrack to time-track coding sessions from the CLI. Trigger this skill whenever the user starts a non-trivial coding task — implementing a feature, fixing a bug, refactoring, or working toward a commit — even if they don't mention btrack. Also trigger when the user mentions btrack, time tracking, sessions, "what did I work on", or asks Claude to log/track work. The skill notes the wall-clock time when work begins and records the finished session with `btrack add --from --to` when it ends (clock mode) — or drives a live timer session when the user prefers.
 license: MIT
 metadata:
   author: tolgazorlu
@@ -42,7 +42,26 @@ than to litter their history with 30-second sessions.
 If `btrack` isn't installed, point them at `brew install tolgazorlu/btrack/btrack`
 (full install matrix in [references/installation.md](references/installation.md)).
 
-## Step 1 — Start the session
+## Two ways to record a session
+
+**Clock mode (preferred for AI assistants).** Don't run a timer at all. When
+you begin the work, note the current wall-clock time (`date +%H:%M`). When the
+work is done, record the whole session in one call — btrack computes the
+duration:
+
+```bash
+btrack add "fix JWT clock skew in auth middleware" --from 14:03 --to 15:10 -p myapp -m "fixed by adding ±60s tolerance #bugfix"
+```
+
+This has no failure mode of a forgotten running timer, and it costs one
+command instead of a start/stop pair. Use `--date 2026-09-16` for past days
+and `--for 45m` when you know the duration instead of the end time.
+
+**Timer mode (live sessions).** `btrack s` / `btrack n` / `btrack x` — use it
+when the user is driving from the terminal themselves, or explicitly asks for
+a live session (`btrack w` shows a running counter).
+
+## Step 1 — Start the session (timer mode)
 
 Check for an active session first; `start` refuses when one is already running.
 
@@ -106,7 +125,7 @@ btrack x -m "fixed JWT clock skew by allowing ±60s drift #bugfix"
 ```
 
 Tags (`#bugfix`, `#feature`, `#refactor`, `#test`, `#docs`) go at the end of the
-message and become filterable with `btrack tag #bugfix`.
+message.
 
 If the user makes many small commits in one logical session, two patterns work:
 
@@ -142,22 +161,29 @@ freshly-issued tokens. Added a 60s leeway window.
 
 | Command | When to use |
 |---|---|
+| `btrack add "task" --from 14:03 --to 15:10` | Record a finished session in one call (clock mode) |
 | `btrack w` | Check whether a session is active before starting another |
-| `btrack s "task" -p project` | Start a new session |
+| `btrack s "task" -p project` | Start a new session (timer mode) |
 | `btrack x -m "message"` | Stop the active session with a closing message |
 | `btrack sw "new task"` | Atomic stop + start when pivoting tasks |
 | `btrack r` | Resume the most recently stopped session |
 | `btrack n "note"` | Add a checkpoint note to the active session |
 | `btrack h` | Recent sessions — also `h -w`, `h -m`, `h -n 20`, `h yesterday` |
-| `btrack stats` | Productivity snapshot |
-| `btrack search "query"` | Full-text search across past sessions |
-| `btrack tag #bugfix` | Filter history by tag |
 | `btrack projects` | List known projects with cumulative time |
-| `btrack export` | CSV/JSON export for reporting or billing |
+| `btrack export` | CSV/JSON export — `-p project`, `--days 30`, `--format json` |
+| `btrack import hours.tsv -p client` | Backfill hours tracked elsewhere (always `--dry-run` first) |
+| `btrack report client --from 21.08` | Client work report (commits + hours) as HTML |
 
 ## Common patterns
 
-**User says "let's fix the login bug":**
+**User says "let's fix the login bug" (clock mode):**
+
+1. `date +%H:%M` — note the start time (e.g. 14:03).
+2. Investigate, fix, test — the actual work.
+3. When done: `btrack add "fix login bug" --from 14:03 --to 15:10 -m "root cause: JWT clock skew #bugfix"`.
+4. `git commit` with a message informed by what you recorded.
+
+**Same task in timer mode (user drives the terminal):**
 
 1. `btrack w` — if a session is active, ask whether to switch.
 2. `btrack s "fix login bug"`.
