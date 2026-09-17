@@ -6,10 +6,6 @@ Every time tracker I tried wanted me to open a browser, log in, pick a workspace
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](go.mod)
 
-<p align="center">
-  <img src="btrack-cli.png" alt="btrack interactive console" width="820" />
-</p>
-
 ---
 
 ## Install
@@ -58,6 +54,7 @@ btrack h                              # see today's work
 | `btrack stop --at "2h ago"` | `x --at` | Stop, backdated |
 | `btrack switch "new task"` | `sw` | Stop current, start new |
 | `btrack resume` | `r` | Continue last session |
+| `btrack add "task" --from 14:03 --to 15:10` | `a` | Record a finished session, no timer |
 
 ### History
 
@@ -80,9 +77,6 @@ btrack h -n 50 -p myapp   # filter by project
 
 ```bash
 btrack w                  # live status TUI
-btrack stats              # today / week / month snapshot
-btrack search "JWT"       # full-text search
-btrack tag #bugfix        # filter by tag
 ```
 
 ---
@@ -126,54 +120,9 @@ btrack edit 42 -p myapp -m "done #bugfix"
 
 ---
 
-## Shell prompt
-
-Show the active session in your terminal prompt. Outputs nothing when idle.
-
-```bash
-btrack shell zsh    # print ready-to-paste zsh snippet
-btrack shell bash   # print ready-to-paste bash snippet
-btrack shell fish   # print ready-to-paste fish snippet
-```
-
-**Zsh** — add to `~/.zshrc`:
-```zsh
-btrack_prompt() { btrack prompt 2>/dev/null; }
-RPROMPT='$(btrack_prompt)'
-```
-
-**Bash** — add to `~/.bashrc`:
-```bash
-btrack_prompt() {
-  local s=$(btrack prompt 2>/dev/null)
-  [ -n "$s" ] && echo " $s"
-}
-PS1='\u@\h \w$(btrack_prompt) \$ '
-```
-
-**Fish** — add to `~/.config/fish/functions/fish_right_prompt.fish`:
-```fish
-function fish_right_prompt
-  btrack prompt 2>/dev/null
-end
-```
-
-**Starship** — add to `~/.config/starship.toml`:
-```toml
-[custom.btrack]
-command = "btrack prompt --format starship"
-when    = "btrack prompt"
-format  = "[$output]($style) "
-style   = "blue"
-```
-
-Result: `fix login bug · 23m` on the right side of your prompt.
-
----
-
 ## Claude Skill
 
-The bundled `btrack` skill teaches Claude Code to track your sessions on its own — start a session before non-trivial coding work, drop checkpoint notes for non-obvious findings, and stop it with a closing message when the work is done. It drives btrack through ordinary shell commands, so there's nothing else to register.
+The bundled `btrack` skill teaches Claude Code (and other CLI agents) to track your sessions on its own. The default flow is clock mode: the agent notes the wall-clock time when work starts, and records the finished session with `btrack add --from --to` when it's done — btrack computes the duration, so no timer runs while the AI works. Timer mode (`btrack s` / `x`) stays available for live terminal sessions.
 
 **Install — pick one:**
 
@@ -218,6 +167,7 @@ Config file: `~/.config/btrack/config.yaml`. Sessions are stored in a local SQLi
 btrack export                              # CSV to stdout
 btrack export --format json --out data.json
 btrack export --days 30 --out may.csv
+btrack export -p myclient --days 30        # one project, one month
 ```
 
 ---
@@ -241,8 +191,6 @@ per-day and grand totals.
 The file lands in your home directory. `--out` puts it elsewhere, `--repo`
 scans a repository other than the current directory, and `--client` sets the
 name printed on the masthead.
-
-In the interactive console the same thing is `/report` (or `/rapor`).
 
 ### Backfilling hours you tracked elsewhere
 

@@ -5,7 +5,7 @@ description: Full reference for all btrack commands and flags.
 
 # Command Reference
 
-Run `btrack` with no arguments to open the [interactive console](/docs/console) — a REPL with `/` quick actions. Every command below also works directly from your shell.
+Every command runs directly from your shell; `btrack --help` prints the full reference.
 
 ## Core Workflow
 
@@ -18,8 +18,8 @@ Run `btrack` with no arguments to open the [interactive console](/docs/console) 
 | `btrack stop -m "message"` | `btrack x -m` | Stop with a final closing message |
 | `btrack switch "description"` | `btrack sw` | Stop current session and start a new one |
 | `btrack resume` | `btrack r` | Resume the most recently stopped session |
+| `btrack add "task" --from 14:03 --to 15:10` | `btrack a` | Record a finished session with explicit times |
 | `btrack w` | | Live status display with elapsed time |
-| `btrack` | | Open the [interactive console](/docs/console) (no args) |
 
 ## History (`btrack h`)
 
@@ -68,23 +68,12 @@ btrack edit 42 --start 09:00 --end 17:30
 btrack edit 42 -p myapp -m "done #bugfix"
 ```
 
-## Shell Prompt
-
-```bash
-btrack prompt                      # outputs "fix login bug · 23m" or nothing
-btrack prompt --format starship    # JSON for Starship
-btrack shell zsh                   # print zsh integration snippet
-btrack shell bash                  # print bash integration snippet
-btrack shell fish                  # print fish integration snippet
-```
-
-See [Shell Prompt](/docs/shell-prompt) for setup.
-
 ## Export
 
 ```bash
 btrack export                          # CSV to stdout
 btrack export --format json --out f    # JSON to a file
+btrack export -p myapp --days 30       # one project, one month
 ```
 
 See [Export](/docs/export).

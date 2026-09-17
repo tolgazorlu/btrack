@@ -123,7 +123,7 @@ A session with **0–3 notes is normal**. A session with 15 notes is noise — y
 btrack x -m "fixed by adding ±60s tolerance #bugfix"
 ```
 
-Typically right before the commit. Tags at the end of the message become filterable later with `btrack tag #bugfix`.
+Typically right before the commit. Tags stay in the session message (e.g. `#bugfix`).
 
 If you forget, `btrack x --at "2h ago"` backdates the stop so a forgotten session doesn't inflate your day.
 
@@ -156,7 +156,6 @@ You barely had to think about the commit message — you'd already written it as
 | `btrack r` | Continue the most recently stopped session |
 | `btrack n "note"` | Add a checkpoint note to the active session |
 | `btrack h` / `h -w` / `h -n 20` | Look at recent sessions |
-| `btrack search "query"` | Full-text search across past sessions |
 | `btrack projects` | List known projects with cumulative tracked time |
 | `btrack export` | CSV/JSON export for reporting or billing |
 
