@@ -114,6 +114,7 @@ Flags of note:
 			Days:         report.Build(commits, entries),
 			PreparedBy:   author,
 			GeneratedAt:  time.Now(),
+			ToolVersion:  displayVersion(Version),
 			FilesChanged: files,
 			LinesAdded:   added,
 			LinesRemoved: removed,
@@ -297,6 +298,23 @@ func gitUserName(repoPath string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// displayVersion cleans a build-time version for print. Developer builds carry
+// suffixes like "+dirty" or a pseudo-version with a commit hash; a client
+// document should show "v0.6.8" or nothing at all, never build plumbing.
+func displayVersion(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" || v == "dev" {
+		return ""
+	}
+	if i := strings.IndexAny(v, "-+"); i > 0 {
+		v = v[:i]
+	}
+	if !strings.HasPrefix(v, "v") {
+		v = "v" + v
+	}
+	return v
 }
 
 func init() {

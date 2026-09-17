@@ -11,6 +11,8 @@
     --wash-madder: #F3E3DF;
     --wash-indigo: #E1E9EE;
     --wash-neutral: #ECE8E1;
+    /* btrack's own teal, used once in the colophon as a generator mark. */
+    --btrack:  #1FAD91;
 
     --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
     --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
@@ -35,6 +37,19 @@
   }
 
   /* ---------- masthead ---------- */
+
+  /* A thin rule above the eyebrow gives the sheet a letterhead edge without
+     adding a logo block that would compete with the headline. */
+  .masthead-rule {
+    height: 3px;
+    background: linear-gradient(
+      to right,
+      var(--madder) 0 4.5rem,
+      var(--ink) 4.5rem 9rem,
+      var(--rule) 9rem 100%
+    );
+    margin-bottom: 20px;
+  }
 
   .eyebrow {
     font-family: var(--font-display);
@@ -66,6 +81,25 @@
   .masthead {
     border-bottom: 2px solid var(--ink);
     padding-bottom: 28px;
+  }
+
+  /* Document identity: reference, issue date, scope. Printed small and
+     monospaced so it reads as filing metadata, not as prose. */
+  .docmeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 26px;
+    margin-top: 20px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--faint);
+  }
+
+  .docmeta span { white-space: nowrap; }
+
+  .docmeta b {
+    font-weight: 500;
+    color: var(--ink);
   }
 
   /* ---------- figures strip ---------- */
@@ -415,9 +449,83 @@
     border-top: 1px solid var(--rule);
     font-size: 0.82rem;
     color: var(--faint);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 22px 40px;
+    align-items: start;
   }
 
-  .colophon p { margin: 0 0 6px; }
+  .colophon-notes p { margin: 0 0 6px; }
+  .colophon-notes p:last-child { margin-bottom: 0; }
+
+  /* The generator mark: a quiet signature, not an advertisement. It sits
+     opposite the scope notes and is the one place the btrack teal appears. */
+  .maker {
+    justify-self: end;
+    text-align: right;
+    border-left: 1px solid var(--rule);
+    padding-left: 20px;
+    min-width: 11rem;
+    max-width: 17rem;
+  }
+
+  .maker-label {
+    font-family: var(--font-display);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 0 0 6px;
+  }
+
+  .maker-name {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 0;
+    text-decoration: none;
+  }
+
+  .maker-name::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    background: var(--btrack);
+    transform: translateY(-1px);
+  }
+
+  .maker-version {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--faint);
+    letter-spacing: 0;
+  }
+
+  .maker-tagline {
+    margin: 5px 0 0;
+    font-size: 0.74rem;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .maker-link {
+    display: block;
+    margin-top: 7px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--faint);
+    text-decoration: none;
+  }
+
+  .maker-link:hover { color: var(--indigo); }
 
   code {
     font-family: var(--font-mono);
@@ -431,6 +539,18 @@
     .day-total small { display: inline; margin-left: 6px; }
     .entry { grid-template-columns: 1fr; gap: 5px; }
     .hrs-row { grid-template-columns: 1fr; gap: 3px; }
+    /* The colophon stacks: the maker mark loses its divider and sits below
+       the scope notes rather than squeezing into a narrow column. */
+    .colophon { grid-template-columns: 1fr; gap: 18px; }
+    .maker {
+      justify-self: start;
+      text-align: left;
+      border-left: 0;
+      border-top: 1px solid var(--rule);
+      padding-left: 0;
+      padding-top: 14px;
+      min-width: 0;
+    }
   }
   @media print {
     body { font-size: 11pt; }
@@ -441,4 +561,17 @@
     .part.first { break-before: auto; }
     .entry, .hrs-row { break-inside: avoid; }
     .reconcile { background: none; }
+    /* Keep the colophon whole and printable: gradients and hover colours do
+       not survive a printer, so the letterhead rule falls back to solid ink. */
+    .colophon { break-inside: avoid; }
+    .masthead-rule {
+      background: var(--ink);
+      height: 2px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .maker-name::before {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
   }

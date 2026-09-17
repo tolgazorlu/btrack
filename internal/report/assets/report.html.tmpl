@@ -21,12 +21,19 @@
 <div class="sheet">
 
   <header class="masthead">
+    <div class="masthead-rule"></div>
     <p class="eyebrow">{{ .Client }} · Serbest çalışma dökümü</p>
     <h1>{{ .Range }} geliştirme raporu</h1>
     <p class="standfirst">
       İki bölümden oluşur: <strong>yapılan iş dökümü</strong> — <code>main</code> dalına birleştirilen
       tüm çalışmalar gün gün ve commit bazında — ve <strong>çalışma saatleri</strong> — aynı dönemin
       kronometre kayıtları. Kaynak: proje git geçmişi ve tutulan süre kaydı.
+    </p>
+    <p class="docmeta">
+      <span>Rapor no <b>{{ .DocRef }}</b></span>
+      <span>Düzenleme <b>{{ .GeneratedAt.Format "02.01.2006" }}</b></span>
+      <span>Dönem <b>{{ .ShortRange }}</b></span>
+      {{ with .PreparedBy }}<span>Hazırlayan <b>{{ . }}</b></span>{{ end }}
     </p>
   </header>
 
@@ -139,10 +146,18 @@
   {{ end }}
 
   <footer class="colophon">
-    <p>Kapsam: <code>main</code> dalı, {{ .From.Format "02.01.2006" }} 00:00 – {{ .To.Format "02.01.2006" }} arası; birleştirme (merge) commit’leri sayımın dışında tutulmuştur.</p>
-    {{ if .FilesChanged }}<p>Dosya ve satır sayıları, dönemin ilk commit’i ile <code>main</code> arasındaki net farktan alınmıştır.</p>{{ end }}
-    <p>Süreler kronometre kaydından alınmış, saniye hassasiyetinde toplanmıştır; ondalık saat değerleri iki basamağa yuvarlanmıştır.</p>
-    <p>Hazırlayan: {{ .PreparedBy }} · Rapor tarihi {{ .GeneratedAt.Format "02.01.2006" }}</p>
+    <div class="colophon-notes">
+      <p>Kapsam: <code>main</code> dalı, {{ .From.Format "02.01.2006" }} 00:00 – {{ .To.Format "02.01.2006" }} arası; birleştirme (merge) commit’leri sayımın dışında tutulmuştur.</p>
+      {{ if .FilesChanged }}<p>Dosya ve satır sayıları, dönemin ilk commit’i ile <code>main</code> arasındaki net farktan alınmıştır.</p>{{ end }}
+      <p>Süreler kronometre kaydından alınmış, saniye hassasiyetinde toplanmıştır; ondalık saat değerleri iki basamağa yuvarlanmıştır.</p>
+      <p>Hazırlayan: {{ .PreparedBy }} · Rapor tarihi {{ .GeneratedAt.Format "02.01.2006" }} · Belge {{ .DocRef }}</p>
+    </div>
+    <div class="maker">
+      <p class="maker-label">Üreten</p>
+      <a class="maker-name" href="https://github.com/tolgazorlu/btrack">btrack{{ with .ToolVersion }}<span class="maker-version">{{ . }}</span>{{ end }}</a>
+      <p class="maker-tagline">Commit geçmişi ve kronometre kayıtlarından otomatik üretilmiştir.</p>
+      <a class="maker-link" href="https://github.com/tolgazorlu/btrack">github.com/tolgazorlu/btrack</a>
+    </div>
   </footer>
 
 </div>

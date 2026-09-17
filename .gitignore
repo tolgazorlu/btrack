@@ -9,3 +9,5 @@ dist/
 node_modules
 /.next
 /.source
+# macOS finder metadata — leaks into skills/ and breaks the embedded tree check
+.DS_Store

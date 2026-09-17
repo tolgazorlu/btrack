@@ -169,11 +169,40 @@ type Report struct {
 	Pending     []string
 	PreparedBy  string
 	GeneratedAt time.Time
+	ToolVersion string // btrack version printed in the colophon
 
 	// Figures
 	FilesChanged int
 	LinesAdded   int
 	LinesRemoved int
+}
+
+// DocRef is the filing reference printed on the masthead and in the colophon,
+// e.g. "YAL-2608-1609". It is derived from the client and the period so the
+// same report always carries the same reference — regenerate it tomorrow and
+// the client can still match it to the invoice they filed.
+func (r Report) DocRef() string {
+	prefix := "RPR"
+	if letters := asciiLetters(r.Client); len(letters) >= 3 {
+		prefix = strings.ToUpper(letters[:3])
+	}
+	return fmt.Sprintf("%s-%s-%s", prefix, r.From.Format("0201"), r.To.Format("0201"))
+}
+
+// asciiLetters folds Turkish characters onto ASCII and drops everything that
+// is not a letter, so "Yalçınkaya Halıcılık" yields "YALCINKAYAHALICILIK".
+func asciiLetters(s string) string {
+	fold := strings.NewReplacer(
+		"ı", "i", "İ", "I", "ş", "s", "Ş", "S", "ğ", "g", "Ğ", "G",
+		"ü", "u", "Ü", "U", "ö", "o", "Ö", "O", "ç", "c", "Ç", "C",
+	)
+	var b strings.Builder
+	for _, r := range fold.Replace(s) {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // Range renders "21 Ağustos – 16 Eylül 2026".
