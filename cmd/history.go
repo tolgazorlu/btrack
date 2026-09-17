@@ -560,11 +560,17 @@ func formatDur(d time.Duration) string {
 	return fmt.Sprintf("%ds", s)
 }
 
+// truncate shortens s to max characters. It counts runes, not bytes: cutting
+// UTF-8 mid-character would corrupt Turkish text like "İstek" or "sıralama".
 func truncate(s string, max int) string {
-	if len(s) <= max {
+	r := []rune(s)
+	if len(r) <= max {
 		return s
 	}
-	return s[:max-3] + "..."
+	if max <= 1 {
+		return "…"
+	}
+	return strings.TrimRight(string(r[:max-1]), " ") + "…"
 }
 
 func init() {
