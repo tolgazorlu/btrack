@@ -37,7 +37,6 @@ type Store interface {
 	GetRecentSessions(limit int) ([]*Session, error)
 	GetSessionsForDate(date time.Time) ([]*Session, error)
 	GetSessionByID(id int64) (*Session, error)
-	SearchSessions(query string) ([]*Session, error)
 	GetProjects() ([]string, error)
 	GetSessionsByProject(project string, limit int) ([]*Session, error)
 	CreateLogEntry(e *LogEntry) error
