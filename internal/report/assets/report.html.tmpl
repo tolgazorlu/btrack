@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>{{ .Title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+{{ .CSS }}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">{{ .Client }} · Serbest çalışma dökümü</p>
+    <h1>{{ .Range }} geliştirme raporu</h1>
+    <p class="standfirst">
+      İki bölümden oluşur: <strong>yapılan iş dökümü</strong> — <code>main</code> dalına birleştirilen
+      tüm çalışmalar gün gün ve commit bazında — ve <strong>çalışma saatleri</strong> — aynı dönemin
+      kronometre kayıtları. Kaynak: proje git geçmişi ve tutulan süre kaydı.
+    </p>
+  </header>
+
+  <dl class="figures">
+    <div class="figure lead">
+      <dt>Kayıtlı süre</dt>
+      <dd>{{ .TotalDecimal }} sa<small>{{ .TotalLabel }}</small></dd>
+    </div>
+    <div class="figure">
+      <dt>Commit</dt>
+      <dd>{{ .TotalCommits }}<small>birleştirme hariç</small></dd>
+    </div>
+    {{ if .PRCount }}
+    <div class="figure">
+      <dt>Pull request</dt>
+      <dd>{{ .PRCount }}<small>{{ .PRSpan }}</small></dd>
+    </div>
+    {{ end }}
+    <div class="figure">
+      <dt>Çalışma günü</dt>
+      <dd>{{ .WorkedDays }}<small>{{ .ShortRange }}</small></dd>
+    </div>
+    {{ if .FilesChanged }}
+    <div class="figure">
+      <dt>Değişen dosya</dt>
+      <dd>{{ .FilesChanged }}<small>+{{ thousands .LinesAdded }} / −{{ thousands .LinesRemoved }} satır</small></dd>
+    </div>
+    {{ end }}
+  </dl>
+
+  <div class="part first">
+    <h2>Bölüm 1 — Yapılan iş dökümü</h2>
+    <span class="part-sub">main dalı · {{ .TotalCommits }} commit{{ if .PRCount }} · {{ .PRCount }} pull request{{ end }}</span>
+  </div>
+
+  <div class="legend">
+    <span><span class="tag tag-feat">feat</span> yeni özellik</span>
+    <span><span class="tag tag-fix">fix</span> hata düzeltme</span>
+    <span><span class="tag tag-chore">bakım</span> yeniden düzenleme / biçim / altyapı</span>
+    <span><span class="tag tag-revert">geri al</span> sonradan geri alınan çalışma</span>
+  </div>
+
+  {{ range .CommitDays }}
+  <section class="day">
+    <div class="day-head">
+      <p class="day-date">{{ .FormatDate }}</p>
+      <p class="day-weekday">{{ .Weekday }}</p>
+      {{ with .Areas }}<p class="day-areas">{{ . }}</p>{{ end }}
+      <p class="day-count">{{ .CommitCount }}</p>
+    </div>
+    <div class="entries">
+      {{ range .Commits }}
+      <div class="entry{{ if eq .Kind "revert" }} reverted{{ end }}">
+        <span class="tag {{ .Kind.CSSClass }}">{{ .Kind.Label }}</span>
+        <div class="entry-text">
+          <p>{{ .Subject }}</p>
+          <p class="entry-meta">{{ .ShortSHA }}{{ if .PR }} · <span class="pr">PR #{{ .PR }}</span>{{ end }}{{ with join .Areas ", " }} · {{ . }}{{ end }}</p>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </section>
+  {{ end }}
+
+  {{ if .Pending }}
+  <div class="pending">
+    <h2>Açık talepler</h2>
+    <p class="note">Dönem içinde iletilen, henüz tamamlanmamış işler.</p>
+    <ul>
+      {{ range .Pending }}<li>{{ . }}</li>{{ end }}
+    </ul>
+  </div>
+  {{ end }}
+
+  <div class="part">
+    <h2>Bölüm 2 — Çalışma saatleri</h2>
+    <span class="part-sub">{{ .Client }} · {{ .TotalEntries }} süre kaydı · {{ len .HourDays }} gün</span>
+  </div>
+
+  {{ range .HourDays }}
+  <section class="day">
+    <div class="day-head">
+      <p class="day-date">{{ .FormatDate }}</p>
+      <p class="day-weekday">{{ .Weekday }}</p>
+      <p class="day-total">{{ .TotalLabel }}<small>{{ .TotalSub }}</small></p>
+    </div>
+    <div class="hrs">
+      {{ range .Entries }}
+      <div class="hrs-row">
+        <p class="dur">{{ duration .Duration }}</p>
+        <p>{{ .Description }}{{ with .Flag }}<span class="flag">{{ . }}</span>{{ end }}</p>
+      </div>
+      {{ end }}
+    </div>
+  </section>
+  {{ end }}
+
+  <div class="grand">
+    <p class="grand-label">Toplam kayıtlı süre</p>
+    <p class="grand-value">{{ .TotalLabel }}<small>{{ .TotalDecimal }} saat · {{ .TotalEntries }} süre kaydı · {{ len .HourDays }} gün</small></p>
+  </div>
+
+  {{ if .Reconcile }}
+  <div class="reconcile">
+    <h3>Süre kaydı ile commit tarihleri arasındaki farklar</h3>
+    <ul>
+      {{ range .Reconcile }}<li>{{ . }}</li>{{ end }}
+    </ul>
+  </div>
+  {{ end }}
+
+  <footer class="colophon">
+    <p>Kapsam: <code>main</code> dalı, {{ .From.Format "02.01.2006" }} 00:00 – {{ .To.Format "02.01.2006" }} arası; birleştirme (merge) commit’leri sayımın dışında tutulmuştur.</p>
+    {{ if .FilesChanged }}<p>Dosya ve satır sayıları, dönemin ilk commit’i ile <code>main</code> arasındaki net farktan alınmıştır.</p>{{ end }}
+    <p>Süreler kronometre kaydından alınmış, saniye hassasiyetinde toplanmıştır; ondalık saat değerleri iki basamağa yuvarlanmıştır.</p>
+    <p>Hazırlayan: {{ .PreparedBy }} · Rapor tarihi {{ .GeneratedAt.Format "02.01.2006" }}</p>
+  </footer>
+
+</div>
+</body>
+</html>
