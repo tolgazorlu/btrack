@@ -55,6 +55,7 @@ var rootCmd = &cobra.Command{
 
   Use ` + ui.StyleDimmed.Render("btrack <command> --help") + ` for details on any command.`,
 	SilenceUsage: true,
+	Args:         cobra.NoArgs,
 }
 
 func Execute() {
