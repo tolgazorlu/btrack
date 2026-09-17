@@ -3,17 +3,14 @@ module github.com/tolgazorlu/btrack
 go 1.25.0
 
 require (
-	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	modernc.org/sqlite v1.33.1
 )
 
 require (
-	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.4.1 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect
