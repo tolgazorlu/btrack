@@ -37,6 +37,7 @@ var rootCmd = &cobra.Command{
     btrack projects                        list projects with time
 
   ` + ui.StyleHighlight.Render("DATA & SETTINGS") + `
+    btrack add "task" --from 14:03 --to 15:10   record a finished session (AI-friendly)
     btrack export                          export to CSV
     btrack export --format json --out f    export to JSON file
     btrack report client --from 21.08      client work report (HTML)
