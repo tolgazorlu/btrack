@@ -222,6 +222,52 @@ btrack export --days 30 --out may.csv
 
 ---
 
+## Client reports
+
+`btrack report` builds the document you hand a client when you invoice them:
+what you committed, and how long it took. Two parts, one HTML file.
+
+```bash
+btrack report myclient --from 21.08 --to 16.09   # a billing period
+btrack report myclient -m                        # this month
+btrack report myclient --from 01.09 --open       # open it when done
+```
+
+Part 1 reads the git history of the repository you run it in: every non-merge
+commit, grouped by day, tagged feat/fix/chore/revert, with the pull request
+that merged it. Part 2 reads your btrack sessions for the same range, with
+per-day and grand totals.
+
+The file lands in your home directory. `--out` puts it elsewhere, `--repo`
+scans a repository other than the current directory, and `--client` sets the
+name printed on the masthead.
+
+In the interactive console the same thing is `/report` (or `/rapor`).
+
+### Backfilling hours you tracked elsewhere
+
+If your hours live in a stopwatch app or a spreadsheet, import them once and
+the report can build itself from then on. The file is one record per line,
+tab- or comma-separated — date, duration, description:
+
+```
+21.08.2026    1.00.46     Request triage + reservation editing + test + deploy
+24.08.2026    24.09.27    Pattern sort + test + deploy
+24.08.2026    15m43s      Mobile app bug review [no commit]
+```
+
+```bash
+btrack import hours.tsv -p myclient --dry-run   # show what would happen
+btrack import hours.tsv -p myclient             # write it
+```
+
+Durations accept the forms people actually write by hand: `1.00.46`,
+`24.09.27`, `1:09:20`, `45m29s`, `1 sa 9 dk`, `0.75h`. A trailing `[note]` in
+the description becomes a chip beside the entry in the report. Always run
+`--dry-run` first.
+
+---
+
 ## Build from source
 
 ```bash

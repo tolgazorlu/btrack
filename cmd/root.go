@@ -42,6 +42,8 @@ var rootCmd = &cobra.Command{
   ` + ui.StyleHighlight.Render("DATA & SETTINGS") + `
     btrack export                          export to CSV
     btrack export --format json --out f    export to JSON file
+    btrack report client --from 21.08      client work report (HTML)
+    btrack import hours.tsv -p client      backfill tracked hours
     btrack edit <id> -t "new name"         edit a past session
     btrack config hours 6                  set daily target
     btrack config idle 15                  auto-stop after 15 min idle
