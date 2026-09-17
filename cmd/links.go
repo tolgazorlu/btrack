@@ -47,12 +47,12 @@ var starCmd = &cobra.Command{
 
 var issueCmd = &cobra.Command{
 	Use:     "issue",
-	Aliases: []string{"feedback", "report", "bug"},
+	Aliases: []string{"feedback", "bug"},
 	Hidden:  true,
 	Short:   "Open a new GitHub issue (use: btrack repo issue)",
 	Long: `Open a new issue on GitHub to report a bug or share feedback.
 
-Aliases: feedback, report, bug
+Aliases: feedback, bug
 
 Examples:
   btrack issue

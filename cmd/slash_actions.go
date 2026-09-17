@@ -28,9 +28,11 @@ var slashAlias = map[string][]string{
 	"search":   {"search"},
 	"tag":      {"tag"},
 
-	"config":  {"config"},
-	"export":  {"export"},
-	"init":    {"init"},
+	"config": {"config"},
+	"export": {"export"},
+	"init":   {"init"},
+	"report": {"report"},
+	"rapor":  {"report"},
 }
 
 var slashActionHints = map[string]string{
@@ -55,6 +57,8 @@ var slashActionHints = map[string]string{
 	"config":   "view or change settings",
 	"export":   "export sessions to CSV/JSON",
 	"init":     "create .btrack project file",
+	"report":   "build a client work report (HTML)",
+	"rapor":    "müşteri çalışma raporu üret (HTML)",
 }
 
 func expandSlashAction(args []string) ([]string, bool) {
