@@ -31,9 +31,6 @@ var rootCmd = &cobra.Command{
     btrack h -y                            this year
     btrack h -n 20                         last 20 sessions (table)
     btrack h -l 5                          last 5 hours
-    btrack stats                           quick snapshot
-    btrack tag #bugfix                     filter by tag
-    btrack search "JWT"                    search sessions       (find, f)
 
   ` + ui.StyleHighlight.Render("PROJECTS") + `
     btrack s "task" -p myapp               assign to a project
@@ -49,14 +46,6 @@ var rootCmd = &cobra.Command{
     btrack config idle 15                  auto-stop after 15 min idle
     btrack config project myapp rate 150   set hourly rate
     btrack config                          show all settings
-
-  ` + ui.StyleHighlight.Render("SHELL PROMPT") + `
-    btrack prompt                          current session for PS1
-    btrack prompt --format starship        Starship JSON module
-
-  ` + ui.StyleHighlight.Render("LINKS") + `
-    btrack repo                            project links
-    btrack repo star / issue / releases    open in browser
 
   ` + ui.StyleHighlight.Render("SHELL AUTOCOMPLETE") + `
     btrack completion zsh >> ~/.zshrc      zsh
