@@ -99,13 +99,16 @@ func (s *SQLiteStore) migrate() error {
 	return err
 }
 
+// CreateSession inserts a session. A session with an EndTime already set is a
+// completed record being backfilled (see `btrack import`), so every field is
+// written; a live session leaves end_time NULL and fills it in on stop.
 func (s *SQLiteStore) CreateSession(sess *Session) error {
 	tagsJSON, _ := json.Marshal(sess.Tags)
 	res, err := s.db.Exec(
-		`INSERT INTO sessions (task_name, start_time, tags, git_branch, git_repo, project)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		sess.TaskName, sess.StartTime.UTC(), string(tagsJSON),
-		sess.GitBranch, sess.GitRepo, sess.Project,
+		`INSERT INTO sessions (task_name, start_time, end_time, message, tags, git_branch, git_repo, project)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		sess.TaskName, sess.StartTime.UTC(), nullTime(sess.EndTime), sess.Message,
+		string(tagsJSON), sess.GitBranch, sess.GitRepo, sess.Project,
 	)
 	if err != nil {
 		return fmt.Errorf("create session: %w", err)
