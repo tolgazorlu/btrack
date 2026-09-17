@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -327,4 +328,16 @@ func init() {
 	reportCmd.Flags().String("author", "", "who prepared the report (default: git user.name)")
 	reportCmd.Flags().Bool("open", false, "open the report in your browser when done")
 	rootCmd.AddCommand(reportCmd)
+}
+
+// openBrowser opens url with the platform's default browser.
+func openBrowser(url string) error {
+	switch runtime.GOOS {
+	case "darwin":
+		return exec.Command("open", url).Start()
+	case "windows":
+		return exec.Command("cmd", "/c", "start", url).Start()
+	default:
+		return exec.Command("xdg-open", url).Start()
+	}
 }
