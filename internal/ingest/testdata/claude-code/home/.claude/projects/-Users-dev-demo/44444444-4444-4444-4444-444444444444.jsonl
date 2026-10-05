@@ -1,0 +1,2 @@
+{"type":"queue-operation","operation":"enqueue","timestamp":"2026-01-04T12:00:00.000Z","sessionId":"44444444-4444-4444-4444-444444444444"}
+{"type":"file-history-snapshot","messageId":"x","snapshot":{},"timestamp":"2026-01-04T12:00:00.100Z"}
