@@ -1,7 +1,9 @@
 package ingest
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -185,5 +187,38 @@ func TestClaudeCodeStableExternalID(t *testing.T) {
 	}
 	if s1[0].ExternalID != s2[0].ExternalID {
 		t.Fatalf("ExternalID not stable across re-reads: %q vs %q", s1[0].ExternalID, s2[0].ExternalID)
+	}
+}
+
+// A resumed conversation's file starts with records copied from the
+// earlier session; only its own records may count.
+func TestClaudeCodeResumedFileSkipsCopiedHistory(t *testing.T) {
+	dir := t.TempDir()
+	rec := func(sid, typ, ts, msgID string) string {
+		if typ == "user" {
+			return `{"type":"user","sessionId":"` + sid + `","timestamp":"` + ts + `","cwd":"/Users/dev/app","message":{"role":"user","content":"do the thing"}}`
+		}
+		return `{"type":"assistant","sessionId":"` + sid + `","timestamp":"` + ts + `","message":{"id":"` + msgID + `","role":"assistant","model":"claude-sonnet-5","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":100,"output_tokens":10}}}`
+	}
+	lines := []string{
+		rec("old-id", "user", "2026-09-15T10:00:00Z", ""),
+		rec("old-id", "assistant", "2026-09-15T10:01:00Z", "m-old"),
+		rec("new-id", "user", "2026-09-16T08:00:00Z", ""),
+		rec("new-id", "assistant", "2026-09-16T08:02:00Z", "m-new"),
+	}
+	path := filepath.Join(dir, "new-id.jsonl")
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ClaudeCodeReader{}.Read(path)
+	if err != nil || len(got) != 1 {
+		t.Fatalf("Read: %v, %d sessions", err, len(got))
+	}
+	s := got[0]
+	if s.ExternalID != "new-id" || len(s.Events) != 2 || len(s.Calls) != 1 || s.Calls[0].Input != 100 {
+		t.Fatalf("copied history counted: id=%s events=%d calls=%+v", s.ExternalID, len(s.Events), s.Calls)
+	}
+	if !s.Start().Equal(time.Date(2026, 9, 16, 8, 0, 0, 0, time.UTC)) {
+		t.Fatalf("start = %v", s.Start())
 	}
 }

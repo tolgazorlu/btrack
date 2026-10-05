@@ -116,7 +116,21 @@ func (r ClaudeCodeReader) Read(path string) ([]Session, error) {
 	var cwd, branch, sessionID string
 	seenCalls := map[string]bool{}
 	var calls []ModelCall
+	var hints []string
 
+	// Resuming or forking a conversation makes Claude Code start a new
+	// file that first copies the earlier conversation's records verbatim
+	// (still carrying the earlier sessionId), then appends its own. Those
+	// copied records already belong to the earlier file, so when this file
+	// has records of its own (sessionId == file stem) only those count;
+	// otherwise the same hours and tokens would be billed twice.
+	stem := claudeCodeStem(path)
+	type parsed struct {
+		rec  claudeCodeRecord
+		line []byte
+	}
+	var recs []parsed
+	ownsStem := false
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
 	for scanner.Scan() {
@@ -128,6 +142,23 @@ func (r ClaudeCodeReader) Read(path string) ([]Session, error) {
 		if err := json.Unmarshal(line, &rec); err != nil {
 			// Malformed line: skip it, keep reading the rest of the file.
 			continue
+		}
+		if rec.SessionID == stem {
+			ownsStem = true
+		}
+		recs = append(recs, parsed{rec, append([]byte(nil), line...)})
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	if ownsStem {
+		sessionID = stem
+	}
+
+	for _, pr := range recs {
+		rec, line := pr.rec, pr.line
+		if ownsStem && rec.SessionID != "" && rec.SessionID != stem {
+			continue // copied from the conversation this one resumed
 		}
 		if rec.SessionID != "" && sessionID == "" {
 			sessionID = rec.SessionID
@@ -193,6 +224,7 @@ func (r ClaudeCodeReader) Read(path string) ([]Session, error) {
 				continue
 			}
 			events = append(events, Event{At: at, Kind: Agent})
+			hints = collectPathHints(hints, string(line))
 			// Claude Code streams one JSONL line per content block of the
 			// same response; every line repeats the identical cumulative
 			// usage for that message. Dedupe by message.id so we count a
@@ -217,9 +249,6 @@ func (r ClaudeCodeReader) Read(path string) ([]Session, error) {
 			// attachment, last-prompt and anything else: not a timestamped
 			// human/agent timeline event we track.
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
 	}
 	if len(events) == 0 {
 		return nil, nil
