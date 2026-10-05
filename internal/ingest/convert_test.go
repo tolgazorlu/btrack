@@ -62,6 +62,14 @@ func TestProjectResolver(t *testing.T) {
 	if got := r.ResolveSession(s); got != "" {
 		t.Errorf("weak hints claimed project %q", got)
 	}
+
+	r.Aliases = map[string]string{"shop-api": "shop"}
+	if got := r.ResolveSession(Session{Cwd: filepath.Join(home, "code", "shop")}); got != "shop" {
+		t.Errorf("alias not applied: %q", got)
+	}
+	if r.RepoDirs()[filepath.Join(home, "code", "shop")] != "shop" {
+		t.Errorf("repo dirs not aliased: %v", r.RepoDirs())
+	}
 }
 
 func TestToDB(t *testing.T) {

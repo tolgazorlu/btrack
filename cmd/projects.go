@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -105,6 +106,80 @@ To start a session in a project:
 	},
 }
 
+var aliasRemove bool
+
+var projectsAliasCmd = &cobra.Command{
+	Use:   "alias [name] [project]",
+	Short: "File sessions discovered under one name as another project",
+	Long: `Imported agent sessions and commits get their project from the repo
+they ran in: a .btrack file, else the git remote's repo name, else the
+folder name. When that differs from the name you bill under, alias it.
+
+Already imported sessions and commits are renamed immediately, and future
+syncs apply the alias. Sessions you logged by hand are never renamed.
+Unlike a .btrack file, an alias needs no file in the repository, which
+matters for client-owned repos.
+
+Examples:
+  btrack projects alias                           # list aliases
+  btrack projects alias acme-backend acme         # file acme-backend as acme
+  btrack projects alias acme-backend --remove     # stop aliasing`,
+	Args: cobra.MaximumNArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.Load()
+		if err != nil {
+			return err
+		}
+		store, err := db.Open(cfg)
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+
+		switch {
+		case aliasRemove:
+			if len(args) != 1 {
+				return fmt.Errorf("usage: btrack projects alias <name> --remove")
+			}
+			if err := store.RemoveAlias(args[0]); err != nil {
+				return err
+			}
+			ui.OK("removed alias " + args[0] + " (already renamed sessions keep their project)")
+			return nil
+		case len(args) == 2:
+			ns, nc, err := store.SetAlias(args[0], args[1])
+			if err != nil {
+				return err
+			}
+			ui.OK(fmt.Sprintf("%s → %s  ·  %d imported sessions and %d commits refiled", args[0], args[1], ns, nc))
+			return nil
+		case len(args) == 1:
+			return fmt.Errorf("usage: btrack projects alias <name> <project>")
+		}
+
+		aliases, err := store.GetAliases()
+		if err != nil {
+			return err
+		}
+		ui.Header("project aliases", "")
+		if len(aliases) == 0 {
+			ui.Hint("none — add one with `btrack projects alias <name> <project>`")
+		}
+		names := make([]string, 0, len(aliases))
+		for a := range aliases {
+			names = append(names, a)
+		}
+		sort.Strings(names)
+		for _, a := range names {
+			ui.KV(a, "→ "+aliases[a])
+		}
+		ui.Blank()
+		return nil
+	},
+}
+
 func init() {
+	projectsAliasCmd.Flags().BoolVar(&aliasRemove, "remove", false, "Remove the alias")
+	projectsCmd.AddCommand(projectsAliasCmd)
 	rootCmd.AddCommand(projectsCmd)
 }

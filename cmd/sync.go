@@ -109,10 +109,11 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 
 	var store db.Store
+	var err error
 	if !syncDryRun {
-		cfg, err := config.Load()
-		if err != nil {
-			return err
+		cfg, cerr := config.Load()
+		if cerr != nil {
+			return cerr
 		}
 		store, err = db.Open(cfg)
 		if err != nil {
@@ -123,6 +124,11 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 	home, _ := os.UserHomeDir()
 	resolver := &ingest.ProjectResolver{Home: home}
+	if store != nil {
+		if resolver.Aliases, err = store.GetAliases(); err != nil {
+			return err
+		}
+	}
 	rep := syncReport{DryRun: syncDryRun, PricesChecked: pricing.CheckedAt()}
 	projects := map[string]*syncProjectRow{}
 	unknown := map[string]bool{}

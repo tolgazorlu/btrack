@@ -30,9 +30,12 @@ func Readers() []Reader {
 // could be about anything. ResolveSession then falls back to the paths
 // the agent touched.
 type ProjectResolver struct {
-	Home  string
-	cache map[string]string
-	repos map[string]string // repo checkout dir -> project, for commit scanning
+	Home string
+	// Aliases rename discovered names (repo remote, folder) to the name
+	// the user files the project under.
+	Aliases map[string]string
+	cache   map[string]string
+	repos   map[string]string // repo checkout dir -> project, for commit scanning
 }
 
 // RepoDirs returns every git checkout a resolved session was attributed
@@ -49,6 +52,7 @@ func (r *ProjectResolver) noteRepo(dir, project string) {
 	if dir == "" || project == "" {
 		return
 	}
+	project = r.alias(project)
 	if r.repos == nil {
 		r.repos = map[string]string{}
 	}
@@ -79,6 +83,17 @@ func (r *ProjectResolver) Resolve(cwd string) string {
 // least 3 hits and 40% of all resolvable hints, so one stray file read in
 // another repo does not claim the session.
 func (r *ProjectResolver) ResolveSession(s Session) string {
+	return r.alias(r.resolveSession(s))
+}
+
+func (r *ProjectResolver) alias(p string) string {
+	if a, ok := r.Aliases[p]; ok {
+		return a
+	}
+	return p
+}
+
+func (r *ProjectResolver) resolveSession(s Session) string {
 	if p := r.Resolve(s.Cwd); p != "" {
 		r.noteRepo(r.existingRepoDir(s.Cwd), p)
 		return p
