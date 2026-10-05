@@ -37,8 +37,6 @@ release: sync-skill
 	GOOS=windows GOARCH=amd64  go build $(LDFLAGS) -o dist/$(BINARY)-windows-amd64.exe .
 	cd dist && sha256sum * > checksums.txt
 
-proto:
-	protoc --go_out=. --go-grpc_out=. proto/btrack.proto
 
 run:
 	go run . $(ARGS)
