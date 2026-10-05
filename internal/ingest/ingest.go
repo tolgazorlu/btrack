@@ -45,8 +45,12 @@ type Session struct {
 	Title      string // best-effort human title: first real prompt or tool-provided title
 	Cwd        string // working directory recorded by the tool, absolute
 	GitBranch  string // if the tool recorded it
-	Events     []Event
-	Calls      []ModelCall
+	// PathHints are absolute paths the agent touched (tool arguments,
+	// tool-reported working directories). When Cwd is the home directory
+	// they decide which project the session belonged to.
+	PathHints []string
+	Events    []Event
+	Calls     []ModelCall
 	// CostUSD is set only when the tool itself recorded a cost; otherwise
 	// the shared pricing table estimates it from Calls.
 	CostUSD *float64
