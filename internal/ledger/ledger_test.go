@@ -166,3 +166,33 @@ func TestSegmentsDriveLinkingAndDays(t *testing.T) {
 		t.Fatalf("day 4 recap = %+v", rc.Total)
 	}
 }
+
+func TestDailySplitsSessionAcrossDaysAndIgnoresManual(t *testing.T) {
+	day := func(d, h int) time.Time { return time.Date(2026, 10, d, h, 0, 0, 0, time.Local) }
+	end := day(3, 12)
+	cost := 4.0
+	sessions := []*db.Session{
+		{ID: 1, Project: "acme", Source: "claude-code", StartTime: day(1, 9), EndTime: &end, CostUSD: &cost},
+		{ID: 2, Project: "acme", Source: db.SourceManual, StartTime: day(1, 9), EndTime: &end},
+		{ID: 3, Project: "other", Source: "codex", StartTime: day(1, 9), EndTime: &end},
+	}
+	segs := []db.Segment{
+		{SessionID: 1, Start: day(1, 9), End: day(1, 10), ActiveSeconds: 900, AgentSeconds: 2700},
+		{SessionID: 1, Start: day(1, 14), End: day(1, 15), ActiveSeconds: 1800, AgentSeconds: 1800},
+		{SessionID: 1, Start: day(3, 11), End: day(3, 12), ActiveSeconds: 3600},
+		{SessionID: 3, Start: day(1, 9), End: day(1, 10), ActiveSeconds: 3600},
+	}
+	got := Daily(sessions, segs, day(1, 0), day(4, 0), "acme")
+	if len(got) != 2 {
+		t.Fatalf("days = %+v", got)
+	}
+	d1, d3 := got[0], got[1]
+	// Day 1 holds 2h of the session's 3h of work, so 2/3 of its $4.
+	near := func(a, b float64) bool { return a-b < 1e-9 && b-a < 1e-9 }
+	if d1.You != 45*time.Minute || d1.Agent != 75*time.Minute || d1.Sessions != 1 || !near(d1.CostUSD, 8.0/3) {
+		t.Errorf("day 1 = %+v", d1)
+	}
+	if d3.You != time.Hour || !near(d3.CostUSD, 4.0/3) || !d3.CostComplete {
+		t.Errorf("day 3 = %+v", d3)
+	}
+}

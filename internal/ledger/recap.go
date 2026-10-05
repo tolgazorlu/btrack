@@ -110,23 +110,11 @@ func Build(sessions []*db.Session, segments []db.Segment, commits []*db.Commit, 
 			continue
 		}
 
-		segs := segsBySession[s.ID]
-		if len(segs) == 0 {
-			// Imported before segments existed: treat as one segment.
-			var a, g int64
-			if s.ActiveSeconds != nil {
-				a = *s.ActiveSeconds
-			}
-			if s.AgentSeconds != nil {
-				g = *s.AgentSeconds
-			}
-			segs = []db.Segment{{SessionID: s.ID, Start: s.StartTime, End: *s.EndTime, ActiveSeconds: a, AgentSeconds: g}}
-		}
-		var total, inPeriod int64
+		segs, total := sessionSegments(s, segsBySession[s.ID])
+		var inPeriod int64
 		counted := false
 		var r *ProjectRecap
 		for _, g := range segs {
-			total += g.ActiveSeconds + g.AgentSeconds
 			if !inRange(g.Start) {
 				continue
 			}
