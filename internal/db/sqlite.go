@@ -352,6 +352,79 @@ func (s *SQLiteStore) GetSegmentsInRange(from, to time.Time) ([]Segment, error) 
 	return out, rows.Err()
 }
 
+func (s *SQLiteStore) SetAlias(alias, project string) (int, int, error) {
+	if alias == "" || project == "" || alias == project {
+		return 0, 0, fmt.Errorf("alias and project must be different, non-empty names")
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return 0, 0, err
+	}
+	defer tx.Rollback()
+	var target string
+	if err := tx.QueryRow(`SELECT project FROM project_aliases WHERE alias=?`, project).Scan(&target); err == nil {
+		project = target // aliasing onto an alias means its target
+	}
+	if alias == project {
+		return 0, 0, fmt.Errorf("%q already resolves to itself", alias)
+	}
+	// No chains: anything that pointed at alias now points at project.
+	if _, err := tx.Exec(`UPDATE project_aliases SET project=? WHERE project=?`, project, alias); err != nil {
+		return 0, 0, err
+	}
+	if _, err := tx.Exec(`DELETE FROM project_aliases WHERE alias=?`, project); err != nil {
+		return 0, 0, err
+	}
+	if _, err := tx.Exec(`INSERT INTO project_aliases (alias, project) VALUES (?, ?)
+		ON CONFLICT (alias) DO UPDATE SET project=excluded.project`, alias, project); err != nil {
+		return 0, 0, err
+	}
+	res, err := tx.Exec(`UPDATE sessions SET project=? WHERE project=? AND source<>'manual'`, project, alias)
+	if err != nil {
+		return 0, 0, err
+	}
+	ns, _ := res.RowsAffected()
+	// A commit already filed under project (seen via two names) stays
+	// once; the duplicate under alias goes.
+	res, err = tx.Exec(`UPDATE OR IGNORE commits SET project=? WHERE project=?`, project, alias)
+	if err != nil {
+		return 0, 0, err
+	}
+	nc, _ := res.RowsAffected()
+	if _, err := tx.Exec(`DELETE FROM commits WHERE project=?`, alias); err != nil {
+		return 0, 0, err
+	}
+	return int(ns), int(nc), tx.Commit()
+}
+
+func (s *SQLiteStore) RemoveAlias(alias string) error {
+	res, err := s.db.Exec(`DELETE FROM project_aliases WHERE alias=?`, alias)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("no alias %q", alias)
+	}
+	return nil
+}
+
+func (s *SQLiteStore) GetAliases() (map[string]string, error) {
+	rows, err := s.db.Query(`SELECT alias, project FROM project_aliases ORDER BY alias`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var a, p string
+		if err := rows.Scan(&a, &p); err != nil {
+			return nil, err
+		}
+		out[a] = p
+	}
+	return out, rows.Err()
+}
+
 const sessionCols = `id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project,
 	source, external_id, cwd, active_seconds, agent_seconds, model,
 	input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd`

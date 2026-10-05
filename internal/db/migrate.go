@@ -18,6 +18,7 @@ var migrations = []migration{
 	{1, "baseline sessions and log entries", migrateBaseline},
 	{2, "agent ledger columns on sessions", migrateAgentLedger},
 	{3, "commits and activity segments", migrateCommits},
+	{4, "project aliases", migrateAliases},
 }
 
 // SchemaVersion is the highest migration version this binary knows about.
@@ -166,6 +167,16 @@ func migrateCommits(tx *sql.Tx) error {
 		CREATE INDEX IF NOT EXISTS idx_segments_session ON session_segments(session_id);
 		CREATE INDEX IF NOT EXISTS idx_segments_start ON session_segments(start_time);
 	`)
+	return err
+}
+
+// migrateAliases maps names a project is discovered under (a repo's
+// remote name, a folder name) to the name the user bills it as.
+func migrateAliases(tx *sql.Tx) error {
+	_, err := tx.Exec(`CREATE TABLE IF NOT EXISTS project_aliases (
+		alias   TEXT PRIMARY KEY,
+		project TEXT NOT NULL
+	)`)
 	return err
 }
 

@@ -295,3 +295,54 @@ func TestSegmentsReplaceAndRange(t *testing.T) {
 		t.Fatalf("all = %d, want 2", len(all))
 	}
 }
+
+func TestSetAliasRenamesImportedButNotManual(t *testing.T) {
+	s, _ := openTemp(t)
+	now := time.Now()
+	end := now.Add(time.Hour)
+	s.CreateSession(&Session{TaskName: "manual", StartTime: now, EndTime: &end, Project: "acme-api"})
+	s.UpsertExternalSession(&Session{TaskName: "agent", StartTime: now, EndTime: &end, Project: "acme-api", Source: "codex", ExternalID: "1"})
+	s.UpsertCommit(&Commit{Project: "acme-api", RepoPath: "/a", SHA: "x", AuthoredAt: now, Subject: "s"})
+	s.UpsertCommit(&Commit{Project: "acme-api", RepoPath: "/a", SHA: "y", AuthoredAt: now, Subject: "s"})
+	s.UpsertCommit(&Commit{Project: "acme", RepoPath: "/b", SHA: "y", AuthoredAt: now, Subject: "s"}) // same commit, other name
+
+	ns, nc, err := s.SetAlias("acme-api", "acme")
+	if err != nil || ns != 1 || nc != 1 {
+		t.Fatalf("SetAlias: sessions=%d commits=%d err=%v", ns, nc, err)
+	}
+	all, _ := s.GetSessionsInRange(now.Add(-time.Minute), end)
+	for _, x := range all {
+		if x.Source == SourceManual && x.Project != "acme-api" {
+			t.Error("manual session renamed")
+		}
+		if x.Source == "codex" && x.Project != "acme" {
+			t.Error("imported session not renamed")
+		}
+	}
+	commits, _ := s.GetCommitsInRange(now.Add(-time.Minute), end)
+	if len(commits) != 2 {
+		t.Fatalf("commits = %d, want 2 after dedupe", len(commits))
+	}
+	for _, c := range commits {
+		if c.Project != "acme" {
+			t.Errorf("commit %s still under %s", c.SHA, c.Project)
+		}
+	}
+
+	// Chains collapse: old -> acme-api -> acme becomes old -> acme.
+	s.SetAlias("old", "acme-api")
+	s.SetAlias("acme-api", "acme")
+	al, _ := s.GetAliases()
+	if al["old"] != "acme" || al["acme-api"] != "acme" {
+		t.Errorf("aliases = %v", al)
+	}
+	if _, _, err := s.SetAlias("same", "same"); err == nil {
+		t.Error("self alias accepted")
+	}
+	if err := s.RemoveAlias("old"); err != nil {
+		t.Error(err)
+	}
+	if err := s.RemoveAlias("old"); err == nil {
+		t.Error("removing a missing alias should fail")
+	}
+}

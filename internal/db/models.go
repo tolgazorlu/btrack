@@ -111,6 +111,12 @@ type Store interface {
 	UpsertCommit(c *Commit) (created bool, err error)
 	GetCommitsInRange(from, to time.Time) ([]*Commit, error)
 	LinkCommit(commitID int64, sessionID *int64) error
+	// SetAlias makes alias resolve to project from now on and renames
+	// already imported sessions and commits filed under alias. Hand-kept
+	// sessions are never renamed.
+	SetAlias(alias, project string) (sessions, commits int, err error)
+	RemoveAlias(alias string) error
+	GetAliases() (map[string]string, error)
 	// ReplaceSegments sets a session's segments, dropping any previous set.
 	ReplaceSegments(sessionID int64, segs []Segment) error
 	// GetSegmentsInRange returns segments overlapping [from, to).
