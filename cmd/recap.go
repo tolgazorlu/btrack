@@ -18,7 +18,7 @@ var (
 	recapDay, recapWeek, recapMonth, recapYear bool
 	recapLast                                  int
 	recapSince, recapUntil, recapProject       string
-	recapJSON, recapMarkdown                   bool
+	recapMarkdown                              bool
 )
 
 var recapCmd = &cobra.Command{
@@ -115,7 +115,7 @@ func runRecap(cmd *cobra.Command, args []string) error {
 	rc := ledger.Build(sessions, segments, commits, from, to, recapProject)
 
 	switch {
-	case recapJSON:
+	case jsonOutput:
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		return enc.Encode(rc)
@@ -217,7 +217,6 @@ func init() {
 	f.StringVar(&recapSince, "since", "", "Start date, YYYY-MM-DD")
 	f.StringVar(&recapUntil, "until", "", "End date, YYYY-MM-DD, inclusive")
 	f.StringVarP(&recapProject, "project", "p", "", "Only this project")
-	f.BoolVar(&recapJSON, "json", false, "Print as JSON")
 	f.BoolVar(&recapMarkdown, "md", false, "Print as Markdown")
 	rootCmd.AddCommand(recapCmd)
 }

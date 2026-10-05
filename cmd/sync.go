@@ -21,7 +21,6 @@ var (
 	syncDryRun  bool
 	syncSources []string
 	syncSince   string
-	syncJSON    bool
 	syncNoGit   bool
 )
 
@@ -147,7 +146,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 			sessions, err := r.Read(p)
 			if err != nil {
 				res.Errors++
-				if !syncJSON {
+				if !jsonOutput {
 					ui.Warn(fmt.Sprintf("%s: %s: %v", r.Source(), p, err))
 				}
 				continue
@@ -207,7 +206,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 	sort.Strings(rep.UnknownModels)
 
-	if syncJSON {
+	if jsonOutput {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		return enc.Encode(rep)
@@ -374,7 +373,6 @@ func init() {
 	syncCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "Parse and summarise without writing anything")
 	syncCmd.Flags().StringSliceVar(&syncSources, "source", nil, "Only these sources (claude-code, codex, hermes)")
 	syncCmd.Flags().StringVar(&syncSince, "since", "", "Only sessions started on or after this date (YYYY-MM-DD)")
-	syncCmd.Flags().BoolVar(&syncJSON, "json", false, "Print the result as JSON")
 	syncCmd.Flags().BoolVar(&syncNoGit, "no-git", false, "Skip scanning repos for your commits")
 	rootCmd.AddCommand(syncCmd)
 }

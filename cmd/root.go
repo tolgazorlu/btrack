@@ -66,6 +66,7 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print machine-readable JSON (for scripts and AI agents)")
 	cobra.OnInitialize(func() {
 		if _, err := config.Load(); err != nil {
 			fmt.Fprintln(os.Stderr, ui.StyleError.Render("config error: ")+err.Error())
