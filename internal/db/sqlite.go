@@ -28,93 +28,91 @@ func NewSQLiteStore(path string) (*SQLiteStore, error) {
 	return s, nil
 }
 
-func (s *SQLiteStore) migrate() error {
-	_, err := s.db.Exec(`
-		CREATE TABLE IF NOT EXISTS sessions (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			task_name  TEXT    NOT NULL,
-			start_time DATETIME NOT NULL,
-			end_time   DATETIME,
-			message    TEXT    DEFAULT '',
-			tags       TEXT    DEFAULT '[]',
-			git_branch TEXT    DEFAULT '',
-			git_repo   TEXT    DEFAULT ''
-		);
-		CREATE TABLE IF NOT EXISTS log_entries (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			session_id INTEGER NOT NULL,
-			note       TEXT    NOT NULL,
-			timestamp  DATETIME NOT NULL,
-			parent_id  INTEGER REFERENCES log_entries(id) ON DELETE SET NULL,
-			FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-		);
-		CREATE INDEX IF NOT EXISTS idx_sessions_end_time ON sessions(end_time);
-		CREATE INDEX IF NOT EXISTS idx_log_entries_session ON log_entries(session_id);
-	`)
-	if err != nil {
-		return err
-	}
-	rows, _ := s.db.Query(`PRAGMA table_info(sessions)`)
-	hasProject := false
-	if rows != nil {
-		for rows.Next() {
-			var cid int
-			var name, typ string
-			var notNull int
-			var dflt sql.NullString
-			var pk int
-			_ = rows.Scan(&cid, &name, &typ, &notNull, &dflt, &pk)
-			if name == "project" {
-				hasProject = true
-			}
-		}
-		rows.Close()
-	}
-	if !hasProject {
-		_, err = s.db.Exec(`ALTER TABLE sessions ADD COLUMN project TEXT NOT NULL DEFAULT ''`)
-		if err != nil {
-			return err
-		}
-	}
-
-	logRows, _ := s.db.Query(`PRAGMA table_info(log_entries)`)
-	hasParentID := false
-	if logRows != nil {
-		for logRows.Next() {
-			var cid int
-			var name, typ string
-			var notNull int
-			var dflt sql.NullString
-			var pk int
-			_ = logRows.Scan(&cid, &name, &typ, &notNull, &dflt, &pk)
-			if name == "parent_id" {
-				hasParentID = true
-			}
-		}
-		logRows.Close()
-	}
-	if !hasParentID {
-		_, err = s.db.Exec(`ALTER TABLE log_entries ADD COLUMN parent_id INTEGER REFERENCES log_entries(id) ON DELETE SET NULL`)
-	}
-	return err
-}
-
 // CreateSession inserts a session. A session with an EndTime already set is a
 // completed record being backfilled (see `btrack import`), so every field is
 // written; a live session leaves end_time NULL and fills it in on stop.
 func (s *SQLiteStore) CreateSession(sess *Session) error {
 	tagsJSON, _ := json.Marshal(sess.Tags)
 	res, err := s.db.Exec(
-		`INSERT INTO sessions (task_name, start_time, end_time, message, tags, git_branch, git_repo, project)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO sessions (task_name, start_time, end_time, message, tags, git_branch, git_repo, project,
+			source, external_id, cwd, active_seconds, agent_seconds, model,
+			input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		sess.TaskName, sess.StartTime.UTC(), nullTime(sess.EndTime), sess.Message,
 		string(tagsJSON), sess.GitBranch, sess.GitRepo, sess.Project,
+		sess.source(), nullString(sess.ExternalID), sess.Cwd, sess.ActiveSeconds, sess.AgentSeconds, sess.Model,
+		sess.Usage.Input, sess.Usage.Output, sess.Usage.CacheRead, sess.Usage.CacheWrite, sess.CostUSD,
 	)
 	if err != nil {
 		return fmt.Errorf("create session: %w", err)
 	}
 	sess.ID, _ = res.LastInsertId()
 	return nil
+}
+
+// UpsertExternalSession records a session imported from another tool, keyed
+// by (Source, ExternalID). Re-syncing the same session refreshes what the
+// tool may have grown since (end time, active/agent time, usage, cost) but
+// never overwrites task name, project or message, which the user may have
+// edited in btrack. Reports whether a new row was created.
+func (s *SQLiteStore) UpsertExternalSession(sess *Session) (bool, error) {
+	if sess.ExternalID == "" || sess.source() == SourceManual {
+		return false, fmt.Errorf("upsert external session: source and external id are required")
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	var id int64
+	err = tx.QueryRow(`SELECT id FROM sessions WHERE source=? AND external_id=?`, sess.source(), sess.ExternalID).Scan(&id)
+	switch {
+	case err == sql.ErrNoRows:
+		tagsJSON, _ := json.Marshal(sess.Tags)
+		res, err := tx.Exec(
+			`INSERT INTO sessions (task_name, start_time, end_time, message, tags, git_branch, git_repo, project,
+				source, external_id, cwd, active_seconds, agent_seconds, model,
+				input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			sess.TaskName, sess.StartTime.UTC(), nullTime(sess.EndTime), sess.Message,
+			string(tagsJSON), sess.GitBranch, sess.GitRepo, sess.Project,
+			sess.source(), sess.ExternalID, sess.Cwd, sess.ActiveSeconds, sess.AgentSeconds, sess.Model,
+			sess.Usage.Input, sess.Usage.Output, sess.Usage.CacheRead, sess.Usage.CacheWrite, sess.CostUSD,
+		)
+		if err != nil {
+			return false, fmt.Errorf("insert external session: %w", err)
+		}
+		sess.ID, _ = res.LastInsertId()
+		return true, tx.Commit()
+	case err != nil:
+		return false, err
+	}
+	sess.ID = id
+	_, err = tx.Exec(
+		`UPDATE sessions SET start_time=?, end_time=?, cwd=?, active_seconds=?, agent_seconds=?, model=?,
+			input_tokens=?, output_tokens=?, cache_read_tokens=?, cache_write_tokens=?, cost_usd=?
+		 WHERE id=?`,
+		sess.StartTime.UTC(), nullTime(sess.EndTime), sess.Cwd, sess.ActiveSeconds, sess.AgentSeconds, sess.Model,
+		sess.Usage.Input, sess.Usage.Output, sess.Usage.CacheRead, sess.Usage.CacheWrite, sess.CostUSD, id,
+	)
+	if err != nil {
+		return false, fmt.Errorf("update external session: %w", err)
+	}
+	return false, tx.Commit()
+}
+
+// GetSessionsInRange returns sessions whose start falls in [from, to).
+func (s *SQLiteStore) GetSessionsInRange(from, to time.Time) ([]*Session, error) {
+	rows, err := s.db.Query(
+		`SELECT `+sessionCols+`
+		 FROM sessions WHERE start_time >= ? AND start_time < ?
+		 ORDER BY start_time ASC`, from.UTC(), to.UTC(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanSessions(rows)
 }
 
 func (s *SQLiteStore) UpdateSession(sess *Session) error {
@@ -128,7 +126,7 @@ func (s *SQLiteStore) UpdateSession(sess *Session) error {
 
 func (s *SQLiteStore) GetActiveSession() (*Session, error) {
 	row := s.db.QueryRow(
-		`SELECT id, task_name, start_time, git_branch, git_repo, tags, project
+		`SELECT ` + sessionCols + `
 		 FROM sessions WHERE end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
 	)
 	return scanSession(row)
@@ -136,7 +134,7 @@ func (s *SQLiteStore) GetActiveSession() (*Session, error) {
 
 func (s *SQLiteStore) GetLastSession() (*Session, error) {
 	row := s.db.QueryRow(
-		`SELECT id, task_name, start_time, git_branch, git_repo, tags, project
+		`SELECT ` + sessionCols + `
 		 FROM sessions ORDER BY start_time DESC LIMIT 1`,
 	)
 	return scanSession(row)
@@ -144,7 +142,7 @@ func (s *SQLiteStore) GetLastSession() (*Session, error) {
 
 func (s *SQLiteStore) GetRecentSessions(limit int) ([]*Session, error) {
 	rows, err := s.db.Query(
-		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
+		`SELECT `+sessionCols+`
 		 FROM sessions ORDER BY start_time DESC LIMIT ?`, limit,
 	)
 	if err != nil {
@@ -156,7 +154,7 @@ func (s *SQLiteStore) GetRecentSessions(limit int) ([]*Session, error) {
 
 func (s *SQLiteStore) GetSessionByID(id int64) (*Session, error) {
 	rows, err := s.db.Query(
-		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
+		`SELECT `+sessionCols+`
 		 FROM sessions WHERE id=? LIMIT 1`, id,
 	)
 	if err != nil {
@@ -175,7 +173,7 @@ func (s *SQLiteStore) GetSessionsForDate(date time.Time) ([]*Session, error) {
 	from := time.Date(y, m, d, 0, 0, 0, 0, time.Local).UTC()
 	to := from.Add(24 * time.Hour)
 	rows, err := s.db.Query(
-		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
+		`SELECT `+sessionCols+`
 		 FROM sessions WHERE start_time >= ? AND start_time < ?
 		 ORDER BY start_time ASC`, from, to,
 	)
@@ -207,7 +205,7 @@ func (s *SQLiteStore) GetProjects() ([]string, error) {
 
 func (s *SQLiteStore) GetSessionsByProject(project string, limit int) ([]*Session, error) {
 	rows, err := s.db.Query(
-		`SELECT id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project
+		`SELECT `+sessionCols+`
 		 FROM sessions WHERE project=? ORDER BY start_time DESC LIMIT ?`, project, limit,
 	)
 	if err != nil {
@@ -259,40 +257,62 @@ func (s *SQLiteStore) GetAllLogs(sessionID int64) ([]*LogEntry, error) {
 
 func (s *SQLiteStore) Close() error { return s.db.Close() }
 
-func scanSession(row *sql.Row) (*Session, error) {
-	var sess Session
-	var tagsJSON string
-	var startStr string
-	err := row.Scan(&sess.ID, &sess.TaskName, &startStr, &sess.GitBranch, &sess.GitRepo, &tagsJSON, &sess.Project)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
+const sessionCols = `id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project,
+	source, external_id, cwd, active_seconds, agent_seconds, model,
+	input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd`
+
+type scanner interface{ Scan(dest ...any) error }
+
+func scanOne(sc scanner) (*Session, error) {
+	var (
+		sess               Session
+		tagsJSON, startStr string
+		endStr, externalID sql.NullString
+		active, agent      sql.NullInt64
+		cost               sql.NullFloat64
+	)
+	err := sc.Scan(&sess.ID, &sess.TaskName, &startStr, &endStr, &sess.Message, &tagsJSON,
+		&sess.GitBranch, &sess.GitRepo, &sess.Project,
+		&sess.Source, &externalID, &sess.Cwd, &active, &agent, &sess.Model,
+		&sess.Usage.Input, &sess.Usage.Output, &sess.Usage.CacheRead, &sess.Usage.CacheWrite, &cost)
 	if err != nil {
 		return nil, err
 	}
 	sess.StartTime = parseTime(startStr)
-	json.Unmarshal([]byte(tagsJSON), &sess.Tags)
+	if endStr.Valid {
+		t := parseTime(endStr.String)
+		sess.EndTime = &t
+	}
+	sess.ExternalID = externalID.String
+	if active.Valid {
+		sess.ActiveSeconds = &active.Int64
+	}
+	if agent.Valid {
+		sess.AgentSeconds = &agent.Int64
+	}
+	if cost.Valid {
+		sess.CostUSD = &cost.Float64
+	}
+	_ = json.Unmarshal([]byte(tagsJSON), &sess.Tags)
 	return &sess, nil
+}
+
+func scanSession(row *sql.Row) (*Session, error) {
+	sess, err := scanOne(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return sess, err
 }
 
 func scanSessions(rows *sql.Rows) ([]*Session, error) {
 	var result []*Session
 	for rows.Next() {
-		var sess Session
-		var tagsJSON, startStr string
-		var endStr sql.NullString
-		err := rows.Scan(&sess.ID, &sess.TaskName, &startStr, &endStr,
-			&sess.Message, &tagsJSON, &sess.GitBranch, &sess.GitRepo, &sess.Project)
+		sess, err := scanOne(rows)
 		if err != nil {
 			return nil, err
 		}
-		sess.StartTime = parseTime(startStr)
-		if endStr.Valid {
-			t := parseTime(endStr.String)
-			sess.EndTime = &t
-		}
-		json.Unmarshal([]byte(tagsJSON), &sess.Tags)
-		result = append(result, &sess)
+		result = append(result, sess)
 	}
 	return result, rows.Err()
 }
@@ -330,4 +350,11 @@ func nullTime(t *time.Time) any {
 		return nil
 	}
 	return t.UTC()
+}
+
+func nullString(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }

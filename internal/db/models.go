@@ -12,6 +12,40 @@ type Session struct {
 	GitBranch string
 	GitRepo   string
 	Project   string
+
+	// Source is where the session came from: SourceManual for sessions
+	// recorded in btrack itself, otherwise the agent tool it was imported
+	// from (see the ingest package).
+	Source     string
+	ExternalID string // session id in the source tool; empty for manual sessions
+	Cwd        string // working directory the source tool recorded
+
+	// ActiveSeconds is time a human was at the keyboard; AgentSeconds is
+	// time the agent worked between human turns. Nil means unknown, which
+	// is always the case for manual sessions.
+	ActiveSeconds *int64
+	AgentSeconds  *int64
+
+	Model   string
+	Usage   TokenUsage
+	CostUSD *float64 // estimated; nil when unknown
+}
+
+// TokenUsage is summed over every model call in a session.
+type TokenUsage struct {
+	Input      int64
+	Output     int64
+	CacheRead  int64
+	CacheWrite int64
+}
+
+const SourceManual = "manual"
+
+func (s *Session) source() string {
+	if s.Source == "" {
+		return SourceManual
+	}
+	return s.Source
 }
 
 func (s *Session) Duration() time.Duration {
@@ -42,5 +76,7 @@ type Store interface {
 	CreateLogEntry(e *LogEntry) error
 	GetRecentLogs(sessionID int64, limit int) ([]*LogEntry, error)
 	GetAllLogs(sessionID int64) ([]*LogEntry, error)
+	UpsertExternalSession(s *Session) (created bool, err error)
+	GetSessionsInRange(from, to time.Time) ([]*Session, error)
 	Close() error
 }
