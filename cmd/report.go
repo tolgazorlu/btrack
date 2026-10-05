@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
+	"github.com/tolgazorlu/btrack/internal/ledger"
 	"github.com/tolgazorlu/btrack/internal/report"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
@@ -43,7 +44,15 @@ Flags of note:
   --repo    which git repository to scan (default: the project's configured
             repo, else the current directory)
   --out     write somewhere other than the home directory
-  --open    open the finished report in your browser`,
+  --open    open the finished report in your browser
+  --agents  add part 3: AI-assisted work measured from agent sessions
+            (imported by btrack sync), shown beside the logged hours,
+            never added to them
+  --ai-cost also show the estimated AI cost in part 3
+
+Whatever the flags, days where agent logs show keyboard time but the
+timesheet has no entry are listed in the terminal: hours you probably
+worked and never logged.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		project := ""
@@ -108,6 +117,13 @@ Flags of note:
 
 		files, added, removed := report.DiffStat(repoPath, from, to)
 
+		withAgents, _ := cmd.Flags().GetBool("agents")
+		withCost, _ := cmd.Flags().GetBool("ai-cost")
+		agentDays, agentSessions, linked, err := agentWork(store, project, from, to)
+		if err != nil {
+			return err
+		}
+
 		rep := report.Report{
 			Client:       clientName,
 			From:         from,
@@ -119,6 +135,9 @@ Flags of note:
 			FilesChanged: files,
 			LinesAdded:   added,
 			LinesRemoved: removed,
+		}
+		if withAgents || withCost {
+			rep.Agent = &report.AgentWork{Days: agentDays, ShowCost: withCost, Linked: linked, Sessions: agentSessions}
 		}
 
 		if outPath == "" {
@@ -144,6 +163,11 @@ Flags of note:
 		ui.KV("range", from.Format("02.01.2006")+" – "+to.Format("02.01.2006"))
 		ui.KV("commits", fmt.Sprintf("%d", rep.TotalCommits()))
 		ui.KV("tracked", fmt.Sprintf("%s (%d sessions)", rep.TotalLabel(), rep.TotalEntries()))
+		if rep.Agent != nil {
+			ui.KV("agents", fmt.Sprintf("%s at the keyboard, %s agent alone (%d days, part 3)",
+				report.FormatDuration(rep.Agent.TotalYou()), report.FormatDuration(rep.Agent.TotalAgent()), len(agentDays)))
+		}
+		warnUnloggedDays(rep.Days, agentDays)
 		if rep.TotalEntries() == 0 {
 			ui.Blank()
 			ui.Warn("no tracked hours in this range — part 2 is empty")
@@ -156,6 +180,83 @@ Flags of note:
 		}
 		return nil
 	},
+}
+
+// agentWork loads imported agent sessions of the project in [from, to]
+// by day, counts the distinct sessions active in it, and the period's
+// commits linked to one of them.
+func agentWork(store db.Store, project string, from, to time.Time) ([]report.AgentDay, int, int, error) {
+	if project == "" {
+		return nil, 0, 0, nil
+	}
+	end := to.AddDate(0, 0, 1)
+	sessions, err := store.GetSessionsInRange(time.Time{}, end)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	segments, err := store.GetSegmentsInRange(time.Time{}, end.AddDate(100, 0, 0))
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	var days []report.AgentDay
+	for _, d := range ledger.Daily(sessions, segments, from, end, project) {
+		days = append(days, report.AgentDay(d))
+	}
+	commits, err := store.GetCommitsInRange(from, end)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	agentSession := map[int64]bool{}
+	for _, s := range sessions {
+		if s.Source != db.SourceManual && s.Project == project {
+			agentSession[s.ID] = true
+		}
+	}
+	active := map[int64]bool{}
+	for _, g := range segments {
+		if agentSession[g.SessionID] && !g.Start.Before(from) && g.Start.Before(end) {
+			active[g.SessionID] = true
+		}
+	}
+	linked := 0
+	for _, c := range commits {
+		if c.SessionID != nil && agentSession[*c.SessionID] {
+			linked++
+		}
+	}
+	return days, len(active), linked, nil
+}
+
+// unloggedThreshold is how much measured keyboard time a day needs before
+// a missing hand-kept entry is worth flagging.
+const unloggedThreshold = 15 * time.Minute
+
+// warnUnloggedDays lists days where agent logs show real keyboard time
+// but the timesheet has nothing: hours that were probably worked and
+// never logged. Terminal only; the client report is not changed.
+func warnUnloggedDays(days []report.Day, agentDays []report.AgentDay) {
+	logged := map[string]bool{}
+	for _, d := range days {
+		if len(d.Entries) > 0 {
+			logged[d.Date.Format("2006-01-02")] = true
+		}
+	}
+	var missing []string
+	var total time.Duration
+	for _, a := range agentDays {
+		if a.You >= unloggedThreshold && !logged[a.Date.Format("2006-01-02")] {
+			missing = append(missing, fmt.Sprintf("%s (%s)", a.Date.Format("02.01"), shortDur(int64(a.You.Seconds()))))
+			total += a.You
+		}
+	}
+	if len(missing) == 0 {
+		return
+	}
+	ui.Blank()
+	ui.Warn(fmt.Sprintf("%d days with agent work but no logged hours, %s at the keyboard in total:",
+		len(missing), shortDur(int64(total.Seconds()))))
+	ui.Plain("  " + strings.Join(missing, ", "))
+	ui.Hint("record them with: btrack add \"task\" --date YYYY-MM-DD --from HH:MM --to HH:MM -p <project>")
 }
 
 // collectEntries pulls stopped sessions in [from, to] for a project.
@@ -327,6 +428,8 @@ func init() {
 	reportCmd.Flags().String("client", "", "client name shown on the report")
 	reportCmd.Flags().String("author", "", "who prepared the report (default: git user.name)")
 	reportCmd.Flags().Bool("open", false, "open the report in your browser when done")
+	reportCmd.Flags().Bool("agents", false, "add part 3: AI-assisted work measured from agent sessions")
+	reportCmd.Flags().Bool("ai-cost", false, "include the estimated AI cost in part 3 (implies --agents)")
 	rootCmd.AddCommand(reportCmd)
 }
 
