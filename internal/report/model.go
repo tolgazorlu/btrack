@@ -171,10 +171,73 @@ type Report struct {
 	GeneratedAt time.Time
 	ToolVersion string // btrack version printed in the colophon
 
+	// Agent is the optional third part: the same period as measured from
+	// AI agent session logs. Nil leaves the part out.
+	Agent *AgentWork
+
 	// Figures
 	FilesChanged int
 	LinesAdded   int
 	LinesRemoved int
+}
+
+// AgentWork is AI-assisted work measured from agent session logs. It is
+// shown beside the hand-kept hours, never added to them.
+type AgentWork struct {
+	Days     []AgentDay
+	ShowCost bool // print the estimated AI cost
+	Linked   int  // commits linked to an agent session
+	Sessions int  // distinct agent sessions; a session spanning days counts once
+}
+
+// AgentDay is one day of measured agent work.
+type AgentDay struct {
+	Date         time.Time
+	You          time.Duration // keyboard time inside agent sessions
+	Agent        time.Duration // agent working alone
+	CostUSD      float64
+	CostComplete bool
+	Sessions     int
+}
+
+func (d AgentDay) FormatDate() string { return Day{Date: d.Date}.FormatDate() }
+func (d AgentDay) Weekday() string    { return Day{Date: d.Date}.Weekday() }
+func (d AgentDay) CostLabel() string  { return FormatUSD(d.CostUSD, d.CostComplete) }
+
+func (a AgentWork) TotalYou() time.Duration {
+	var t time.Duration
+	for _, d := range a.Days {
+		t += d.You
+	}
+	return t
+}
+
+func (a AgentWork) TotalAgent() time.Duration {
+	var t time.Duration
+	for _, d := range a.Days {
+		t += d.Agent
+	}
+	return t
+}
+
+func (a AgentWork) CostLabel() string {
+	var c float64
+	complete := true
+	for _, d := range a.Days {
+		c += d.CostUSD
+		complete = complete && d.CostComplete
+	}
+	return FormatUSD(c, complete)
+}
+
+// FormatUSD renders "~$12,40" with a Turkish decimal comma; a trailing
+// "+" marks a total that misses unpriced sessions.
+func FormatUSD(v float64, complete bool) string {
+	s := "~$" + strings.Replace(fmt.Sprintf("%.2f", v), ".", ",", 1)
+	if !complete {
+		s += "+"
+	}
+	return s
 }
 
 // DocRef is the filing reference printed on the masthead and in the colophon,

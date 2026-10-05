@@ -136,6 +136,34 @@
     <p class="grand-value">{{ .TotalLabel }}<small>{{ .TotalDecimal }} saat · {{ .TotalEntries }} süre kaydı · {{ len .HourDays }} gün</small></p>
   </div>
 
+  {{ with .Agent }}{{ if .Days }}
+  <div class="part">
+    <h2>Bölüm 3 — Yapay zekâ destekli çalışma</h2>
+    <span class="part-sub">{{ .Sessions }} ajan oturumu · {{ len .Days }} gün{{ if .Linked }} · {{ .Linked }} commit bir oturuma bağlı{{ end }}</span>
+  </div>
+  <p class="note">Bu bölüm yapay zekâ kodlama ajanlarının oturum kayıtlarından ölçülmüştür ve Bölüm 2’deki kayıtlı süreye <strong>eklenmez</strong>; aynı çalışmanın ölçülmüş görünümüdür. “Klavye başında”, istemler arasında 10 dakikadan kısa aralıklarla geçen süredir; “ajan tek başına”, ajanın yanıt beklemeden çalıştığı süredir.</p>
+
+  {{ $cost := .ShowCost }}
+  {{ range .Days }}
+  <section class="day">
+    <div class="day-head">
+      <p class="day-date">{{ .FormatDate }}</p>
+      <p class="day-weekday">{{ .Weekday }}</p>
+      <p class="day-total">{{ duration .You }}<small>klavye başında</small></p>
+    </div>
+    <div class="hrs">
+      <div class="hrs-row"><p class="dur">{{ duration .Agent }}</p><p>Ajan tek başına</p></div>
+      {{ if $cost }}<div class="hrs-row"><p class="dur">{{ .CostLabel }}</p><p>Tahmini yapay zekâ maliyeti (API liste fiyatı)</p></div>{{ end }}
+    </div>
+  </section>
+  {{ end }}
+
+  <div class="grand">
+    <p class="grand-label">Ölçülen ajan çalışması</p>
+    <p class="grand-value">{{ duration .TotalYou }}<small>klavye başında · {{ duration .TotalAgent }} ajan tek başına{{ if .ShowCost }} · {{ .CostLabel }} tahmini maliyet{{ end }}</small></p>
+  </div>
+  {{ end }}{{ end }}
+
   {{ if .Reconcile }}
   <div class="reconcile">
     <h3>Süre kaydı ile commit tarihleri arasındaki farklar</h3>
