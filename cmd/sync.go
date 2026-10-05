@@ -12,6 +12,7 @@ import (
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
 	"github.com/tolgazorlu/btrack/internal/ingest"
+	"github.com/tolgazorlu/btrack/internal/ledger"
 	"github.com/tolgazorlu/btrack/internal/pricing"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
@@ -21,6 +22,7 @@ var (
 	syncSources []string
 	syncSince   string
 	syncJSON    bool
+	syncNoGit   bool
 )
 
 var syncCmd = &cobra.Command{
@@ -34,6 +36,10 @@ working alone, which model it used and what it cost.
 Safe to run repeatedly: sessions are keyed by their id in the source tool,
 so a re-run only refreshes sessions that grew. Titles and projects you
 edit in btrack are never overwritten.
+
+It also records your own commits (by your git user.email) in every repo
+those sessions worked in, and links each commit to the session that
+produced it.
 
 Imported sessions are kept apart from your hand-kept timesheet: btrack h,
 export and report keep showing only sessions you recorded yourself.
@@ -71,8 +77,17 @@ type syncProjectRow struct {
 	Sources       []string `json:"sources"`
 }
 
+type syncCommitResult struct {
+	Repos   int `json:"repos"`
+	Scanned int `json:"scanned"`
+	New     int `json:"new"`
+	Linked  int `json:"linked"`
+	Errors  int `json:"errors"`
+}
+
 type syncReport struct {
 	DryRun        bool               `json:"dry_run"`
+	Commits       *syncCommitResult  `json:"commits,omitempty"`
 	Sources       []syncSourceResult `json:"sources"`
 	Projects      []syncProjectRow   `json:"projects"`
 	UnknownModels []string           `json:"unknown_models"`
@@ -152,11 +167,22 @@ func runSync(cmd *cobra.Command, args []string) error {
 					} else {
 						res.Updated++
 					}
+					if err := store.ReplaceSegments(conv.Session.ID, conv.Segments); err != nil {
+						res.Errors++
+					}
 				}
 				addProjectRow(projects, conv.Session)
 			}
 		}
 		rep.Sources = append(rep.Sources, res)
+	}
+
+	if store != nil && !syncNoGit {
+		cr, err := syncCommits(store, resolver.RepoDirs(), since)
+		if err != nil {
+			return err
+		}
+		rep.Commits = cr
 	}
 
 	for _, row := range projects {
@@ -182,6 +208,73 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 	printSyncReport(rep)
 	return nil
+}
+
+// syncCommits records the user's commits in every repo an imported
+// session was attributed through, then links each commit in the touched
+// period to the session that produced it.
+func syncCommits(store db.Store, repos map[string]string, since time.Time) (*syncCommitResult, error) {
+	res := &syncCommitResult{Repos: len(repos)}
+	earliest := time.Now()
+	dirs := make([]string, 0, len(repos))
+	for d := range repos {
+		dirs = append(dirs, d)
+	}
+	sort.Strings(dirs)
+	for _, dir := range dirs {
+		commits, err := ledger.ScanCommits(dir, repos[dir], since)
+		if err != nil {
+			res.Errors++
+			continue
+		}
+		for _, c := range commits {
+			res.Scanned++
+			created, err := store.UpsertCommit(c)
+			if err != nil {
+				return nil, err
+			}
+			if created {
+				res.New++
+			}
+			if c.AuthoredAt.Before(earliest) {
+				earliest = c.AuthoredAt
+			}
+		}
+	}
+	if res.Scanned == 0 {
+		return res, nil
+	}
+	// Sessions can start up to a day before a commit they produced.
+	from, to := earliest.Add(-24*time.Hour), time.Now().Add(time.Hour)
+	// Any session can own a segment in the period, however long ago it
+	// started, so load them all; segments narrow it down.
+	sessions, err := store.GetSessionsInRange(time.Time{}, to)
+	if err != nil {
+		return nil, err
+	}
+	segments, err := store.GetSegmentsInRange(from, to)
+	if err != nil {
+		return nil, err
+	}
+	commits, err := store.GetCommitsInRange(earliest.Add(-time.Second), to)
+	if err != nil {
+		return nil, err
+	}
+	links := ledger.Link(sessions, segments, commits)
+	for _, c := range commits {
+		sid, ok := links[c.ID]
+		var want *int64
+		if ok {
+			want = &sid
+			res.Linked++
+		}
+		if (c.SessionID == nil) != (want == nil) || (want != nil && *c.SessionID != *want) {
+			if err := store.LinkCommit(c.ID, want); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return res, nil
 }
 
 func addProjectRow(projects map[string]*syncProjectRow, s *db.Session) {
@@ -233,6 +326,10 @@ func printSyncReport(rep syncReport) {
 		}
 		ui.Plain(line)
 	}
+	if c := rep.Commits; c != nil {
+		ui.Plain(fmt.Sprintf("%-12s %4d yours in %d repos  ·  %d new, %d linked to a session",
+			"git", c.Scanned, c.Repos, c.New, c.Linked))
+	}
 	if len(rep.Projects) == 0 {
 		ui.Blank()
 		return
@@ -272,5 +369,6 @@ func init() {
 	syncCmd.Flags().StringSliceVar(&syncSources, "source", nil, "Only these sources (claude-code, codex, hermes)")
 	syncCmd.Flags().StringVar(&syncSince, "since", "", "Only sessions started on or after this date (YYYY-MM-DD)")
 	syncCmd.Flags().BoolVar(&syncJSON, "json", false, "Print the result as JSON")
+	syncCmd.Flags().BoolVar(&syncNoGit, "no-git", false, "Skip scanning repos for your commits")
 	rootCmd.AddCommand(syncCmd)
 }
