@@ -54,7 +54,8 @@ var rootCmd = &cobra.Command{
     btrack completion fish > completions   fish
 
   Use ` + ui.StyleDimmed.Render("btrack <command> --help") + ` for details on any command.`,
-	SilenceUsage: true,
+	SilenceUsage:  true,
+	SilenceErrors: true, // Execute prints the error once, styled
 	Args:         cobra.NoArgs,
 }
 
