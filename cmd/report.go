@@ -167,7 +167,9 @@ worked and never logged.`,
 			ui.KV("agents", fmt.Sprintf("%s at the keyboard, %s agent alone (%d days, part 3)",
 				report.FormatDuration(rep.Agent.TotalYou()), report.FormatDuration(rep.Agent.TotalAgent()), len(agentDays)))
 		}
-		warnUnloggedDays(rep.Days, agentDays)
+		if err := warnUnloggedDays(store, project, from, to); err != nil {
+			return err
+		}
 		if rep.TotalEntries() == 0 {
 			ui.Blank()
 			ui.Warn("no tracked hours in this range — part 2 is empty")
@@ -227,36 +229,38 @@ func agentWork(store db.Store, project string, from, to time.Time) ([]report.Age
 	return days, len(active), linked, nil
 }
 
-// unloggedThreshold is how much measured keyboard time a day needs before
-// a missing hand-kept entry is worth flagging.
-const unloggedThreshold = 15 * time.Minute
-
 // warnUnloggedDays lists days where agent logs show real keyboard time
 // but the timesheet has nothing: hours that were probably worked and
 // never logged. Terminal only; the client report is not changed.
-func warnUnloggedDays(days []report.Day, agentDays []report.AgentDay) {
-	logged := map[string]bool{}
-	for _, d := range days {
-		if len(d.Entries) > 0 {
-			logged[d.Date.Format("2006-01-02")] = true
-		}
+func warnUnloggedDays(store db.Store, project string, from, to time.Time) error {
+	if project == "" {
+		return nil
+	}
+	end := to.AddDate(0, 0, 1)
+	sessions, err := store.GetSessionsInRange(time.Time{}, end)
+	if err != nil {
+		return err
+	}
+	segments, err := store.GetSegmentsInRange(time.Time{}, end.AddDate(100, 0, 0))
+	if err != nil {
+		return err
+	}
+	days := ledger.Unlogged(sessions, segments, from, end, project)
+	if len(days) == 0 {
+		return nil
 	}
 	var missing []string
 	var total time.Duration
-	for _, a := range agentDays {
-		if a.You >= unloggedThreshold && !logged[a.Date.Format("2006-01-02")] {
-			missing = append(missing, fmt.Sprintf("%s (%s)", a.Date.Format("02.01"), shortDur(int64(a.You.Seconds()))))
-			total += a.You
-		}
-	}
-	if len(missing) == 0 {
-		return
+	for _, d := range days {
+		missing = append(missing, fmt.Sprintf("%s (%s)", d.Date.Format("02.01"), shortDur(d.YouSeconds)))
+		total += d.You
 	}
 	ui.Blank()
 	ui.Warn(fmt.Sprintf("%d days with agent work but no logged hours, %s at the keyboard in total:",
-		len(missing), shortDur(int64(total.Seconds()))))
+		len(days), shortDur(int64(total.Seconds()))))
 	ui.Plain("  " + strings.Join(missing, ", "))
-	ui.Hint("record them with: btrack add \"task\" --date YYYY-MM-DD --from HH:MM --to HH:MM -p <project>")
+	ui.Hint("record them with: btrack add \"task\" --date YYYY-MM-DD --from HH:MM --to HH:MM -p " + project)
+	return nil
 }
 
 // collectEntries pulls stopped sessions in [from, to] for a project.

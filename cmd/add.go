@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
+	"github.com/tolgazorlu/btrack/internal/ledger"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -30,6 +31,10 @@ Times accept HH:MM (today, or --date's day) or a full timestamp:
 Instead of --to you can give --for with a duration:
 
   btrack add "standup prep" --from 08:45 --for 25m
+
+It refuses times in the future, sessions over 16h, and any overlap with
+a session already on your timesheet, so the same minutes can never be
+billed twice.
 
 Usage:
   btrack add <task> --from <time> --to <time> [--date D] [-p project] [-m message]`,
@@ -85,11 +90,6 @@ Usage:
 			end = start.Add(dur)
 		}
 
-		if end.Sub(start) > 16*time.Hour {
-			return fmt.Errorf("session is longer than 16h (%s – %s) — check the times",
-				start.Format("02.01 15:04"), end.Format("02.01 15:04"))
-		}
-
 		cfg, err := config.Load()
 		if err != nil {
 			return err
@@ -108,15 +108,14 @@ Usage:
 			}
 		}
 
-		sess := &db.Session{
-			TaskName:  task,
-			StartTime: start,
-			EndTime:   &end,
-			Message:   message,
-			Project:   project,
+		sess, err := ledger.Record(store, ledger.RecordInput{
+			Task: task, Project: project, Message: message, Start: start, End: end,
+		}, time.Now())
+		if err != nil {
+			return err
 		}
-		if err := store.CreateSession(sess); err != nil {
-			return fmt.Errorf("create session: %w", err)
+		if jsonOutput {
+			return printJSON(toSessionJSON(sess, nil))
 		}
 
 		ui.Blank()
