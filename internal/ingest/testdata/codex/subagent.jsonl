@@ -1,0 +1,9 @@
+{"timestamp":"2026-04-01T11:00:00.000Z","type":"session_meta","payload":{"id":"sess-subagent-1","cwd":"/Users/dev/proj"}}
+{"timestamp":"2026-04-01T11:00:01.000Z","type":"turn_context","payload":{"turn_id":"turn-root","root_turn_id":"turn-root","model":"gpt-5.1-codex"}}
+{"timestamp":"2026-04-01T11:00:02.000Z","type":"event_msg","payload":{"type":"user_message","message":"Spawn a helper and summarize"}}
+{"timestamp":"2026-04-01T11:00:03.000Z","type":"response_item","payload":{"type":"function_call","name":"spawn_agent","call_id":"call-1","arguments":"{}"}}
+{"timestamp":"2026-04-01T11:00:04.000Z","type":"turn_context","payload":{"turn_id":"turn-child","root_turn_id":"turn-root","model":"gpt-5.1-codex-mini"}}
+{"timestamp":"2026-04-01T11:00:05.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"[subagent] working on it"}]}}
+{"timestamp":"2026-04-01T11:00:06.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":500,"cached_input_tokens":100,"cache_write_input_tokens":0,"output_tokens":40,"total_tokens":540},"last_token_usage":{"input_tokens":500,"cached_input_tokens":100,"cache_write_input_tokens":0,"output_tokens":40,"total_tokens":540}}}}
+{"timestamp":"2026-04-01T11:00:07.000Z","type":"function_call_output","payload":{"type":"function_call_output","call_id":"call-1","output":"summary from subagent"}}
+{"timestamp":"2026-04-01T11:00:08.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Here is the summary."}]}}
