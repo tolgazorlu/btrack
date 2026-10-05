@@ -221,7 +221,7 @@ type Converted struct {
 	Session      *db.Session
 	Split        Split
 	Segments     []db.Segment // SessionID is filled in once the session is stored
-	UnknownModel string // first model the pricing table could not price
+	UnknownModel string       // first model the pricing table could not price
 }
 
 // ToDB maps a parsed session to a db.Session: time split, cost and
