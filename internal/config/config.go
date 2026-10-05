@@ -75,7 +75,13 @@ func PidFile() string {
 	return filepath.Join(DataDir(), "daemon.pid")
 }
 
+// SQLitePath is the database file: $BTRACK_DB if set (handy for trying
+// commands against a copy), else database.sqlite_path from the config,
+// else btrack.db in the data directory.
 func SQLitePath() string {
+	if p := os.Getenv("BTRACK_DB"); p != "" {
+		return p
+	}
 	if instance != nil && instance.Database.SQLitePath != "" {
 		return instance.Database.SQLitePath
 	}
