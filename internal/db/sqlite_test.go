@@ -169,7 +169,7 @@ func TestUpsertExternalSessionIsIdempotentAndKeepsUserEdits(t *testing.T) {
 	if !got.EndTime.Equal(later) || *got.ActiveSeconds != 900 || *got.CostUSD != 0.4 {
 		t.Errorf("metrics not refreshed: %+v", got)
 	}
-	all, _ := s.GetRecentSessions(10)
+	all, _ := s.GetSessionsInRange(start.Add(-time.Hour), start.Add(time.Hour))
 	if len(all) != 1 {
 		t.Errorf("rows = %d, want 1", len(all))
 	}
@@ -214,5 +214,27 @@ func TestDeletingSessionCascadesNotes(t *testing.T) {
 	logs, _ := s.GetAllLogs(sess.ID)
 	if len(logs) != 0 {
 		t.Fatalf("notes survived session delete: %d", len(logs))
+	}
+}
+
+func TestListingMethodsHideImportedSessions(t *testing.T) {
+	s, _ := openTemp(t)
+	now := time.Now()
+	end := now.Add(time.Minute)
+	s.CreateSession(&Session{TaskName: "manual", StartTime: now, EndTime: &end, Project: "p"})
+	if _, err := s.UpsertExternalSession(&Session{TaskName: "agent", StartTime: now, EndTime: &end,
+		Project: "q", Source: "claude-code", ExternalID: "x"}); err != nil {
+		t.Fatal(err)
+	}
+	recent, _ := s.GetRecentSessions(10)
+	day, _ := s.GetSessionsForDate(now)
+	projects, _ := s.GetProjects()
+	last, _ := s.GetLastSession()
+	if len(recent) != 1 || len(day) != 1 || len(projects) != 1 || last.TaskName != "manual" {
+		t.Fatalf("imported session leaked: recent=%d day=%d projects=%v last=%s", len(recent), len(day), projects, last.TaskName)
+	}
+	all, _ := s.GetSessionsInRange(now.Add(-time.Hour), now.Add(time.Hour))
+	if len(all) != 2 {
+		t.Fatalf("range should see both sources, got %d", len(all))
 	}
 }

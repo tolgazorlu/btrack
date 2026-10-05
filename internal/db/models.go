@@ -63,6 +63,11 @@ type LogEntry struct {
 	Timestamp time.Time
 }
 
+// Store persists sessions. The listing methods (active, last, recent, by
+// date, by project, projects) see manual sessions only, so imported agent
+// sessions never inflate the hand-kept timesheet that history, export and
+// client reports are built from. GetSessionsInRange and GetSessionByID see
+// every source.
 type Store interface {
 	CreateSession(s *Session) error
 	UpdateSession(s *Session) error

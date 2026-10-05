@@ -127,7 +127,7 @@ func (s *SQLiteStore) UpdateSession(sess *Session) error {
 func (s *SQLiteStore) GetActiveSession() (*Session, error) {
 	row := s.db.QueryRow(
 		`SELECT ` + sessionCols + `
-		 FROM sessions WHERE end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
+		 FROM sessions WHERE end_time IS NULL AND source='manual' ORDER BY start_time DESC LIMIT 1`,
 	)
 	return scanSession(row)
 }
@@ -135,7 +135,7 @@ func (s *SQLiteStore) GetActiveSession() (*Session, error) {
 func (s *SQLiteStore) GetLastSession() (*Session, error) {
 	row := s.db.QueryRow(
 		`SELECT ` + sessionCols + `
-		 FROM sessions ORDER BY start_time DESC LIMIT 1`,
+		 FROM sessions WHERE source='manual' ORDER BY start_time DESC LIMIT 1`,
 	)
 	return scanSession(row)
 }
@@ -143,7 +143,7 @@ func (s *SQLiteStore) GetLastSession() (*Session, error) {
 func (s *SQLiteStore) GetRecentSessions(limit int) ([]*Session, error) {
 	rows, err := s.db.Query(
 		`SELECT `+sessionCols+`
-		 FROM sessions ORDER BY start_time DESC LIMIT ?`, limit,
+		 FROM sessions WHERE source='manual' ORDER BY start_time DESC LIMIT ?`, limit,
 	)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (s *SQLiteStore) GetSessionsForDate(date time.Time) ([]*Session, error) {
 	to := from.Add(24 * time.Hour)
 	rows, err := s.db.Query(
 		`SELECT `+sessionCols+`
-		 FROM sessions WHERE start_time >= ? AND start_time < ?
+		 FROM sessions WHERE start_time >= ? AND start_time < ? AND source='manual'
 		 ORDER BY start_time ASC`, from, to,
 	)
 	if err != nil {
@@ -186,7 +186,7 @@ func (s *SQLiteStore) GetSessionsForDate(date time.Time) ([]*Session, error) {
 
 func (s *SQLiteStore) GetProjects() ([]string, error) {
 	rows, err := s.db.Query(
-		`SELECT DISTINCT project FROM sessions WHERE project != '' ORDER BY project ASC`,
+		`SELECT DISTINCT project FROM sessions WHERE project != '' AND source='manual' ORDER BY project ASC`,
 	)
 	if err != nil {
 		return nil, err
@@ -206,7 +206,7 @@ func (s *SQLiteStore) GetProjects() ([]string, error) {
 func (s *SQLiteStore) GetSessionsByProject(project string, limit int) ([]*Session, error) {
 	rows, err := s.db.Query(
 		`SELECT `+sessionCols+`
-		 FROM sessions WHERE project=? ORDER BY start_time DESC LIMIT ?`, project, limit,
+		 FROM sessions WHERE project=? AND source='manual' ORDER BY start_time DESC LIMIT ?`, project, limit,
 	)
 	if err != nil {
 		return nil, err
