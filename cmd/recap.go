@@ -40,7 +40,7 @@ Examples:
   btrack recap -d               # today
   btrack recap -m               # this month
   btrack recap --last 30        # the last 30 days
-  btrack recap --since 2026-09-01 --until 2026-09-30 -p bungalove
+  btrack recap --since 2026-09-01 --until 2026-09-30 -p acme
   btrack recap -w --md          # markdown, for a standup or a journal
   btrack recap -m --json        # for scripts and agents`,
 	RunE: runRecap,

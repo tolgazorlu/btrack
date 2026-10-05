@@ -101,7 +101,7 @@ func TestCreateSessionRoundTripsLedgerFields(t *testing.T) {
 	start := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
 	end := start.Add(2 * time.Hour)
 	in := &Session{
-		TaskName: "fix credit race", StartTime: start, EndTime: &end, Project: "bungalove",
+		TaskName: "fix credit race", StartTime: start, EndTime: &end, Project: "acme",
 		Tags: []string{"bugfix"}, Source: "claude-code", ExternalID: "abc-123", Cwd: "/repo",
 		ActiveSeconds: ptr[int64](1800), AgentSeconds: ptr[int64](3600), Model: "claude-sonnet-5",
 		Usage:   TokenUsage{Input: 10, Output: 20, CacheRead: 30, CacheWrite: 40},
