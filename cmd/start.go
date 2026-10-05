@@ -75,6 +75,14 @@ Tips:
 			return fmt.Errorf("parse daemon response: %w", err)
 		}
 
+		if jsonOutput {
+			sj, err := loadSessionJSON(sess.ID)
+			if err != nil {
+				return err
+			}
+			return printJSON(sj)
+		}
+
 		line := ui.StyleSuccess.Render(ui.Sym.Start) + "  " + ui.StyleHighlight.Render(sess.TaskName)
 		var meta []string
 		if sess.Project != "" {

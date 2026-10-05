@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -69,6 +70,16 @@ Tips:
 				return fmt.Errorf("add note: %w", err)
 			}
 
+			if jsonOutput {
+				return printJSON(struct {
+					SessionID int64    `json:"session_id"`
+					Note      NoteJSON `json:"note"`
+				}{
+					SessionID: sessionID,
+					Note:      NoteJSON{ID: entry.ID, Note: entry.Note, At: entry.Timestamp},
+				})
+			}
+
 			ui.Sign(
 				ui.StyleSuccess.Render(ui.Sym.OK),
 				ui.StyleDimmed.Render(fmt.Sprintf("#%d", sessionID))+"  "+ui.StyleHighlight.Render(note),
@@ -84,6 +95,43 @@ Tips:
 		}
 		if !resp.Success {
 			return fmt.Errorf("%s", resp.Error)
+		}
+
+		if jsonOutput {
+			var nr struct {
+				Note string `json:"note"`
+				ID   int64  `json:"id"`
+			}
+			if err := json.Unmarshal(resp.Data, &nr); err != nil {
+				return fmt.Errorf("parse daemon response: %w", err)
+			}
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+			store, err := db.Open(cfg)
+			if err != nil {
+				return err
+			}
+			defer store.Close()
+
+			active, err := store.GetActiveSession()
+			if err != nil || active == nil {
+				return fmt.Errorf("active session not found")
+			}
+			nj := NoteJSON{ID: nr.ID, Note: nr.Note, At: time.Now()}
+			if logs, err := store.GetAllLogs(active.ID); err == nil {
+				for _, l := range logs {
+					if l.ID == nr.ID {
+						nj = NoteJSON{ID: l.ID, Note: l.Note, At: l.Timestamp}
+						break
+					}
+				}
+			}
+			return printJSON(struct {
+				SessionID int64    `json:"session_id"`
+				Note      NoteJSON `json:"note"`
+			}{SessionID: active.ID, Note: nj})
 		}
 
 		ui.OK(ui.StyleHighlight.Render(note))

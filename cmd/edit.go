@@ -119,6 +119,11 @@ Flags:
 			return fmt.Errorf("update session: %w", err)
 		}
 
+		if jsonOutput {
+			notes, _ := store.GetAllLogs(sess.ID)
+			return printJSON(toSessionJSON(sess, notes))
+		}
+
 		ui.Rule()
 		ui.OK(fmt.Sprintf("session #%d updated", id))
 		ui.Blank()

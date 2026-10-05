@@ -40,6 +40,10 @@ To start a session in a project:
 			return fmt.Errorf("load projects: %w", err)
 		}
 
+		if jsonOutput {
+			return printProjectsJSON(store, cfg, projects)
+		}
+
 		if len(projects) == 0 {
 			ui.Header("projects", "")
 			ui.Hint("no projects yet — start one with `btrack s \"task\" -p name`")
@@ -108,6 +112,61 @@ To start a session in a project:
 
 var aliasRemove bool
 
+// ─── JSON output ─────────────────────────────────────────────────────────────
+
+// projectJSON is one entry in `btrack projects --json`.
+type projectJSON struct {
+	Name         string     `json:"name"`
+	TotalSeconds int64      `json:"total_seconds"`
+	Sessions     int        `json:"sessions"`
+	LastActive   *time.Time `json:"last_active,omitempty"`
+	Rate         float64    `json:"rate,omitempty"`
+}
+
+func printProjectsJSON(store db.Store, cfg *config.Config, projects []string) error {
+	out := struct {
+		Projects     []projectJSON `json:"projects"`
+		TotalSeconds int64         `json:"total_seconds"`
+		Sessions     int           `json:"sessions"`
+	}{Projects: []projectJSON{}}
+
+	var grandTotal time.Duration
+	grandSessions := 0
+
+	for _, proj := range projects {
+		sessions, err := store.GetSessionsByProject(proj, 5000)
+		if err != nil {
+			continue
+		}
+		var total time.Duration
+		var lastActive time.Time
+		for _, s := range sessions {
+			total += s.Duration()
+			if s.StartTime.After(lastActive) {
+				lastActive = s.StartTime
+			}
+		}
+		grandTotal += total
+		grandSessions += len(sessions)
+
+		pj := projectJSON{Name: proj, TotalSeconds: int64(total.Seconds()), Sessions: len(sessions)}
+		if cfg.Projects != nil {
+			if pc, ok := cfg.Projects[proj]; ok && pc.Rate > 0 {
+				pj.Rate = pc.Rate
+			}
+		}
+		if !lastActive.IsZero() {
+			la := lastActive
+			pj.LastActive = &la
+		}
+		out.Projects = append(out.Projects, pj)
+	}
+
+	out.TotalSeconds = int64(grandTotal.Seconds())
+	out.Sessions = grandSessions
+	return printJSON(out)
+}
+
 var projectsAliasCmd = &cobra.Command{
 	Use:   "alias [name] [project]",
 	Short: "File sessions discovered under one name as another project",
@@ -144,12 +203,25 @@ Examples:
 			if err := store.RemoveAlias(args[0]); err != nil {
 				return err
 			}
+			if jsonOutput {
+				return printJSON(struct {
+					Removed string `json:"removed"`
+				}{Removed: args[0]})
+			}
 			ui.OK("removed alias " + args[0] + " (already renamed sessions keep their project)")
 			return nil
 		case len(args) == 2:
 			ns, nc, err := store.SetAlias(args[0], args[1])
 			if err != nil {
 				return err
+			}
+			if jsonOutput {
+				return printJSON(struct {
+					Alias           string `json:"alias"`
+					Project         string `json:"project"`
+					SessionsRefiled int    `json:"sessions_refiled"`
+					CommitsRefiled  int    `json:"commits_refiled"`
+				}{Alias: args[0], Project: args[1], SessionsRefiled: ns, CommitsRefiled: nc})
 			}
 			ui.OK(fmt.Sprintf("%s → %s  ·  %d imported sessions and %d commits refiled", args[0], args[1], ns, nc))
 			return nil
@@ -160,6 +232,11 @@ Examples:
 		aliases, err := store.GetAliases()
 		if err != nil {
 			return err
+		}
+		if jsonOutput {
+			return printJSON(struct {
+				Aliases map[string]string `json:"aliases"`
+			}{Aliases: aliases})
 		}
 		ui.Header("project aliases", "")
 		if len(aliases) == 0 {

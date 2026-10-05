@@ -43,6 +43,14 @@ Tips:
 			return fmt.Errorf("parse daemon response: %w", err)
 		}
 
+		if jsonOutput {
+			sj, err := loadSessionJSON(sess.ID)
+			if err != nil {
+				return err
+			}
+			return printJSON(sj)
+		}
+
 		ui.Blank()
 		ui.Sign(ui.StyleSuccess.Render(ui.Sym.Resume), ui.StyleHighlight.Render(sess.TaskName))
 		ui.Hint("session resumed")

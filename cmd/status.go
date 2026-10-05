@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"github.com/tolgazorlu/btrack/internal/config"
@@ -59,6 +61,10 @@ Tips:
 			}
 		}
 
+		if jsonOutput {
+			return printStatusJSON(store)
+		}
+
 		client := daemon.NewClient()
 		model := ui.NewStatusModel(client, dailyHours, idleMinutes, store, Version)
 
@@ -66,6 +72,35 @@ Tips:
 		_, err := p.Run()
 		return err
 	},
+}
+
+// statusJSON is the --json shape for `btrack status`.
+type statusJSON struct {
+	Active       *SessionJSON `json:"active"`
+	TodaySeconds int64        `json:"today_seconds"`
+}
+
+func printStatusJSON(store db.Store) error {
+	out := statusJSON{}
+	if store == nil {
+		return printJSON(out)
+	}
+
+	if active, err := store.GetActiveSession(); err == nil && active != nil {
+		notes, _ := store.GetRecentLogs(active.ID, 20)
+		sj := toSessionJSON(active, notes)
+		out.Active = &sj
+	}
+
+	if today, err := store.GetSessionsForDate(time.Now()); err == nil {
+		var total time.Duration
+		for _, s := range today {
+			total += s.Duration()
+		}
+		out.TodaySeconds = int64(total.Seconds())
+	}
+
+	return printJSON(out)
 }
 
 func init() {

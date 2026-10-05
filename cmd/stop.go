@@ -98,6 +98,14 @@ Tips:
 			return fmt.Errorf("parse daemon response: %w", err)
 		}
 
+		if jsonOutput {
+			sj, err := loadSessionJSON(sess.ID)
+			if err != nil {
+				return err
+			}
+			return printJSON(sj)
+		}
+
 		start, _ := time.Parse(time.RFC3339, sess.StartTime)
 		end, _ := time.Parse(time.RFC3339, sess.EndTime)
 		if end.IsZero() {

@@ -72,6 +72,32 @@ The date argument accepts: today, yesterday, or YYYY-MM-DD`,
 	},
 }
 
+// ─── JSON output ─────────────────────────────────────────────────────────────
+
+// historyJSON is the --json shape for every history view.
+type historyJSON struct {
+	From         time.Time     `json:"from"`
+	To           time.Time     `json:"to"`
+	Sessions     []SessionJSON `json:"sessions"`
+	TotalSeconds int64         `json:"total_seconds"`
+}
+
+func printHistoryJSON(store db.Store, sessions []*db.Session, from, to time.Time, showNotes bool) error {
+	out := historyJSON{From: from, To: to, Sessions: []SessionJSON{}}
+	var total int64
+	for _, s := range sessions {
+		var notes []*db.LogEntry
+		if showNotes {
+			notes, _ = store.GetAllLogs(s.ID)
+		}
+		sj := toSessionJSON(s, notes)
+		total += sj.DurationSeconds
+		out.Sessions = append(out.Sessions, sj)
+	}
+	out.TotalSeconds = total
+	return printJSON(out)
+}
+
 // ─── table view ──────────────────────────────────────────────────────────────
 
 func runTable(limit int, showNotes bool, project string) error {
@@ -94,6 +120,11 @@ func runTable(limit int, showNotes bool, project string) error {
 	if err != nil {
 		return fmt.Errorf("load sessions: %w", err)
 	}
+
+	if jsonOutput {
+		return printHistoryJSON(store, sessions, time.Time{}, time.Now(), showNotes)
+	}
+
 	if len(sessions) == 0 {
 		fmt.Println(ui.StyleSubtle.Render("\n  no sessions recorded yet\n"))
 		fmt.Println(ui.StyleDimmed.Render("  start one with: btrack s \"task\"\n"))
@@ -152,6 +183,10 @@ func runLastHours(hours float64) error {
 		if s.StartTime.After(since) {
 			sessions = append(sessions, s)
 		}
+	}
+
+	if jsonOutput {
+		return printHistoryJSON(store, sessions, since, time.Now(), true)
 	}
 
 	label := fmt.Sprintf("last %.0fh", hours)
@@ -244,6 +279,17 @@ func runMonth() error {
 	all, err := store.GetRecentSessions(2000)
 	if err != nil {
 		return err
+	}
+
+	if jsonOutput {
+		var monthSessions []*db.Session
+		for _, s := range all {
+			st := s.StartTime.Local()
+			if st.Month() == now.Month() && st.Year() == now.Year() {
+				monthSessions = append(monthSessions, s)
+			}
+		}
+		return printHistoryJSON(store, monthSessions, monthStart, monthStart.AddDate(0, 1, 0), true)
 	}
 
 	// Group by week.
@@ -397,6 +443,17 @@ func runYear() error {
 	all, err := store.GetRecentSessions(5000)
 	if err != nil {
 		return err
+	}
+
+	if jsonOutput {
+		var yearSessions []*db.Session
+		for _, s := range all {
+			if s.StartTime.Year() == now.Year() {
+				yearSessions = append(yearSessions, s)
+			}
+		}
+		yearStart := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.Local)
+		return printHistoryJSON(store, yearSessions, yearStart, yearStart.AddDate(1, 0, 0), true)
 	}
 
 	type monthStat struct {
@@ -625,6 +682,12 @@ func runDay(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("load sessions: %w", err)
 	}
 
+	if jsonOutput {
+		y, m, d := target.Local().Date()
+		dayStart := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		return printHistoryJSON(store, sessions, dayStart, dayStart.AddDate(0, 0, 1), true)
+	}
+
 	recentSessions, _ := store.GetRecentSessions(500)
 	streak := computeStreak(recentSessions)
 
@@ -762,6 +825,19 @@ func runWeek(cmd *cobra.Command, args []string) error {
 	monday := now.AddDate(0, 0, -(weekday - 1))
 	y, m, d := monday.Local().Date()
 	weekStart := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+
+	if jsonOutput {
+		var weekSessions []*db.Session
+		for i := 0; i < 7; i++ {
+			day := weekStart.AddDate(0, 0, i)
+			if day.After(now) {
+				break
+			}
+			daySessions, _ := store.GetSessionsForDate(day)
+			weekSessions = append(weekSessions, daySessions...)
+		}
+		return printHistoryJSON(store, weekSessions, weekStart, weekStart.AddDate(0, 0, 7), true)
+	}
 
 	sep := ui.StyleDimmed.Render(strings.Repeat("─", 60))
 	fmt.Println()

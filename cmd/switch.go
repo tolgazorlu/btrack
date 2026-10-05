@@ -50,6 +50,26 @@ Tips:
 			return err
 		}
 
+		if jsonOutput {
+			out := struct {
+				Stopped *SessionJSON `json:"stopped,omitempty"`
+				Started *SessionJSON `json:"started"`
+			}{}
+			if data.Stopped != nil {
+				sj, err := loadSessionJSON(data.Stopped.ID)
+				if err != nil {
+					return err
+				}
+				out.Stopped = &sj
+			}
+			sj, err := loadSessionJSON(data.Started.ID)
+			if err != nil {
+				return err
+			}
+			out.Started = &sj
+			return printJSON(out)
+		}
+
 		ui.Blank()
 		if data.Stopped != nil {
 			ui.Sign(ui.StyleDimmed.Render(ui.Sym.Stop), ui.StyleDimmed.Render(data.Stopped.TaskName))
