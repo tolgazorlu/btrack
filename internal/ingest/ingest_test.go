@@ -39,3 +39,25 @@ func TestComputeSplitUnsortedAndEmpty(t *testing.T) {
 		t.Fatalf("unsorted split = %+v", sp)
 	}
 }
+
+func TestSegments(t *testing.T) {
+	ev := []Event{
+		{at(0), Human}, {at(1), Agent}, {at(6), Agent}, {at(9), Human},
+		{at(50), Agent}, {at(52), Agent}, // 41m stall: new segment
+		{at(90), Human}, {at(91), Agent}, // 38m away: new segment
+	}
+	segs := Segments(ev, SplitOptions{})
+	if len(segs) != 3 {
+		t.Fatalf("got %d segments: %+v", len(segs), segs)
+	}
+	want := []Segment{
+		{Start: at(-2), End: at(9), Active: 5 * time.Minute, Agent: 6 * time.Minute},
+		{Start: at(50), End: at(52), Agent: 2 * time.Minute},
+		{Start: at(88), End: at(91), Active: 2 * time.Minute, Agent: time.Minute},
+	}
+	for i := range want {
+		if segs[i] != want[i] {
+			t.Errorf("segment %d = %+v, want %+v", i, segs[i], want[i])
+		}
+	}
+}

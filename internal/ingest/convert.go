@@ -32,6 +32,27 @@ func Readers() []Reader {
 type ProjectResolver struct {
 	Home  string
 	cache map[string]string
+	repos map[string]string // repo checkout dir -> project, for commit scanning
+}
+
+// RepoDirs returns every git checkout a resolved session was attributed
+// through, mapped to its project.
+func (r *ProjectResolver) RepoDirs() map[string]string {
+	out := make(map[string]string, len(r.repos))
+	for k, v := range r.repos {
+		out[k] = v
+	}
+	return out
+}
+
+func (r *ProjectResolver) noteRepo(dir, project string) {
+	if dir == "" || project == "" {
+		return
+	}
+	if r.repos == nil {
+		r.repos = map[string]string{}
+	}
+	r.repos[dir] = project
 }
 
 func (r *ProjectResolver) Resolve(cwd string) string {
@@ -59,16 +80,20 @@ func (r *ProjectResolver) Resolve(cwd string) string {
 // another repo does not claim the session.
 func (r *ProjectResolver) ResolveSession(s Session) string {
 	if p := r.Resolve(s.Cwd); p != "" {
+		r.noteRepo(r.existingRepoDir(s.Cwd), p)
 		return p
 	}
 	counts := map[string]int{}
+	dirs := map[string]string{}
 	total := 0
 	for _, h := range s.PathHints {
-		p := r.Resolve(r.existingRepoDir(h))
+		dir := r.existingRepoDir(h)
+		p := r.Resolve(dir)
 		if p == "" {
 			continue
 		}
 		counts[p]++
+		dirs[dir] = p
 		total++
 	}
 	best, bestN := "", 0
@@ -78,6 +103,11 @@ func (r *ProjectResolver) ResolveSession(s Session) string {
 		}
 	}
 	if bestN >= 3 && bestN*10 >= total*4 {
+		for dir, p := range dirs {
+			if p == best {
+				r.noteRepo(dir, p)
+			}
+		}
 		return best
 	}
 	return ""
@@ -190,6 +220,7 @@ func originRepoName(configPath string) string {
 type Converted struct {
 	Session      *db.Session
 	Split        Split
+	Segments     []db.Segment // SessionID is filled in once the session is stored
 	UnknownModel string // first model the pricing table could not price
 }
 
@@ -209,6 +240,12 @@ func ToDB(s Session, resolver *ProjectResolver, opt SplitOptions) *Converted {
 	agent := int64(sp.Agent.Seconds())
 
 	out := &Converted{Split: sp}
+	for _, g := range Segments(s.Events, opt) {
+		out.Segments = append(out.Segments, db.Segment{
+			Start: g.Start, End: g.End,
+			ActiveSeconds: int64(g.Active.Seconds()), AgentSeconds: int64(g.Agent.Seconds()),
+		})
+	}
 	sess := &db.Session{
 		TaskName:      title(s),
 		StartTime:     start,

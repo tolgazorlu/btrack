@@ -109,48 +109,76 @@ func (o SplitOptions) withDefaults() SplitOptions {
 	return o
 }
 
-// ComputeSplit attributes every gap between consecutive events:
+// Segment is one stretch of continuous work inside a session. A long
+// session left open across lunch or several days is several segments;
+// time is bucketed by day, and commits are linked, per segment rather
+// than per session span.
+type Segment struct {
+	Start, End time.Time
+	Active     time.Duration
+	Agent      time.Duration
+}
+
+// Segments splits a timeline into stretches of work, attributing every
+// gap between consecutive events:
 //
 //   - gap ending in a Human event: the human was reading the previous
-//     output and typing. Credited to Active, capped at IdleGap; a longer
-//     gap means they walked away, so only ReturnAllowance is credited.
-//     The first prompt of a session also gets ReturnAllowance.
-//   - gap ending in an Agent event: the agent was working. Credited to
-//     Agent unless it exceeds AgentStall.
+//     output and typing; credited to Active when it is at most IdleGap.
+//     A longer gap means they walked away: a new segment starts, credited
+//     ReturnAllowance for reading and typing the prompt. The first prompt
+//     of a session gets the same allowance, before its timestamp.
+//   - gap ending in an Agent event: the agent was working; credited to
+//     Agent when it is at most AgentStall, otherwise a new segment starts
+//     (rate limit, hung tool, laptop asleep).
 //
 // It is a heuristic and labelled as such in every report.
-func ComputeSplit(events []Event, opt SplitOptions) Split {
+func Segments(events []Event, opt SplitOptions) []Segment {
 	opt = opt.withDefaults()
 	if len(events) == 0 {
-		return Split{}
+		return nil
 	}
 	ev := append([]Event(nil), events...)
 	sort.SliceStable(ev, func(i, j int) bool { return ev[i].At.Before(ev[j].At) })
 
-	var sp Split
-	sp.Wall = ev[len(ev)-1].At.Sub(ev[0].At)
-	if ev[0].Kind == Human {
-		// Reading and typing the first prompt happened before its timestamp.
-		sp.Active += opt.ReturnAllowance
-		sp.Wall += opt.ReturnAllowance
+	open := func(e Event) Segment {
+		if e.Kind == Human {
+			return Segment{Start: e.At.Add(-opt.ReturnAllowance), End: e.At, Active: opt.ReturnAllowance}
+		}
+		return Segment{Start: e.At, End: e.At}
 	}
+	var out []Segment
+	cur := open(ev[0])
 	for i := 1; i < len(ev); i++ {
 		gap := ev[i].At.Sub(ev[i-1].At)
-		if gap <= 0 {
+		if gap < 0 {
+			gap = 0
+		}
+		switch {
+		case ev[i].Kind == Human && gap <= opt.IdleGap:
+			cur.Active += gap
+		case ev[i].Kind == Agent && gap <= opt.AgentStall:
+			cur.Agent += gap
+		default:
+			out = append(out, cur)
+			cur = open(ev[i])
 			continue
 		}
-		switch ev[i].Kind {
-		case Human:
-			if gap <= opt.IdleGap {
-				sp.Active += gap
-			} else {
-				sp.Active += opt.ReturnAllowance
-			}
-		case Agent:
-			if gap <= opt.AgentStall {
-				sp.Agent += gap
-			}
-		}
+		cur.End = ev[i].At
+	}
+	return append(out, cur)
+}
+
+// ComputeSplit sums Segments; Wall spans the first segment's start to
+// the last event.
+func ComputeSplit(events []Event, opt SplitOptions) Split {
+	segs := Segments(events, opt)
+	if len(segs) == 0 {
+		return Split{}
+	}
+	sp := Split{Wall: segs[len(segs)-1].End.Sub(segs[0].Start)}
+	for _, s := range segs {
+		sp.Active += s.Active
+		sp.Agent += s.Agent
 	}
 	return sp
 }
