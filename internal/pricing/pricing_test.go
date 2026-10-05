@@ -155,3 +155,17 @@ func TestEstimateZeroTokens(t *testing.T) {
 		t.Fatalf("expected 0 usd for zero tokens, got %v", usd)
 	}
 }
+
+func TestFableLongestPrefixAndSynthetic(t *testing.T) {
+	p, ok := Lookup("claude-fable-5-1")
+	if !ok || p.CacheRead != 0.25 {
+		t.Fatalf("fable 5.1 = %+v %v", p, ok)
+	}
+	p, ok = Lookup("claude-fable-5")
+	if !ok || p.CacheRead != 1.0 {
+		t.Fatalf("fable 5 = %+v %v", p, ok)
+	}
+	if p, ok := Lookup("<synthetic>"); !ok || p != (Price{}) {
+		t.Fatalf("synthetic = %+v %v", p, ok)
+	}
+}

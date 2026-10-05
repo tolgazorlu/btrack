@@ -137,6 +137,11 @@ func isAllDigits(s string) bool {
 // run locally and are always known with a zero price.
 func isLocalModel(model string) bool {
 	lower := strings.ToLower(model)
+	// "<synthetic>" and similar bracketed ids are placeholders agents write
+	// for locally generated messages (errors, interrupts): no API call.
+	if strings.HasPrefix(model, "<") && strings.HasSuffix(model, ">") {
+		return true
+	}
 	return strings.Contains(model, ":") || strings.Contains(lower, "ollama")
 }
 
