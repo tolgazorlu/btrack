@@ -236,16 +236,10 @@ func warnUnloggedDays(store db.Store, project string, from, to time.Time) error 
 	if project == "" {
 		return nil
 	}
-	end := to.AddDate(0, 0, 1)
-	sessions, err := store.GetSessionsInRange(time.Time{}, end)
+	days, err := ledger.LoadUnlogged(store, from, to.AddDate(0, 0, 1), project)
 	if err != nil {
 		return err
 	}
-	segments, err := store.GetSegmentsInRange(time.Time{}, end.AddDate(100, 0, 0))
-	if err != nil {
-		return err
-	}
-	days := ledger.Unlogged(sessions, segments, from, end, project)
 	if len(days) == 0 {
 		return nil
 	}

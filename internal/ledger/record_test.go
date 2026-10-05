@@ -66,3 +66,30 @@ func TestUnlogged(t *testing.T) {
 		t.Fatalf("unlogged = %+v", got)
 	}
 }
+
+func TestPeriodResolve(t *testing.T) {
+	now := time.Date(2026, 10, 8, 15, 0, 0, 0, time.Local) // a Thursday
+	d := func(m time.Month, day int) time.Time { return time.Date(2026, m, day, 0, 0, 0, 0, time.Local) }
+	cases := []struct {
+		p        PeriodSpec
+		from, to time.Time
+	}{
+		{PeriodSpec{}, d(10, 5), d(10, 12)},
+		{PeriodSpec{Kind: "day"}, d(10, 8), d(10, 9)},
+		{PeriodSpec{Kind: "month"}, d(10, 1), d(11, 1)},
+		{PeriodSpec{LastDays: 7}, d(10, 2), d(10, 9)},
+		{PeriodSpec{Since: "2026-09-01", Until: "2026-09-30", Kind: "day"}, d(9, 1), d(10, 1)},
+	}
+	for _, c := range cases {
+		from, to, _, err := c.p.Resolve(now)
+		if err != nil || !from.Equal(c.from) || !to.Equal(c.to) {
+			t.Errorf("%+v -> %v %v %v", c.p, from, to, err)
+		}
+	}
+	if _, _, _, err := (PeriodSpec{Kind: "fortnight"}).Resolve(now); err == nil {
+		t.Error("unknown kind accepted")
+	}
+	if _, _, _, err := (PeriodSpec{Since: "2026-10-05", Until: "2026-10-01"}).Resolve(now); err == nil {
+		t.Error("reversed range accepted")
+	}
+}

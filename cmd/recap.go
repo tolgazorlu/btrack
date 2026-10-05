@@ -47,38 +47,16 @@ Examples:
 }
 
 func recapRange(now time.Time) (time.Time, time.Time, string, error) {
-	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	spec := ledger.PeriodSpec{LastDays: recapLast, Since: recapSince, Until: recapUntil}
 	switch {
-	case recapSince != "" || recapUntil != "":
-		from, to := time.Time{}, day.AddDate(0, 0, 1)
-		var err error
-		if recapSince != "" {
-			if from, err = time.ParseInLocation("2006-01-02", recapSince, time.Local); err != nil {
-				return from, to, "", fmt.Errorf("--since must be YYYY-MM-DD: %w", err)
-			}
-		}
-		if recapUntil != "" {
-			if to, err = time.ParseInLocation("2006-01-02", recapUntil, time.Local); err != nil {
-				return from, to, "", fmt.Errorf("--until must be YYYY-MM-DD: %w", err)
-			}
-			to = to.AddDate(0, 0, 1) // inclusive
-		}
-		return from, to, "", nil
-	case recapLast > 0:
-		return day.AddDate(0, 0, 1-recapLast), day.AddDate(0, 0, 1), fmt.Sprintf("last %d days", recapLast), nil
 	case recapDay:
-		return day, day.AddDate(0, 0, 1), "today", nil
+		spec.Kind = "day"
 	case recapMonth:
-		m := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
-		return m, m.AddDate(0, 1, 0), "this month", nil
+		spec.Kind = "month"
 	case recapYear:
-		y := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.Local)
-		return y, y.AddDate(1, 0, 0), "this year", nil
-	default:
-		offset := (int(day.Weekday()) + 6) % 7 // Monday-based week
-		w := day.AddDate(0, 0, -offset)
-		return w, w.AddDate(0, 0, 7), "this week", nil
+		spec.Kind = "year"
 	}
+	return spec.Resolve(now)
 }
 
 func runRecap(cmd *cobra.Command, args []string) error {
@@ -96,23 +74,10 @@ func runRecap(cmd *cobra.Command, args []string) error {
 	}
 	defer store.Close()
 
-	// Sessions that started before the period can still have segments in
-	// it, so load every session; local data stays small enough.
-	sessions, err := store.GetSessionsInRange(time.Time{}, to)
+	rc, err := ledger.LoadRecap(store, from, to, recapProject)
 	if err != nil {
 		return err
 	}
-	// All segments, not just the period's: a session's cost is shared
-	// across its segments, so the share needs the session's full total.
-	segments, err := store.GetSegmentsInRange(time.Time{}, to.AddDate(100, 0, 0))
-	if err != nil {
-		return err
-	}
-	commits, err := store.GetCommitsInRange(from, to)
-	if err != nil {
-		return err
-	}
-	rc := ledger.Build(sessions, segments, commits, from, to, recapProject)
 
 	switch {
 	case jsonOutput:
