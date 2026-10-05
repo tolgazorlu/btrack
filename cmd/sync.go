@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -12,8 +10,6 @@ import (
 	"github.com/tolgazorlu/btrack/internal/config"
 	"github.com/tolgazorlu/btrack/internal/db"
 	"github.com/tolgazorlu/btrack/internal/ingest"
-	"github.com/tolgazorlu/btrack/internal/ledger"
-	"github.com/tolgazorlu/btrack/internal/pricing"
 	"github.com/tolgazorlu/btrack/internal/ui"
 )
 
@@ -56,43 +52,6 @@ Examples:
 	RunE: runSync,
 }
 
-type syncSourceResult struct {
-	Source   string `json:"source"`
-	Files    int    `json:"files"`
-	Sessions int    `json:"sessions"`
-	Created  int    `json:"created"`
-	Updated  int    `json:"updated"`
-	Skipped  int    `json:"skipped"`
-	Errors   int    `json:"errors"`
-}
-
-type syncProjectRow struct {
-	Project       string   `json:"project"`
-	Sessions      int      `json:"sessions"`
-	ActiveSeconds int64    `json:"active_seconds"`
-	AgentSeconds  int64    `json:"agent_seconds"`
-	CostUSD       float64  `json:"cost_usd"`
-	CostComplete  bool     `json:"cost_complete"`
-	Sources       []string `json:"sources"`
-}
-
-type syncCommitResult struct {
-	Repos   int `json:"repos"`
-	Scanned int `json:"scanned"`
-	New     int `json:"new"`
-	Linked  int `json:"linked"`
-	Errors  int `json:"errors"`
-}
-
-type syncReport struct {
-	DryRun        bool               `json:"dry_run"`
-	Commits       *syncCommitResult  `json:"commits,omitempty"`
-	Sources       []syncSourceResult `json:"sources"`
-	Projects      []syncProjectRow   `json:"projects"`
-	UnknownModels []string           `json:"unknown_models"`
-	PricesChecked string             `json:"prices_checked_at"`
-}
-
 func runSync(cmd *cobra.Command, args []string) error {
 	var since time.Time
 	if syncSince != "" {
@@ -102,217 +61,34 @@ func runSync(cmd *cobra.Command, args []string) error {
 		}
 		since = t
 	}
-	want := map[string]bool{}
-	for _, s := range syncSources {
-		want[strings.ToLower(strings.TrimSpace(s))] = true
-	}
-
 	var store db.Store
-	var err error
 	if !syncDryRun {
-		cfg, cerr := config.Load()
-		if cerr != nil {
-			return cerr
-		}
-		store, err = db.Open(cfg)
+		cfg, err := config.Load()
 		if err != nil {
+			return err
+		}
+		if store, err = db.Open(cfg); err != nil {
 			return err
 		}
 		defer store.Close()
 	}
-
 	home, _ := os.UserHomeDir()
-	resolver := &ingest.ProjectResolver{Home: home}
-	if store != nil {
-		if resolver.Aliases, err = store.GetAliases(); err != nil {
-			return err
-		}
+	opt := ingest.RunOptions{Home: home, Sources: syncSources, Since: since, NoGit: syncNoGit}
+	if !jsonOutput {
+		opt.Warn = ui.Warn
 	}
-	rep := syncReport{DryRun: syncDryRun, PricesChecked: pricing.CheckedAt()}
-	projects := map[string]*syncProjectRow{}
-	unknown := map[string]bool{}
-
-	for _, r := range ingest.Readers() {
-		if len(want) > 0 && !want[r.Source()] {
-			continue
-		}
-		res := syncSourceResult{Source: r.Source()}
-		paths, err := r.Discover(home)
-		if err != nil {
-			return fmt.Errorf("%s: discover: %w", r.Source(), err)
-		}
-		res.Files = len(paths)
-		for _, p := range paths {
-			sessions, err := r.Read(p)
-			if err != nil {
-				res.Errors++
-				if !jsonOutput {
-					ui.Warn(fmt.Sprintf("%s: %s: %v", r.Source(), p, err))
-				}
-				continue
-			}
-			for _, s := range sessions {
-				conv := ingest.ToDB(s, resolver, ingest.SplitOptions{})
-				if conv == nil || (!since.IsZero() && conv.Session.StartTime.Before(since)) {
-					res.Skipped++
-					continue
-				}
-				res.Sessions++
-				if conv.UnknownModel != "" {
-					unknown[conv.UnknownModel] = true
-				}
-				if store != nil {
-					created, err := store.UpsertExternalSession(conv.Session)
-					if err != nil {
-						res.Errors++
-						continue
-					}
-					if created {
-						res.Created++
-					} else {
-						res.Updated++
-					}
-					if err := store.ReplaceSegments(conv.Session.ID, conv.Segments); err != nil {
-						res.Errors++
-					}
-				}
-				addProjectRow(projects, conv.Session)
-			}
-		}
-		rep.Sources = append(rep.Sources, res)
+	rep, err := ingest.Run(store, opt)
+	if err != nil {
+		return err
 	}
-
-	if store != nil && !syncNoGit {
-		cr, err := syncCommits(store, resolver.RepoDirs(), since)
-		if err != nil {
-			return err
-		}
-		rep.Commits = cr
-	}
-
-	for _, row := range projects {
-		sort.Strings(row.Sources)
-		rep.Projects = append(rep.Projects, *row)
-	}
-	sort.Slice(rep.Projects, func(i, j int) bool {
-		a, b := rep.Projects[i], rep.Projects[j]
-		if a.ActiveSeconds != b.ActiveSeconds {
-			return a.ActiveSeconds > b.ActiveSeconds
-		}
-		return a.Project < b.Project
-	})
-	for m := range unknown {
-		rep.UnknownModels = append(rep.UnknownModels, m)
-	}
-	sort.Strings(rep.UnknownModels)
-
 	if jsonOutput {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(rep)
+		return printJSON(rep)
 	}
-	printSyncReport(rep)
+	printSyncReport(*rep)
 	return nil
 }
 
-// syncCommits records the user's commits in every repo an imported
-// session was attributed through, then links each commit in the touched
-// period to the session that produced it.
-func syncCommits(store db.Store, repos map[string]string, since time.Time) (*syncCommitResult, error) {
-	res := &syncCommitResult{Repos: len(repos)}
-	earliest := time.Now()
-	dirs := make([]string, 0, len(repos))
-	for d := range repos {
-		dirs = append(dirs, d)
-	}
-	sort.Strings(dirs)
-	for _, dir := range dirs {
-		commits, err := ledger.ScanCommits(dir, repos[dir], since)
-		if err != nil {
-			res.Errors++
-			continue
-		}
-		for _, c := range commits {
-			res.Scanned++
-			created, err := store.UpsertCommit(c)
-			if err != nil {
-				return nil, err
-			}
-			if created {
-				res.New++
-			}
-			if c.AuthoredAt.Before(earliest) {
-				earliest = c.AuthoredAt
-			}
-		}
-	}
-	if res.Scanned == 0 {
-		return res, nil
-	}
-	// Sessions can start up to a day before a commit they produced.
-	from, to := earliest.Add(-24*time.Hour), time.Now().Add(time.Hour)
-	// Any session can own a segment in the period, however long ago it
-	// started, so load them all; segments narrow it down.
-	sessions, err := store.GetSessionsInRange(time.Time{}, to)
-	if err != nil {
-		return nil, err
-	}
-	segments, err := store.GetSegmentsInRange(from, to)
-	if err != nil {
-		return nil, err
-	}
-	commits, err := store.GetCommitsInRange(earliest.Add(-time.Second), to)
-	if err != nil {
-		return nil, err
-	}
-	links := ledger.Link(sessions, segments, commits)
-	for _, c := range commits {
-		sid, ok := links[c.ID]
-		var want *int64
-		if ok {
-			want = &sid
-			res.Linked++
-		}
-		if (c.SessionID == nil) != (want == nil) || (want != nil && *c.SessionID != *want) {
-			if err := store.LinkCommit(c.ID, want); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return res, nil
-}
-
-func addProjectRow(projects map[string]*syncProjectRow, s *db.Session) {
-	name := s.Project
-	if name == "" {
-		name = "(unassigned)"
-	}
-	row, ok := projects[name]
-	if !ok {
-		row = &syncProjectRow{Project: name, CostComplete: true}
-		projects[name] = row
-	}
-	row.Sessions++
-	if s.ActiveSeconds != nil {
-		row.ActiveSeconds += *s.ActiveSeconds
-	}
-	if s.AgentSeconds != nil {
-		row.AgentSeconds += *s.AgentSeconds
-	}
-	if s.CostUSD != nil {
-		row.CostUSD += *s.CostUSD
-	} else {
-		row.CostComplete = false
-	}
-	for _, src := range row.Sources {
-		if src == s.Source {
-			return
-		}
-	}
-	row.Sources = append(row.Sources, s.Source)
-}
-
-func printSyncReport(rep syncReport) {
+func printSyncReport(rep ingest.Report) {
 	title := "sync"
 	if rep.DryRun {
 		title = "sync (dry run, nothing written)"
