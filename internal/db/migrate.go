@@ -17,6 +17,7 @@ type migration struct {
 var migrations = []migration{
 	{1, "baseline sessions and log entries", migrateBaseline},
 	{2, "agent ledger columns on sessions", migrateAgentLedger},
+	{3, "commits and activity segments", migrateCommits},
 }
 
 // SchemaVersion is the highest migration version this binary knows about.
@@ -128,6 +129,42 @@ func migrateAgentLedger(tx *sql.Tx) error {
 		CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_source_external
 			ON sessions(source, external_id) WHERE external_id IS NOT NULL;
 		CREATE INDEX IF NOT EXISTS idx_sessions_start_time ON sessions(start_time);
+	`)
+	return err
+}
+
+// migrateCommits stores activity segments of imported sessions and the
+// user's own commits in repos btrack has seen them work in, each optionally linked to the session that produced it.
+func migrateCommits(tx *sql.Tx) error {
+	_, err := tx.Exec(`
+		CREATE TABLE IF NOT EXISTS commits (
+			id          INTEGER PRIMARY KEY AUTOINCREMENT,
+			project     TEXT     NOT NULL,
+			repo_path   TEXT     NOT NULL,
+			sha         TEXT     NOT NULL,
+			authored_at DATETIME NOT NULL,
+			subject     TEXT     NOT NULL,
+			files       INTEGER  NOT NULL DEFAULT 0,
+			insertions  INTEGER  NOT NULL DEFAULT 0,
+			deletions   INTEGER  NOT NULL DEFAULT 0,
+			session_id  INTEGER  REFERENCES sessions(id) ON DELETE SET NULL,
+			UNIQUE (project, sha)
+		);
+		CREATE INDEX IF NOT EXISTS idx_commits_authored_at ON commits(authored_at);
+		CREATE INDEX IF NOT EXISTS idx_commits_session ON commits(session_id);
+
+		-- Stretches of continuous work inside an imported session, so a
+		-- session left open for days is bucketed and linked by when work
+		-- actually happened.
+		CREATE TABLE IF NOT EXISTS session_segments (
+			session_id     INTEGER  NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+			start_time     DATETIME NOT NULL,
+			end_time       DATETIME NOT NULL,
+			active_seconds INTEGER  NOT NULL DEFAULT 0,
+			agent_seconds  INTEGER  NOT NULL DEFAULT 0
+		);
+		CREATE INDEX IF NOT EXISTS idx_segments_session ON session_segments(session_id);
+		CREATE INDEX IF NOT EXISTS idx_segments_start ON session_segments(start_time);
 	`)
 	return err
 }

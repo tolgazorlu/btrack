@@ -63,6 +63,29 @@ type LogEntry struct {
 	Timestamp time.Time
 }
 
+// Commit is one of the user's own commits in a repo btrack has seen them
+// work in. SessionID links it to the session that produced it, if any.
+type Commit struct {
+	ID         int64
+	Project    string
+	RepoPath   string
+	SHA        string
+	AuthoredAt time.Time
+	Subject    string
+	Files      int
+	Insertions int
+	Deletions  int
+	SessionID  *int64
+}
+
+// Segment is a stretch of continuous work inside an imported session.
+type Segment struct {
+	SessionID     int64
+	Start, End    time.Time
+	ActiveSeconds int64
+	AgentSeconds  int64
+}
+
 // Store persists sessions. The listing methods (active, last, recent, by
 // date, by project, projects) see manual sessions only, so imported agent
 // sessions never inflate the hand-kept timesheet that history, export and
@@ -83,5 +106,14 @@ type Store interface {
 	GetAllLogs(sessionID int64) ([]*LogEntry, error)
 	UpsertExternalSession(s *Session) (created bool, err error)
 	GetSessionsInRange(from, to time.Time) ([]*Session, error)
+	// UpsertCommit records a commit once per (project, sha); a re-scan
+	// keeps the existing row and its link.
+	UpsertCommit(c *Commit) (created bool, err error)
+	GetCommitsInRange(from, to time.Time) ([]*Commit, error)
+	LinkCommit(commitID int64, sessionID *int64) error
+	// ReplaceSegments sets a session's segments, dropping any previous set.
+	ReplaceSegments(sessionID int64, segs []Segment) error
+	// GetSegmentsInRange returns segments overlapping [from, to).
+	GetSegmentsInRange(from, to time.Time) ([]Segment, error)
 	Close() error
 }

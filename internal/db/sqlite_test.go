@@ -238,3 +238,60 @@ func TestListingMethodsHideImportedSessions(t *testing.T) {
 		t.Fatalf("range should see both sources, got %d", len(all))
 	}
 }
+
+func TestCommitsUpsertRangeAndLink(t *testing.T) {
+	s, _ := openTemp(t)
+	at := time.Date(2026, 10, 3, 14, 0, 0, 0, time.UTC)
+	c := &Commit{Project: "app", RepoPath: "/r", SHA: "abc", AuthoredAt: at, Subject: "feat: x", Files: 2, Insertions: 10, Deletions: 1}
+	created, err := s.UpsertCommit(c)
+	if err != nil || !created || c.ID == 0 {
+		t.Fatalf("first upsert: %v %v %d", created, err, c.ID)
+	}
+	sess := &Session{TaskName: "w", StartTime: at.Add(-time.Hour)}
+	s.CreateSession(sess)
+	if err := s.LinkCommit(c.ID, &sess.ID); err != nil {
+		t.Fatal(err)
+	}
+	// Same commit seen again via another worktree path: no new row, link kept.
+	again := &Commit{Project: "app", RepoPath: "/r-wt", SHA: "abc", AuthoredAt: at, Subject: "feat: x"}
+	created, err = s.UpsertCommit(again)
+	if err != nil || created || again.ID != c.ID {
+		t.Fatalf("second upsert: %v %v %d", created, err, again.ID)
+	}
+	got, err := s.GetCommitsInRange(at.Add(-time.Minute), at.Add(time.Minute))
+	if err != nil || len(got) != 1 || got[0].SessionID == nil || *got[0].SessionID != sess.ID || got[0].Insertions != 10 {
+		t.Fatalf("range: %v %+v", err, got)
+	}
+	// Deleting the session unlinks, not deletes, the commit.
+	s.db.Exec(`DELETE FROM sessions WHERE id=?`, sess.ID)
+	got, _ = s.GetCommitsInRange(at.Add(-time.Minute), at.Add(time.Minute))
+	if len(got) != 1 || got[0].SessionID != nil {
+		t.Fatalf("after session delete: %+v", got)
+	}
+}
+
+func TestSegmentsReplaceAndRange(t *testing.T) {
+	s, _ := openTemp(t)
+	t0 := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
+	end := t0.Add(72 * time.Hour)
+	sess := &Session{TaskName: "long", StartTime: t0, EndTime: &end, Source: "claude-code", ExternalID: "x"}
+	s.UpsertExternalSession(sess)
+	segs := []Segment{
+		{Start: t0, End: t0.Add(time.Hour), ActiveSeconds: 600, AgentSeconds: 1200},
+		{Start: t0.Add(48 * time.Hour), End: t0.Add(49 * time.Hour), ActiveSeconds: 300},
+	}
+	if err := s.ReplaceSegments(sess.ID, segs); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ReplaceSegments(sess.ID, segs); err != nil { // re-sync must not duplicate
+		t.Fatal(err)
+	}
+	got, err := s.GetSegmentsInRange(t0.Add(24*time.Hour), t0.Add(72*time.Hour))
+	if err != nil || len(got) != 1 || got[0].ActiveSeconds != 300 || got[0].SessionID != sess.ID {
+		t.Fatalf("range: %v %+v", err, got)
+	}
+	all, _ := s.GetSegmentsInRange(t0.Add(-time.Hour), end)
+	if len(all) != 2 {
+		t.Fatalf("all = %d, want 2", len(all))
+	}
+}

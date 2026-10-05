@@ -257,6 +257,101 @@ func (s *SQLiteStore) GetAllLogs(sessionID int64) ([]*LogEntry, error) {
 
 func (s *SQLiteStore) Close() error { return s.db.Close() }
 
+func (s *SQLiteStore) UpsertCommit(c *Commit) (bool, error) {
+	res, err := s.db.Exec(
+		`INSERT INTO commits (project, repo_path, sha, authored_at, subject, files, insertions, deletions)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT (project, sha) DO NOTHING`,
+		c.Project, c.RepoPath, c.SHA, c.AuthoredAt.UTC(), c.Subject, c.Files, c.Insertions, c.Deletions,
+	)
+	if err != nil {
+		return false, fmt.Errorf("upsert commit: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 1 {
+		c.ID, _ = res.LastInsertId()
+		return true, nil
+	}
+	return false, s.db.QueryRow(`SELECT id FROM commits WHERE project=? AND sha=?`, c.Project, c.SHA).Scan(&c.ID)
+}
+
+func (s *SQLiteStore) GetCommitsInRange(from, to time.Time) ([]*Commit, error) {
+	rows, err := s.db.Query(
+		`SELECT id, project, repo_path, sha, authored_at, subject, files, insertions, deletions, session_id
+		 FROM commits WHERE authored_at >= ? AND authored_at < ? ORDER BY authored_at ASC`,
+		from.UTC(), to.UTC(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*Commit
+	for rows.Next() {
+		var c Commit
+		var at string
+		var sid sql.NullInt64
+		if err := rows.Scan(&c.ID, &c.Project, &c.RepoPath, &c.SHA, &at, &c.Subject,
+			&c.Files, &c.Insertions, &c.Deletions, &sid); err != nil {
+			return nil, err
+		}
+		c.AuthoredAt = parseTime(at)
+		if sid.Valid {
+			c.SessionID = &sid.Int64
+		}
+		out = append(out, &c)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) LinkCommit(commitID int64, sessionID *int64) error {
+	_, err := s.db.Exec(`UPDATE commits SET session_id=? WHERE id=?`, sessionID, commitID)
+	return err
+}
+
+func (s *SQLiteStore) ReplaceSegments(sessionID int64, segs []Segment) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM session_segments WHERE session_id=?`, sessionID); err != nil {
+		return err
+	}
+	for _, g := range segs {
+		if _, err := tx.Exec(
+			`INSERT INTO session_segments (session_id, start_time, end_time, active_seconds, agent_seconds)
+			 VALUES (?, ?, ?, ?, ?)`,
+			sessionID, g.Start.UTC(), g.End.UTC(), g.ActiveSeconds, g.AgentSeconds,
+		); err != nil {
+			return fmt.Errorf("insert segment: %w", err)
+		}
+	}
+	return tx.Commit()
+}
+
+func (s *SQLiteStore) GetSegmentsInRange(from, to time.Time) ([]Segment, error) {
+	rows, err := s.db.Query(
+		`SELECT session_id, start_time, end_time, active_seconds, agent_seconds
+		 FROM session_segments WHERE end_time >= ? AND start_time < ? ORDER BY start_time ASC`,
+		from.UTC(), to.UTC(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Segment
+	for rows.Next() {
+		var g Segment
+		var st, en string
+		if err := rows.Scan(&g.SessionID, &st, &en, &g.ActiveSeconds, &g.AgentSeconds); err != nil {
+			return nil, err
+		}
+		g.Start, g.End = parseTime(st), parseTime(en)
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
 const sessionCols = `id, task_name, start_time, end_time, message, tags, git_branch, git_repo, project,
 	source, external_id, cwd, active_seconds, agent_seconds, model,
 	input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd`
