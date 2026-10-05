@@ -4,7 +4,7 @@ description: Use btrack to time-track coding sessions from the CLI. Trigger this
 license: MIT
 metadata:
   author: tolgazorlu
-  version: "0.7.0"
+  version: "0.9.0"
   homepage: "https://btrack.dev"
   repository: "https://github.com/tolgazorlu/btrack"
 ---
@@ -156,6 +156,32 @@ fix(auth): tolerate ±60s clock skew in JWT verifier
 Server clock was 45s ahead of the token issuer; verifier rejected
 freshly-issued tokens. Added a 60s leeway window.
 ```
+
+## Agent sessions, commits and recaps
+
+btrack also reads the session logs AI agents already keep (Claude Code,
+Codex, Hermes) and links them to the user's commits. These imported
+sessions never appear on the timesheet (`h`, `export`, `report`); they
+are a measured view beside it.
+
+| Command | Use |
+|---|---|
+| `btrack sync` | Import new agent sessions and commits. Idempotent; run it before answering questions about past work. |
+| `btrack recap [-d\|-w\|-m\|--last N] [-p project]` | What was worked on, for how long, which commits. Add `--json` to parse it. |
+| `btrack report <client> --from D --agents` | Client report with a part for measured AI-assisted work. Always lists days with agent work but no timesheet entry. |
+| `btrack projects alias <name> <project>` | File sessions discovered under a repo name as the project the user bills. |
+| `btrack mcp` | The same as MCP tools: recap, log_work, list_sessions, unlogged_days, sync, projects. |
+
+Every command takes `--json`. Prefer it whenever you parse output.
+
+Before helping with an invoice, check for unlogged days
+(`btrack report <client> --from D` prints them, or the MCP tool
+`unlogged_days`) and ask the user before adding anything: measured
+keyboard time is a heuristic, the user decides what is billed.
+
+`btrack add` refuses overlaps with existing timesheet entries and future
+times. If it refuses, report the conflict; never shift times to make it
+fit.
 
 ## Command reference
 
