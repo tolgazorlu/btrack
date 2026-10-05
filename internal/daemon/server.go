@@ -448,9 +448,8 @@ func (s *Server) maxHoursWatcher() {
 	}
 }
 
-// reminderWatcher fires an OS notification + sound every reminderMinutes
-// while a session is active. Designed for catching forgotten sessions —
-// e.g. set to 60 to get pinged every hour the timer keeps running.
+// autoStopMaxHours stops the active session once it has run longer than
+// cap, so a forgotten timer cannot invent unbounded hours.
 func (s *Server) autoStopMaxHours(cap time.Duration) {
 	if s.state.session == nil {
 		return
