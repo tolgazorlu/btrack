@@ -23,6 +23,7 @@ func buildHermesFixture(t *testing.T, path string) {
 		id TEXT PRIMARY KEY,
 		source TEXT NOT NULL,
 		parent_session_id TEXT,
+		end_reason TEXT,
 		started_at REAL NOT NULL,
 		cwd TEXT,
 		git_branch TEXT,
@@ -41,6 +42,7 @@ func buildHermesFixture(t *testing.T, path string) {
 		session_id TEXT NOT NULL,
 		role TEXT NOT NULL,
 		content TEXT,
+		tool_calls TEXT,
 		timestamp REAL NOT NULL
 	);
 	CREATE TABLE session_model_usage (
@@ -284,5 +286,51 @@ func TestHermesUnixToTime(t *testing.T) {
 	want := time.Unix(1000, 500000000).UTC()
 	if !got.Equal(want) {
 		t.Errorf("hermesUnixToTime(1000.5) = %v, want %v", got, want)
+	}
+}
+
+// A conversation compressed into a fresh session continues the same work:
+// the continuation is its own session, and its usage is not folded into
+// the parent (that would count it twice).
+func TestHermesCompressionContinuationIsKept(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.db")
+	buildHermesFixture(t, path)
+	db, err := sql.Open("sqlite", "file:"+path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustExec := func(q string) {
+		if _, err := db.Exec(q); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	mustExec(`INSERT INTO sessions (id, source, end_reason, started_at) VALUES ('long', 'desktop', 'compression', 5000)`)
+	mustExec(`INSERT INTO sessions (id, source, parent_session_id, started_at) VALUES ('long-2', 'desktop', 'long', 6000)`)
+	mustExec(`INSERT INTO messages (session_id, role, content, timestamp) VALUES ('long', 'user', 'start the refactor', 5000), ('long', 'assistant', 'ok', 5060)`)
+	mustExec(`INSERT INTO messages (session_id, role, content, timestamp) VALUES ('long-2', 'user', 'keep going', 6000), ('long-2', 'assistant', 'done', 6120)`)
+	mustExec(`INSERT INTO session_model_usage (session_id, model, input_tokens) VALUES ('long', 'claude-sonnet-5', 10), ('long-2', 'claude-sonnet-5', 7)`)
+	db.Close()
+
+	got, err := HermesReader{}.Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := map[string]Session{}
+	for _, s := range got {
+		byID[s.ExternalID] = s
+	}
+	parent, okP := byID["default/long"]
+	cont, okC := byID["default/long-2"]
+	if !okP || !okC {
+		t.Fatalf("want both sessions, got %v", byID)
+	}
+	sum := func(s Session) (n int64) {
+		for _, c := range s.Calls {
+			n += c.Input
+		}
+		return
+	}
+	if sum(parent) != 10 || sum(cont) != 7 {
+		t.Fatalf("usage parent=%d continuation=%d, want 10 and 7", sum(parent), sum(cont))
 	}
 }

@@ -165,6 +165,10 @@ func (r HermesReader) Read(path string) ([]Session, error) {
 		       actual_cost_usd
 		FROM sessions
 		WHERE parent_session_id IS NULL
+		   -- A compression continuation is the same conversation carried
+		   -- into a fresh session after its parent ended with
+		   -- end_reason='compression': its time is real, not a subagent's.
+		   OR parent_session_id IN (SELECT id FROM sessions WHERE end_reason = 'compression')
 	`)
 	if err != nil {
 		return nil, err
@@ -207,7 +211,7 @@ func (r HermesReader) Read(path string) ([]Session, error) {
 
 func (r HermesReader) readOne(db *sql.DB, profile string, s hermesSessionRow) (*Session, error) {
 	msgRows, err := db.Query(`
-		SELECT role, content, timestamp
+		SELECT role, content, tool_calls, timestamp
 		FROM messages
 		WHERE session_id = ?
 		ORDER BY timestamp ASC, id ASC
@@ -218,12 +222,13 @@ func (r HermesReader) readOne(db *sql.DB, profile string, s hermesSessionRow) (*
 	defer msgRows.Close()
 
 	var events []Event
+	var hints []string
 	var firstHuman string
 	for msgRows.Next() {
 		var role string
-		var content sql.NullString
+		var content, toolCalls sql.NullString
 		var ts sql.NullFloat64
-		if err := msgRows.Scan(&role, &content, &ts); err != nil {
+		if err := msgRows.Scan(&role, &content, &toolCalls, &ts); err != nil {
 			continue
 		}
 		if !ts.Valid {
@@ -245,6 +250,12 @@ func (r HermesReader) readOne(db *sql.DB, profile string, s hermesSessionRow) (*
 			events = append(events, Event{At: at, Kind: Human})
 		case "assistant", "tool":
 			events = append(events, Event{At: at, Kind: Agent})
+			// Tool arguments and tool results (which report the working
+			// directory) say which repo the agent was actually in.
+			hints = collectPathHints(hints, toolCalls.String)
+			if role == "tool" {
+				hints = collectPathHints(hints, content.String)
+			}
 		default:
 			// Unknown role (future-proofing): treat conservatively as
 			// agent activity rather than drop the timestamp entirely.
@@ -299,6 +310,7 @@ func (r HermesReader) readOne(db *sql.DB, profile string, s hermesSessionRow) (*
 		Title:      title,
 		Cwd:        cwd,
 		GitBranch:  branch,
+		PathHints:  hints,
 		Events:     events,
 		Calls:      calls,
 		CostUSD:    costUSD,
@@ -320,7 +332,8 @@ func (r HermesReader) collectCalls(db *sql.DB, s hermesSessionRow) ([]ModelCall,
 		       SUM(cache_read_tokens), SUM(cache_write_tokens)
 		FROM session_model_usage
 		WHERE session_id = ?
-		   OR session_id IN (SELECT id FROM sessions WHERE parent_session_id = ?)
+		   OR session_id IN (SELECT c.id FROM sessions c JOIN sessions p ON p.id = c.parent_session_id
+		                     WHERE c.parent_session_id = ? AND COALESCE(p.end_reason, '') <> 'compression')
 		GROUP BY model
 		HAVING model <> ''
 		ORDER BY model
