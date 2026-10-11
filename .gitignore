@@ -11,3 +11,6 @@ node_modules
 /.source
 # macOS finder metadata — leaks into skills/ and breaks the embedded tree check
 .DS_Store
+
+# Per-machine Claude Code permissions, never shared
+.claude/settings.local.json
