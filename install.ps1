@@ -65,6 +65,32 @@ try {
 }
 Write-Ok "Downloaded"
 
+# 3b. Verify the SHA-256 against the release's checksums.txt before running anything
+$sumAsset = $release.assets | Where-Object { $_.name -eq "checksums.txt" } | Select-Object -First 1
+if (-not $sumAsset) {
+    Write-Fail "checksums.txt not found in $version, refusing to install an unverified binary"
+}
+try {
+    $sums = (Invoke-WebRequest -Uri $sumAsset.browser_download_url -UseBasicParsing).Content
+    if ($sums -is [byte[]]) { $sums = [System.Text.Encoding]::UTF8.GetString($sums) }
+} catch {
+    Write-Fail "Could not download checksums.txt: $_"
+}
+$expected = $null
+foreach ($line in ($sums -split "`n")) {
+    $parts = $line.Trim() -split '\s+'
+    if ($parts.Count -ge 2 -and $parts[1] -eq $assetName) { $expected = $parts[0].ToLower() }
+}
+if (-not $expected) {
+    Write-Fail "No checksum listed for $assetName"
+}
+$actual = (Get-FileHash -Algorithm SHA256 -Path $zipPath).Hash.ToLower()
+if ($actual -ne $expected) {
+    Remove-Item $tmpDir -Recurse -Force
+    Write-Fail "Checksum mismatch for $assetName (expected $expected, got $actual)"
+}
+Write-Ok "Checksum verified"
+
 # 4. Extract
 Write-Step "Extracting..."
 Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
