@@ -226,6 +226,12 @@ go build -o btrack .
 
 ---
 
+## Related
+
+Homebrew tap: [tolgazorlu/homebrew-btrack](https://github.com/tolgazorlu/homebrew-btrack)
+
+---
+
 ## License
 
 MIT
