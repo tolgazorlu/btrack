@@ -153,12 +153,27 @@ func exportCSV(sessions []*db.Session, out *os.File) error {
 		_ = w.Write([]string{
 			fmt.Sprintf("%d", r.ID),
 			r.Date, r.StartTime, r.EndTime, r.DurationMinutes,
-			r.Task, r.Project, r.Message, strings.Join(r.Tags, " "),
-			r.GitBranch, r.GitRepo,
+			csvSafe(r.Task), csvSafe(r.Project), csvSafe(r.Message), csvSafe(strings.Join(r.Tags, " ")),
+			csvSafe(r.GitBranch), csvSafe(r.GitRepo),
 		})
 	}
 	w.Flush()
 	return w.Error()
+}
+
+// csvSafe neutralises spreadsheet formula injection: a free-text cell that
+// starts with = + - @ or a tab/CR is run as a formula by Excel, Numbers and
+// Sheets. Task names can come from agents (MCP log_work, sync), so they are
+// not trusted. A leading apostrophe makes the cell plain text.
+func csvSafe(s string) string {
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + s
+	}
+	return s
 }
 
 func exportJSON(sessions []*db.Session, out *os.File) error {
