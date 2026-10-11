@@ -12,7 +12,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:              "btrack",
 	TraverseChildren: true,
-	Short: ui.StyleTitle.Render("btrack") + " — time tracker for developers",
+	Short:            ui.StyleTitle.Render("btrack") + " — time tracker for developers",
 	Long: ui.StyleTitle.Render("btrack") + `  ` + ui.StyleDimmed.Render("— time tracker for developers") + `
 
   ` + ui.StyleHighlight.Render("DAILY WORKFLOW") + `
@@ -56,7 +56,7 @@ var rootCmd = &cobra.Command{
   Use ` + ui.StyleDimmed.Render("btrack <command> --help") + ` for details on any command.`,
 	SilenceUsage:  true,
 	SilenceErrors: true, // Execute prints the error once, styled
-	Args:         cobra.NoArgs,
+	Args:          cobra.NoArgs,
 	// A runnable root makes cobra reject unknown commands (exit 1) instead
 	// of silently printing help with exit 0, which agents read as success.
 	RunE: func(cmd *cobra.Command, args []string) error { return cmd.Help() },

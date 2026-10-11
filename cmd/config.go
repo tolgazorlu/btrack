@@ -110,9 +110,6 @@ Examples:
 	},
 }
 
-
-
-
 var configMaxHoursCmd = &cobra.Command{
 	Use:   "max-hours <hours>",
 	Short: "Cap any single session at N hours (0 = disabled)",

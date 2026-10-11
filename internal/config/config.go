@@ -135,8 +135,6 @@ func Reload() (*Config, error) {
 	return Load()
 }
 
-
-
 func SaveDailyHours(hours int) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -173,9 +171,6 @@ func SaveMaxHours(hours int) error {
 	return nil
 }
 
-
-
-
 func SaveProjectRate(project string, rate float64) error {
 	if _, err := Load(); err != nil {
 		return err
@@ -187,7 +182,6 @@ func SaveProjectRate(project string, rate float64) error {
 	instance = nil
 	return nil
 }
-
 
 func writeDefaultConfig(path string) {
 	content := `# btrack configuration
