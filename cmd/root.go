@@ -57,6 +57,9 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	SilenceErrors: true, // Execute prints the error once, styled
 	Args:         cobra.NoArgs,
+	// A runnable root makes cobra reject unknown commands (exit 1) instead
+	// of silently printing help with exit 0, which agents read as success.
+	RunE: func(cmd *cobra.Command, args []string) error { return cmd.Help() },
 }
 
 func Execute() {
