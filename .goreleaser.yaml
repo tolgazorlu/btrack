@@ -20,7 +20,7 @@ builds:
       - goos: windows
         goarch: arm64
     ldflags:
-      - -s -w -X main.Version={{.Version}}
+      - -s -w -X github.com/tolgazorlu/btrack/cmd.Version={{.Version}}
     main: .
 
 archives:
