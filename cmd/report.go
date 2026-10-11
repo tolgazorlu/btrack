@@ -389,7 +389,19 @@ func slug(s string) string {
 		"ü", "u", "Ü", "u", "ö", "o", "Ö", "o", "ç", "c", "Ç", "c",
 		" ", "-", "_", "-",
 	)
-	return strings.ToLower(repl.Replace(s))
+	// Keep only [a-z0-9-] so a client or project name can never steer the
+	// default output path (e.g. "../" or a drive letter) out of the home dir.
+	var b strings.Builder
+	for _, r := range strings.ToLower(repl.Replace(s)) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			b.WriteRune(r)
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		out = "client"
+	}
+	return out
 }
 
 func gitUserName(repoPath string) string {
