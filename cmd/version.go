@@ -9,7 +9,9 @@ import (
 )
 
 // Version is set at build time via ldflags:
-//   -X github.com/tolgazorlu/btrack/cmd.Version=v1.2.3
+//
+//	-X github.com/tolgazorlu/btrack/cmd.Version=v1.2.3
+//
 // When unset (e.g. `go install ...@v1.2.3`), it falls back to the
 // module version embedded in the binary by the Go toolchain.
 var Version = "dev"

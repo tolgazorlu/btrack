@@ -34,15 +34,15 @@ func ac(light, dark string) lipgloss.AdaptiveColor {
 var (
 	colorForeground       = ac(hexLightForeground, hexDarkForeground)
 	colorPrimary          = ac(hexLightPrimary, hexDarkPrimary)
-	colorSecondary          = ac(hexLightSecondaryForeground, hexDarkSecondaryForeground)
-	colorMuted              = ac(hexLightMutedForeground, hexDarkMutedForeground)
-	colorAccent             = ac(hexLightAccent, hexDarkAccent)
-	colorAccentForeground   = ac(hexLightAccentForeground, hexDarkAccentForeground)
-	colorMutedFill          = ac(hexLightMuted, hexDarkMuted)
-	colorBorder             = ac(hexLightBorderOpaque, hexDarkBorderOpaque)
-	colorSuccess            = colorPrimary
-	colorWarning            = colorAccentForeground
-	colorError              = colorForeground
+	colorSecondary        = ac(hexLightSecondaryForeground, hexDarkSecondaryForeground)
+	colorMuted            = ac(hexLightMutedForeground, hexDarkMutedForeground)
+	colorAccent           = ac(hexLightAccent, hexDarkAccent)
+	colorAccentForeground = ac(hexLightAccentForeground, hexDarkAccentForeground)
+	colorMutedFill        = ac(hexLightMuted, hexDarkMuted)
+	colorBorder           = ac(hexLightBorderOpaque, hexDarkBorderOpaque)
+	colorSuccess          = colorPrimary
+	colorWarning          = colorAccentForeground
+	colorError            = colorForeground
 )
 
 var (

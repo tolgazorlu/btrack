@@ -23,24 +23,24 @@ const (
 )
 
 type StatusModel struct {
-	status       *daemon.StatusData
-	startTime    time.Time
-	frame        int
-	err          error
-	quitting     bool
-	client       *daemon.Client
-	dailyHours   int
-	idleMinutes  int
-	lastKey      time.Time
-	store            db.Store
-	sessions         []*db.Session
-	mode             inputMode
-	inputText        string
-	subNoteParentID  int64
-	updateAvail      string
-	version          string
-	actionResult     string
-	actionIsErr      bool
+	status          *daemon.StatusData
+	startTime       time.Time
+	frame           int
+	err             error
+	quitting        bool
+	client          *daemon.Client
+	dailyHours      int
+	idleMinutes     int
+	lastKey         time.Time
+	store           db.Store
+	sessions        []*db.Session
+	mode            inputMode
+	inputText       string
+	subNoteParentID int64
+	updateAvail     string
+	version         string
+	actionResult    string
+	actionIsErr     bool
 }
 
 type tickMsg time.Time
@@ -388,7 +388,7 @@ func (m StatusModel) View() string {
 	default:
 		if m.updateAvail != "" {
 			b.WriteString(StyleWarning.Render(
-				"  ↑ "+m.updateAvail+" available  ·  go install github.com/tolgazorlu/btrack@latest\n",
+				"  ↑ " + m.updateAvail + " available  ·  go install github.com/tolgazorlu/btrack@latest\n",
 			))
 		}
 		hints := "  n note"

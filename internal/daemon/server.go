@@ -17,13 +17,13 @@ import (
 )
 
 type Server struct {
-	mu              sync.Mutex
-	store           db.Store
-	listener        net.Listener
-	state           *activeState
-	lastActivity    time.Time
-	idleMinutes     int
-	maxHours        int
+	mu           sync.Mutex
+	store        db.Store
+	listener     net.Listener
+	state        *activeState
+	lastActivity time.Time
+	idleMinutes  int
+	maxHours     int
 }
 
 const staleSessionThreshold = 6 * time.Hour
@@ -41,11 +41,11 @@ func NewServer(store db.Store) *Server {
 		maxHours = cfg.Work.MaxHours
 	}
 	return &Server{
-		store:           store,
-		state:           &activeState{},
-		lastActivity:    time.Now(),
-		idleMinutes:     idleMinutes,
-		maxHours:        maxHours,
+		store:        store,
+		state:        &activeState{},
+		lastActivity: time.Now(),
+		idleMinutes:  idleMinutes,
+		maxHours:     maxHours,
 	}
 }
 
@@ -268,7 +268,7 @@ func (s *Server) handleSwitch(req Request) Response {
 		}
 		out.Stopped = sessionToDTO(s.state.session)
 		s.state.session = nil
-		}
+	}
 
 	sess := &db.Session{
 		TaskName:  p.TaskName,
