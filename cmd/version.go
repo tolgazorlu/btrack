@@ -24,6 +24,7 @@ func init() {
 	}
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.Version = Version
+	rootCmd.SetVersionTemplate("{{.Version}}\n") // bare: scripts and agents parse it
 }
 
 var versionCmd = &cobra.Command{
