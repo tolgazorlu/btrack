@@ -449,7 +449,9 @@ func openBrowser(url string) error {
 	case "darwin":
 		return exec.Command("open", url).Start()
 	case "windows":
-		return exec.Command("cmd", "/c", "start", url).Start()
+		// Not "cmd /c start": cmd.exe re-parses the argument, so a path with
+		// "&" or "|" would run as a second command.
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 	default:
 		return exec.Command("xdg-open", url).Start()
 	}
