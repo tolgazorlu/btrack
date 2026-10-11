@@ -1,10 +1,12 @@
 # btrack
 
+A one-line time tracker for developers that also records what your AI coding agents did: Claude Code, Codex and Hermes sessions, the commits they produced and their estimated cost.
+
 Every time tracker I tried wanted me to open a browser, log in, pick a workspace, and click through a dashboard. I just wanted to type one line and get back to work.
 
 [![Release](https://img.shields.io/github/v/release/tolgazorlu/btrack)](https://github.com/tolgazorlu/btrack/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go)](go.mod)
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](go.mod)
 
 ---
 
@@ -37,6 +39,16 @@ btrack n "found the issue"            # add a note while working
 btrack x -m "fixed JWT clock skew"   # stop and save
 btrack h                              # see today's work
 ```
+
+### Your AI agent sessions
+
+```bash
+btrack sync                # import Claude Code, Codex and Hermes sessions from their local logs
+btrack recap -w            # this week per project: your time, agent time, commits, estimated cost
+btrack recap -m --md       # the same as markdown, for a standup or a client
+```
+
+`sync` is safe to repeat. Imported sessions stay separate from your hand-kept timesheet, so `btrack h`, `export` and `report` only bill what you recorded yourself; `recap` combines both without counting time twice.
 
 ---
 
@@ -120,7 +132,23 @@ btrack edit 42 -p myapp -m "done #bugfix"
 
 ---
 
-## Claude Skill
+## Use it from an AI agent
+
+Two integrations; use either or both.
+
+- **Skill**: teaches the agent to log its own work sessions with btrack (below).
+- **MCP**: gives the agent the ledger itself, through the tools `recap`, `log_work`, `list_sessions`, `unlogged_days`, `sync` and `projects`:
+
+  ```bash
+  claude mcp add btrack -- btrack mcp
+  codex mcp add btrack -- btrack mcp
+  ```
+
+  or in any MCP client: `{"mcpServers": {"btrack": {"command": "btrack", "args": ["mcp"]}}}`
+
+Every command also takes `--json`.
+
+### Skill
 
 The bundled `btrack` skill teaches Claude Code (and other CLI agents) to track your sessions on its own. The default flow is clock mode: the agent notes the wall-clock time when work starts, and records the finished session with `btrack add --from --to` when it's done — btrack computes the duration, so no timer runs while the AI works. Timer mode (`btrack s` / `x`) stays available for live terminal sessions.
 
@@ -213,6 +241,12 @@ Durations accept the forms people actually write by hand: `1.00.46`,
 `24.09.27`, `1:09:20`, `45m29s`, `1 sa 9 dk`, `0.75h`. A trailing `[note]` in
 the description becomes a chip beside the entry in the report. Always run
 `--dry-run` first.
+
+---
+
+## Data and privacy
+
+Everything stays on your machine, in one SQLite file: `~/Library/Application Support/btrack/` on macOS, `~/.local/share/btrack/` on Linux, `%LOCALAPPDATA%\btrack\` on Windows (`BTRACK_DB` overrides the path). `btrack sync` only reads the session logs your agents already keep locally. The only network call is the update check in `btrack w`, a request to the GitHub releases API. No telemetry.
 
 ---
 
