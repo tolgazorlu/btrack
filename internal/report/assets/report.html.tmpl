@@ -136,6 +136,47 @@
     <p class="grand-value">{{ .TotalLabel }}<small>{{ .TotalDecimal }} saat · {{ .TotalEntries }} süre kaydı · {{ len .HourDays }} gün</small></p>
   </div>
 
+  <div class="fee" id="fee" data-seconds="{{ .TotalSeconds }}">
+    <div class="fee-amount" id="fee-amount" hidden>
+      <p class="grand-label">Toplam tutar</p>
+      <p class="grand-value"><span id="fee-total"></span><small id="fee-detail"></small></p>
+    </div>
+    <label class="fee-input">
+      <span>Saatlik ücret</span>
+      <input id="fee-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="ör. 1.500">
+      <span>₺ / saat</span>
+    </label>
+  </div>
+  <script>
+  (function () {
+    var box = document.getElementById("fee");
+    var rateEl = document.getElementById("fee-rate");
+    var amountEl = document.getElementById("fee-amount");
+    var seconds = Number(box.dataset.seconds) || 0;
+    var money = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var hours = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function parseRate(s) {
+      s = s.replace(/[^0-9.,]/g, "");
+      if (s.indexOf(",") >= 0) s = s.replace(/\./g, "").replace(",", ".");
+      else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+      var n = parseFloat(s);
+      return isFinite(n) && n > 0 ? n : 0;
+    }
+    function update() {
+      var rate = parseRate(rateEl.value);
+      box.classList.toggle("is-set", rate > 0);
+      amountEl.hidden = !(rate > 0);
+      if (!(rate > 0)) return;
+      var total = Math.round(seconds / 3600 * rate * 100) / 100;
+      document.getElementById("fee-total").textContent = money.format(total) + " ₺";
+      document.getElementById("fee-detail").textContent =
+        hours.format(seconds / 3600) + " saat × " + money.format(rate) + " ₺ (saniye hassasiyetinde hesaplanmıştır)";
+    }
+    rateEl.addEventListener("input", update);
+    update();
+  })();
+  </script>
+
   {{ with .Agent }}{{ if .Days }}
   <div class="part">
     <h2>Bölüm 3 — Yapay zekâ destekli çalışma</h2>

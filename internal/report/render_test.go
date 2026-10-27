@@ -54,3 +54,20 @@ func TestFormatUSD(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestRateCalculatorUsesExactSeconds(t *testing.T) {
+	day := time.Date(2026, 10, 27, 0, 0, 0, 0, time.Local)
+	r := Report{
+		Client: "Acme", From: day, To: day,
+		Days: Build(nil, []Entry{
+			{Date: day.Add(9 * time.Hour), Duration: 9*time.Minute + 29*time.Second, Description: "fix"},
+			{Date: day.Add(10 * time.Hour), Duration: 30 * time.Minute, Description: "feature"},
+		}),
+	}
+	out := render(t, r)
+	for _, want := range []string{`data-seconds="2369"`, `id="fee-rate"`, "Saatlik ücret", "Toplam tutar"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("calculator missing %q", want)
+		}
+	}
+}
