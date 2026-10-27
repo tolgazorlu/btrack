@@ -416,6 +416,42 @@
     letter-spacing: 0;
   }
 
+  .fee {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-block: 4px 22px;
+  }
+  .fee-amount {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    padding-block: 18px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .fee-amount[hidden] { display: none; }
+  .fee-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    color: var(--ink);
+  }
+  .fee-input input {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    width: 9rem;
+    padding: 8px 10px;
+    border: 1px solid var(--muted);
+    border-radius: 4px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .fee-input input:focus { outline: 2px solid var(--indigo); outline-offset: 1px; }
+
   .reconcile {
     border: 1px solid var(--rule);
     border-left: 3px solid var(--indigo);
@@ -556,7 +592,10 @@
     body { font-size: 11pt; }
     .sheet { max-width: none; padding-block: 0 0; padding-inline: 0; }
     .day-head { position: static; }
-    .day, .part, .reconcile, .grand { break-inside: avoid; }
+    .day, .part, .reconcile, .grand, .fee { break-inside: avoid; }
+    /* The calculator is a screen tool: print the amount only once a rate is entered. */
+    .fee-input { display: none; }
+    .fee:not(.is-set) { display: none; }
     .part { break-before: page; }
     .part.first { break-before: auto; }
     .entry, .hrs-row { break-inside: avoid; }

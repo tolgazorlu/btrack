@@ -332,6 +332,10 @@ func (r Report) TotalDuration() time.Duration {
 	return sum
 }
 
+// TotalSeconds is the exact recorded time in whole seconds; the report's
+// hourly-rate calculator multiplies this, not the rounded decimal hours.
+func (r Report) TotalSeconds() int64 { return int64(r.TotalDuration() / time.Second) }
+
 // WorkedDays counts days with a commit or a stopwatch entry.
 func (r Report) WorkedDays() int {
 	n := 0
