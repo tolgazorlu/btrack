@@ -313,7 +313,7 @@ func resolveRange(fromStr, toStr string, thisMonth bool) (time.Time, time.Time, 
 	now := time.Now()
 	if thisMonth {
 		from := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-		return from, endOfDay(now), nil
+		return from, startOfDay(now), nil
 	}
 	if fromStr == "" {
 		return time.Time{}, time.Time{}, fmt.Errorf("need a range: --from 21.08 --to 16.09 (or -m for this month)")
@@ -332,12 +332,13 @@ func resolveRange(fromStr, toStr string, thisMonth bool) (time.Time, time.Time, 
 	if to.Before(from) {
 		return time.Time{}, time.Time{}, fmt.Errorf("--to is before --from")
 	}
-	return from, endOfDay(to), nil
+	return from, startOfDay(to), nil
 }
 
-func endOfDay(t time.Time) time.Time {
+// startOfDay is the range's last day; callers bound it as [from, to+1 day).
+func startOfDay(t time.Time) time.Time {
 	y, m, d := t.Date()
-	return time.Date(y, m, d, 23, 59, 59, 0, t.Location())
+	return time.Date(y, m, d, 0, 0, 0, 0, t.Location())
 }
 
 // parseReportDate accepts 21.08, 21.08.2026, 2026-08-21 and 21/08.
